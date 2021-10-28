@@ -6,7 +6,29 @@ Esta documentação foi gerada durante o estudo do curso **[Descomplicando Istio
 
 Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio. Mas em ambientes de produção é uma boa ideia utilizar serviços gerenciados com o o [EKS](https://aws.amazon.com/eks), [GKE](https://cloud.google.com/kubernetes-engine), [AKS](https://azure.microsoft.com/en-us/free/kubernetes-service), [DOKS](https://www.digitalocean.com/products/kubernetes/), entre outros.
 
-> Para o Kubernetes e o Istio funcionarem corretamente, foi necessário liberar um conjunto de 40 portas no security group associado as instâncias EC2.
+> Para o Kubernetes e o Istio funcionarem corretamente, foi necessário liberar um conjunto de **40 portas** no security group associado as instâncias EC2, citados nos prints do diretório images.
+
+# Configurações do Ambiente
+
+As versões dos softwares utilizados foram:
+
+* Docker: 20.04
+* Kubernetes: 1.22.2
+* Istio: 1.11.4
+
+Instances:
+
+* type: on-demand (t2.large 2 CPU e 8 GB de memória)
+* SO: Ubuntu 20.04 64 bits
+* login: ubuntu
+* SSH: 22/TCP
+* key: teste-aecio-treinamento-istio
+
+```bash
+ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@master
+ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@worker1
+ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@worker2
+```
 
 # Day 1
 
