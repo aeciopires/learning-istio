@@ -36,15 +36,15 @@ Veja os comandos [aqui](day1.md)
 
 # Day 2
 
-Veja os comandos aqui.
+Veja os comandos [aqui](day2.md)
 
 # Day 3
 
-Veja os comandos aqui.
+Veja os comandos [aqui](day3.md)
 
 # Day 4
 
-Veja os comandos aqui.
+Veja os comandos [aqui](day4.md)
 
 # Referências
 
