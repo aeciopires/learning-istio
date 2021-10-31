@@ -6,12 +6,13 @@ Execute os passos a seguir sempre que desejar melhorar o conteúdo deste reposit
 
 * Instale os seguintes pacotes: ``git`` e um editor de texto de sua preferência.
 * Crie um fork neste repositório. Veja este tutorial: https://help.github.com/en/github/getting-started-with-github/fork-a-repo
+* Configure a autenticação em sua conta Github para usar o protocolo SSH em vez de HTTP. Assista a este tutorial para aprender a configurar: https://help.github.com/en/github/authenticating-to-github/adding-a-new-ssh-key-to-your-github-account
 * Clone o repositório resultante do fork para o seu computador.
 * Adicione a URL do repositório de origem com o comando a seguir.
 
 ```
 git remote -v
-git remote add upstream https://github.com/aeciopires/learning-istio
+git remote add upstream git@github.com:aeciopires/learning-istio.git
 git remote -v
 ```
 

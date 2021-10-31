@@ -12,6 +12,7 @@ As versões dos softwares utilizados foram:
 
 * Docker: 20.04
 * Kubernetes: 1.22.2
+* Helm: 3.7.1
 * Istio: 1.11.4
 
 Instances:
@@ -75,6 +76,7 @@ Fonte:
 * https://istio.io/latest/docs/setup/getting-started/
 * https://istio.io/latest/docs/ops/deployment/requirements/
 * https://istio.io/latest/docs/setup/install/istioctl/
+* https://istio.io/latest/docs/setup/install/helm/
 * https://www.alibabacloud.com/blog/kubernetes-configure-liveness-and-readiness-probes_594833 
 * https://medium.com/sitewards/deploying-on-kubernetes-10-health-checking-a4986e807afe 
 * https://githubmemory.com/repo/istio/istio/issues/32963 
