@@ -59,8 +59,8 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 kubectl get virtualservice reviews -o yaml
 
-vim samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
-kubectl apply -f samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
+vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 

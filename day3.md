@@ -123,4 +123,33 @@ kubectl delete destinationrules default -n giropops
 kubectl delete destinationrules httpbin -n strigus
 
 #----------------- Authorization
+kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/meshpolicy.yaml
+kubectl get policies.authentication.istio.io --all-namespaces
+kubectl get meshpolicy
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl get deployments. --all-namespaces
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all-mtls.yaml
+kubectl get destinationrules -o yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/bookinfo-gateway.yaml
+kubectl get deployments. --all-namespaces
+kubectl get svc
+kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0 &
+
+vim $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/rbac-config-ON.yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/rbac-config-ON.yaml
+
+vim $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/namespace-policy.yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/namespace-policy.yaml
+kubectl get servicerole
+kubectl get servicerolebindings.rbac.istio.io
+
+vim $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/productpage-policy.yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/details-reviews-policy.yaml
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/ratings-policy.yaml
+
+vim $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/ratings-policy.yaml
+kubectl get serviceaccounts
+kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/namespace-policy.yaml
+kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/ratings-policy.yaml 
+kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/details-reviews-policy.yaml
 ```
