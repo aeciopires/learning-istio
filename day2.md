@@ -31,6 +31,7 @@ Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
 #------- Specifics (master)
+sudo su
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
@@ -88,6 +89,7 @@ kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-normal.yaml
+
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
@@ -95,7 +97,7 @@ kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-de
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
-kubectl delete -f $COMPLEMENTARY_FILES/request-timeout/samples/bookinfo/networking/virtual-service-all-v1.yaml
+kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Circuit breaking
 vim $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml

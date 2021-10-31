@@ -14,6 +14,7 @@ Comandos executados em sequencia durante o treinamento.
 
 ```bash
 #------- Specifics (master)
+sudo su
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
@@ -68,7 +69,6 @@ kubectl exec -ti -n giropopssleep-7d457d69b5-tw5pt -- curl http://httpbin.strigu
 kubectl exec -ti -n giropopssleep-7d457d69b5-tw5pt -- curl http://httpbin.girus:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-fix-girus-conn.yaml
-
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-fix-girus-conn.yaml
 

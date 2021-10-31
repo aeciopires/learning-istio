@@ -14,6 +14,7 @@ Comandos executados em sequencia durante o treinamento.
 
 ```bash
 #------- Specifics (master)
+sudo su
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
@@ -22,9 +23,8 @@ export PATH="$PATH:$ISTIO_DIR_BASE/bin"
 export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
 #----------------- Uninstall Istio
-kubectl delete -f $ISTIO_DIR_BASE/install/kubernetes/istio-demo-auth.yaml
-kubectl delete -f $ISTIO_DIR_BASE/install/kubernetes/istio-demo.yaml
-for i in $ISTIO_DIR_BASE/install/kubernetes/helm/istio-init/files/crd*yaml; do kubectl delete -f $i; done
+kubectl delete -f $ISTIO_DIR_BASE/samples/addons
+istioctl manifest generate --set profile=demo | kubectl delete --ignore-not-found=true -f -
 kubectl get virtualservices.networking.istio.io --all-namespaces
 
 #----------------- Install Helm
@@ -33,41 +33,31 @@ cd $HOME
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
 chmod 700 $HOME/get_helm.sh
 $HOME/get_helm.sh
+helm version
 
 #----------------- Install Istio with Helm
 # Reference: https://istio.io/latest/docs/setup/install/helm/
-for i in $ISTIO_DIR_BASE/install/kubernetes/helm/istio-init/files/crd*yaml; do kubectl apply -f $i; done
-
-# helm template install/kubernetes/helm/istio --name istio --namespace istio-system --values install/kubernetes/helm/istio/values.yaml --set gateways.istio-ingresssgateway.type=NodePort --set grafana.enabled=true --set kiali.enabled=true --set tracing.enabled=true --set kiali.dashboard.username=admin --set kiali.dashboard.passphrase=admin --set servicegraph.enabled=true > $HOME/meu_istio.yaml
-
-vim $HOME/meu_istio.yaml
 kubectl create namespace istio-system
-kubectl apply -f $HOME/meu_istio.yaml
-kubectl get pods -n istio-system
-kubectl get pods -n istio-system --watch
+helm install istio-base $ISTIO_DIR_BASE/manifests/charts/base -n istio-system
 
- # KIALI_USERNAME=$(read -p 'Kiali Username: ' uval && echo -n $uval | base64)
- # KIALI_PASSPHRASE=$(read -sp 'Kiali Passphrase: ' pval && echo -n $pval | base64)
- # echo $KIALI_USERNAME
- # echo $KIALI_PASSPHRASE
- # NAMESPACE=istio-system
- # cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kiali
-  namespace: $NAMESPACE
-  labels:
-    app: kiali
-type: Opaque
-data:
-  username: $KIALI_USERNAME
-  passphrase: $KIALI_PASSPHRASE
-EOF
+helm install istiod $ISTIO_DIR_BASE/manifests/charts/istio-control/istio-discovery \
+    -n istio-system
 
-kubectl get services -n istio-system
-kubectl port-forward svc/kiali 20001:20001 -n istio-system --address=0.0.0.0 &
+helm install istio-ingress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-ingress \
+    -n istio-system
 
+helm install istio-egress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-egress \
+    -n istio-system
+
+ kubectl get pods -n istio-system
+
+# Uninstall with helm
+# helm delete istio-egress -n istio-system
+# helm delete istio-ingress -n istio-system
+# helm delete istiod -n istio-system
+# helm delete istio-base -n istio-system
+# kubectl delete namespace istio-system
+# kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
 
 #----------------- Egress
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml
