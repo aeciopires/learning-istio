@@ -35,6 +35,9 @@ export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
 
+# Complementary files
+export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
+
 #----------------- Traffic request
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
 
@@ -82,26 +85,26 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 #----------------- Request timeout
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
-vim $ISTIO_DIR_BASE/virtual-service-reviews-normal.yaml
+vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/virtual-service-normal.yaml
-vim $ISTIO_DIR_BASE/virtual-service-ratings-delay.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-normal.yaml
+vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/virtual-service-ratings-delay.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
-vim $ISTIO_DIR_BASE/virtual-service-reviews-timeout.yaml
+vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/virtual-service-reviews-timeout.yaml
-kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
+kubectl delete -f $COMPLEMENTARY_FILES/request-timeout/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Circuit breaking
 vim $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
 
-vim $ISTIO_DIR_BASE/circuit-breaker.yaml
+vim $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/circuit-breaker.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
 kubectl get destinationrule httpbin -o yaml
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/sample-client/fortio-deploy.yaml
 FORTIO_POD=$(kubectl get pod | grep fortio | awk '{ print $1 }')
@@ -119,38 +122,38 @@ kubectl delete deploy httpbin fortio-deploy
 kubectl delete svc httpbin
 
 #----------------- Mirroring
-vim $ISTIO_DIR_BASE/deployment-httpbin-v1.yaml
-vim $ISTIO_DIR_BASE/deployment-httpbin-v2.yaml
+vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
+vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/deployment-httpbin-v1.yaml
-kubectl apply -f $ISTIO_DIR_BASE/deployment-httpbin-v2.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
 
-vim $ISTIO_DIR_BASE/service-httpbin.yaml
+vim $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/service-httpbin.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
 
-vim $ISTIO_DIR_BASE/deployment-sleep.yaml
+vim $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/deployment-sleep.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
 
-vim $ISTIO_DIR_BASE/virtual-service-httpbin.yaml
+vim $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/virtual-service-httpbin.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
 
-vim $ISTIO_DIR_BASE/destination-rule-httpbin.yaml
+vim $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/destination-rule-httpbin.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
 kubectl get pods
 kubectl exec -ti sleep-674f75ff4d-5bsnf -c sleep -- sh -c 'curl http://httpbin:8000/headers'
 kubectl logs httpbin-v1-b9985cc7d-t5f4z  httpbin
 kubectl logs httpbin-v2-5cdb74d4c7-2lc27 httpbin
 
-vim $ISTIO_DIR_BASE/mirroring-httpbin.yaml
+vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 
-kubectl apply -f $ISTIO_DIR_BASE/mirroring-httpbin.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 kubectl get virtualservices.networking.istio.io
 
-vim $ISTIO_DIR_BASE/mirroring-httpbin.yaml
+vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 
 kubectl get virtualservices.networking.istio.io httpbin -o yaml
 kubectl exec -ti sleep-674f75ff4d-5bsnf -c sleep -- sh -c 'curl http://httpbin:8000/headers'

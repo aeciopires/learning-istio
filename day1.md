@@ -121,6 +121,11 @@ curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.11.4 sh -
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
+
+# Complementary files
+git clone https://github.com/aeciopires/learning-istio
+export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
+
 istioctl x precheck
 
 # Install profile of demonstration
