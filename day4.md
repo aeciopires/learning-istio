@@ -13,6 +13,7 @@
 Comandos executados em sequencia durante o treinamento.
 
 ```bash
+#------- Specifics (master)
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"

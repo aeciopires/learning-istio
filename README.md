@@ -6,8 +6,6 @@ Esta documentação foi gerada durante o estudo do curso **[Descomplicando Istio
 
 Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio. Mas em ambientes de produção é uma boa ideia utilizar serviços gerenciados com o o [EKS](https://aws.amazon.com/eks), [GKE](https://cloud.google.com/kubernetes-engine), [AKS](https://azure.microsoft.com/en-us/free/kubernetes-service), [DOKS](https://www.digitalocean.com/products/kubernetes/), entre outros.
 
-> Para o Kubernetes e o Istio funcionarem corretamente, foi necessário liberar um conjunto de **40 portas** no security group associado as instâncias EC2, citados nos prints do diretório images.
-
 # Configurações do Ambiente
 
 As versões dos softwares utilizados foram:
@@ -46,6 +44,27 @@ Veja os comandos [aqui](day3.md)
 
 Veja os comandos [aqui](day4.md)
 
+# Security group/firewall
+
+> Para o Kubernetes e o Istio funcionarem corretamente, foi necessário liberar um conjunto de **40 portas** no security group associado as instâncias EC2, citados nos prints do diretório images.
+
+Fonte:
+
+* https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
+* https://istio.io/latest/docs/ops/deployment/requirements/
+
+<p align="center">
+  <img src="images/sec1.png" alt="Rules of security group - part 1">
+</p>
+
+<p align="center">
+  <img src="images/sec2.png" alt="Rules of security group - part 2">
+</p>
+
+<p align="center">
+  <img src="images/sec3.png" alt="Rules of security group - part 3">
+</p>
+
 # Referências
 
 * https://github.com/badtuxx/DescomplicandoKubernetes
@@ -61,4 +80,6 @@ Veja os comandos [aqui](day4.md)
 * https://githubmemory.com/repo/istio/istio/issues/32963 
 * https://support.sisense.com/kb/en/article/pod-in-crashloopbackoff-state-readinessliveness-probe-failed-get-httppod-ip8082actuatorhealth-dial-tcp-pod-ip8082-connect-connection-refused 
 * https://forums.rancher.com/t/liveness-probe-failed-connection-refused/20837 
-* https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796  
+* https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796
+* https://www.udemy.com/course/istio-hands-on-for-kubernetes/
+* https://academy.tetrate.io

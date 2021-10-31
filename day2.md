@@ -30,6 +30,7 @@ Estratégias de gerenciamento de tráfego (*traffic management*):
 Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
+#------- Specifics (master)
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
 cd $ISTIO_DIR_BASE
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"

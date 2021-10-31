@@ -144,10 +144,6 @@ kubectl get pods
 # Verify everything is working correctly up to this point. Run this command to see if the app is running inside the cluster and serving HTML pages by checking for the page title in the response:
 kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 
-
-# Access URL: http://master:9080/productpage
-
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/bookinfo-gateway.yaml
 kubectl get gateway
 kubectl get virtualservices -o yaml
@@ -158,17 +154,23 @@ kubectl get virtualservices.networking.istio.io
 kubectl describe virtualservices.networking.istio.io bookinfo
 kubectl get gateways.networking.istio.io
 kubectl describe gateways.networking.istio.io bookinfo-gateway
+
+# Allow port 9080/TCP
 kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0
+# Access URL: http://master:9080/productpage
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/addons
 kubectl rollout status deployment/kiali -n istio-system
 
+# Allow port 20001/TCP
 kubectl port-forward svc/kiali 20001:20001 -n istio-system --address=0.0.0.0
 # Access URL: http://master:20001/kiali
 
+# Allow port 3000/TCP
 kubectl port-forward svc/grafana 3000:3000 -n istio-system --address=0.0.0.0
 # Access URL: http://master:3000
 
+# Allow port 9090/TCP
 kubectl port-forward svc/prometheus 9090:9090 -n istio-system --address=0.0.0.0
 # Access URL: http://master:9090
 
