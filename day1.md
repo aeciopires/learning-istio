@@ -110,8 +110,13 @@ kubectl get nodes
 
 
 #------- Specifics (worker1 and worker2)
-# Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar 
-kubeadm join 10.0.35.25:6443 --token xzlzjw.bksen5z6somtgh22 --discovery-token-ca-cert-hash sha256:86e507a7af3de3b47aceff4c9a2466e965e72ff7236a37031ea76258425b5c72
+# Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
+#
+# In master node print a join command for add worker node in cluster
+kubeadm token create --print-join-command
+#
+# Example of command to run in worker node:
+# kubeadm join 10.0.35.25:6443 --token xzlzjw.bksen5z6somtgh22 --discovery-token-ca-cert-hash sha256:86e507a7af3de3b47aceff4c9a2466e965e72ff7236a37031ea76258425b5c72
 
 #------- Specifics (master)
 # References:
