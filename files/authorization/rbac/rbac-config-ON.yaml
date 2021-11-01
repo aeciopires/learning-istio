@@ -1,7 +1,7 @@
-kind: ClusterRbacConfig
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
 metadata:
-  name: default
+  name: allow-nothing
 spec:
-  mode: 'ON_WITH_INCLUSION'
-  inclusion:
-    namespaces: ["default"]
+  action: ALLOW
+  # the rules field is not specified, and the policy will never match.

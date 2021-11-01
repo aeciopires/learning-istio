@@ -1,21 +1,23 @@
-apiVersion: "rbac.istio.io/v1alpha1"
-kind: ServiceRole
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
 metadata:
   name: ratings-viewer
   namespace: default
 spec:
+  selector:
+    matchLabels:
+      app: ratings
+      namespace: default
+  action: ALLOW
   rules:
-  - services: ["ratings.default.svc.cluster.local"]
-    methods: ["GET"]
----
-apiVersion: "rbac.istio.io/v1alpha1"
-kind: ServiceRoleBinding
-metadata:
-  name: bind-ratings
-  namespace: default
-spec:
-  subjects:
-  - user: "cluster.local/ns/default/sa/bookinfo-reviews"
-  roleRef:
-    kind: ServiceRole
-    name: "ratings-viewer"
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/ratings"]
+    - source:
+        namespaces: ["default"]
+    to:
+    - operation:
+        methods: ["GET"]
+    when:
+    - key: request.auth.claims[iss]
+      values: ["cluster.local/ns/default/sa/bookinfo-reviews"]

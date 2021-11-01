@@ -57,27 +57,26 @@ kubectl label namespace default istio-injection=enabled
 
 #----------------- Egress
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml
-kubectl get deployments.
+kubectl get deployments
 kubectl get pods
 kubectl get configmaps istio -n istio-system
-kubectl get configmaps istio -n istio-system -o yaml | grep -o "mode: ALLOW_ANY"
 
 SLEEP_POD=$(kubectl get pod | grep sleep | awk '{ print $1 }' | head -n1)
 kubectl exec -ti $SLEEP_POD -c sleep -- curl -I https://www.linuxtips.io
 
 kubectl edit configmaps istio -n istio-system
 
-kubectl get configmaps istio -n istio-system -o yaml | sed 's/mode: ALLOW_ANY/mode: REGISTRY_ONLY/g' | kubectl replace -n istio-system -f -
-
-kubectl get configmaps istio -n istio-system -o yaml | sed 's/mode: REGISTRY_ONLY/mode: ALLOW_ANY/g' | kubectl replace -n istio-system -f -
-
 kubectl apply -f $COMPLEMENTARY_FILES/egress/libera_httpbin_https.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/egress/libera_httpbin.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/egress/vs_httpbin_org.yaml
+
 kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/2
+
 kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/4
+
 kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/3
 
+# Remove configurations
 kubectl delete -f $COMPLEMENTARY_FILES/egress
 
 #----------------- Retry policy
@@ -89,6 +88,7 @@ vim $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 
+# Remove configurations
 kubectl delete -f $COMPLEMENTARY_FILES/retry-policy/
 
 # Uninstall Istio with helm

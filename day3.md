@@ -152,16 +152,19 @@ kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/rbac-config-ON.yaml
 vim $COMPLEMENTARY_FILES/authorization/rbac/namespace-policy.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/namespace-policy.yaml
-kubectl get servicerole
-kubectl get servicerolebindings.rbac.istio.io
+kubectl get authorizationpolicy
+kubectl get authorizationpolicy.security.istio.io
 
 vim $COMPLEMENTARY_FILES/authorization/rbac/productpage-policy.yaml
 
-kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/ratings-policy.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/productpage-policy.yaml
 
 vim $COMPLEMENTARY_FILES/authorization/rbac/ratings-policy.yaml
 
-kubectl get serviceaccounts
-kubectl delete -f $COMPLEMENTARY_FILES/authorization/rbac/namespace-policy.yaml
-kubectl delete -f $COMPLEMENTARY_FILES/authorization/rbac/ratings-policy.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/ratings-policy.yaml
+
+kubectl get authorizationpolicy
+
+# Remove configurations
+kubectl delete -f $COMPLEMENTARY_FILES/authorization/rbac/
 ```

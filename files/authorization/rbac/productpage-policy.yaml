@@ -1,21 +1,17 @@
-apiVersion: "rbac.istio.io/v1alpha1"
-kind: ServiceRole
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
 metadata:
   name: productpage-viewer
   namespace: default
 spec:
+  selector:
+    matchLabels:
+      app: productpage
+  action: ALLOW
   rules:
-  - services: ["productpage.default.svc.cluster.local"]
-    methods: ["GET"]
----
-apiVersion: "rbac.istio.io/v1alpha1"
-kind: ServiceRoleBinding
-metadata:
-  name: bind-productpage-viewer
-  namespace: default
-spec:
-  subjects:
-  - user: "*"
-  roleRef:
-    kind: ServiceRole
-    name: "productpage-viewer"
+  - from:
+    - source:
+        principals: ["*"]
+    to:
+    - operation:
+        methods: ["GET"]
