@@ -62,7 +62,8 @@ kubectl get pods
 kubectl get configmaps istio -n istio-system
 kubectl get configmaps istio -n istio-system -o yaml | grep -o "mode: ALLOW_ANY"
 
-kubectl exec -ti sleep-7d457d69b5-wbcbw -c sleep -- curl -I https://www.linuxtips.io
+SLEEP_POD=$(kubectl get pod | grep sleep | awk '{ print $1 }' | head -n1)
+kubectl exec -ti $SLEEP_POD -c sleep -- curl -I https://www.linuxtips.io
 
 kubectl edit configmaps istio -n istio-system
 
@@ -73,19 +74,17 @@ kubectl get configmaps istio -n istio-system -o yaml | sed 's/mode: REGISTRY_ONL
 kubectl apply -f $COMPLEMENTARY_FILES/egress/libera_httpbin_https.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/egress/libera_httpbin.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/egress/vs_httpbin_org.yaml
-kubectl exec -ti sleep-7d457d69b5-wbcbw -c sleep -- curl -I http://httpbin.org/delay/2
-kubectl exec -ti sleep-7d457d69b5-wbcbw -c sleep -- curl -I http://httpbin.org/delay/4
-kubectl exec -ti sleep-7d457d69b5-wbcbw -c sleep -- curl -I http://httpbin.org/delay/3
+kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/2
+kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/4
+kubectl exec -ti $SLEEP_POD -c sleep -- curl -I http://httpbin.org/delay/3
 
 kubectl delete -f $COMPLEMENTARY_FILES/egress
 
 #----------------- Retry policy
 vim $COMPLEMENTARY_FILES/retry-policy/destination_rule.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/destination_rule.yaml
 
 vim $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 
 kubectl delete -f $COMPLEMENTARY_FILES/retry-policy/
