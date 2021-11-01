@@ -4,7 +4,7 @@
 
 Esta documentação foi gerada durante o estudo do curso **[Descomplicando Istio](https://www.linuxtips.io/products/descomplicando-o-istio)** da [LinuxTips](https://www.linuxtips.io), como uma forma de aprender a usar o Istio e os conceitos de Service mesh.
 
-É recomendado ter um bom domínio sobre orquestração de conteinêres com Docker e Kubernetes antes de começar a estudar o Istio. Os links citados nas referências podem ajudar nisso.
+**É recomendado ter um bom domínio sobre orquestração de conteinêres com Docker e Kubernetes** antes de começar a estudar o Istio. Os links citados nas referências podem ajudar nisso. Você também pode aprender através dos cursos [Descomplicando Docker](https://www.linuxtips.io/products/descomplicando-o-docker) e [Descomplicando Kubernetes](https://www.linuxtips.io/products/descomplicando-o-kubernetes).
 
 Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 utilizando o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio. 
 
