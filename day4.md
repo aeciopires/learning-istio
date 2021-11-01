@@ -82,9 +82,11 @@ kubectl delete -f $COMPLEMENTARY_FILES/egress
 
 #----------------- Retry policy
 vim $COMPLEMENTARY_FILES/retry-policy/destination_rule.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/destination_rule.yaml
 
 vim $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 
 kubectl delete -f $COMPLEMENTARY_FILES/retry-policy/

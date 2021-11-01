@@ -1,8 +1,7 @@
-#apiVersion: "authentication.istio.io/v1alpha1"
 apiVersion: security.istio.io/v1beta1
-kind: "MeshPolicy"
+kind: PeerAuthentication
 metadata:
   name: "default"
 spec:
-  peers:
-  - mtls: {}
+  mtls:
+    mode: STRICT

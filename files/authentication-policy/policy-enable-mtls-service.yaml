@@ -1,11 +1,11 @@
-#apiVersion: "authentication.istio.io/v1alpha1"
 apiVersion: security.istio.io/v1beta1
-kind: "Policy"
+kind: PeerAuthentication
 metadata:
   name: "httpbin"
-  namespace: strigus
+  namespace: "strigus"
 spec:
-  targets:
-  - name: httpbin
-  peers:
-  - mtls: {}
+  selector:
+     matchLabels:
+       app: httpbin
+  mtls:
+    mode: STRICT

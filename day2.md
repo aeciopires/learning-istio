@@ -39,14 +39,17 @@ export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
 #----------------- Traffic request
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
 kubectl get destinationrules -o yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 kubectl get virtualservices
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 kubectl get virtualservice reviews -o yaml
 
@@ -58,6 +61,7 @@ kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all
 kubectl get virtualservice reviews -o yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 
 # Remove configurations
@@ -67,13 +71,17 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
-kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml 
+
+kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
+
 kubectl get virtualservice ratings -o yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
 
 # Remove configurations
@@ -83,12 +91,15 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
 
 # Remove configurations
@@ -96,9 +107,11 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 
 #----------------- Circuit breaking
 vim $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
 kubectl get destinationrule httpbin -o yaml
 
@@ -120,21 +133,27 @@ kubectl delete svc httpbin
 
 #----------------- Mirroring
 vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
 
 kubectl get pods
@@ -148,10 +167,12 @@ HTTPBIN_V2_POD=$(kubectl get pod | grep httpbin-v1 | awk '{ print $1 }' | head -
 kubectl logs $HTTPBIN_V2_POD httpbin
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 kubectl get virtualservices.networking.istio.io
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
+
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 kubectl get virtualservices.networking.istio.io httpbin -o yaml
 

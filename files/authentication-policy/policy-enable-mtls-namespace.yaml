@@ -1,9 +1,8 @@
-#apiVersion: "authentication.istio.io/v1alpha1"
 apiVersion: security.istio.io/v1beta1
-kind: "Policy"
+kind: PeerAuthentication
 metadata:
   name: "default"
   namespace: "giropops"
 spec:
-  peers:
-  - mtls: {}
+  mtls:
+    mode: STRICT
