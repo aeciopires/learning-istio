@@ -98,4 +98,13 @@ helm delete istiod -n istio-system
 helm delete istio-base -n istio-system
 kubectl delete namespace istio-system
 kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
+
+# Remove configurations
+kubectl delete ns giropops girus strigus
+
+kubectl delete deployment details-v1 httpbin-v1 httpbin-v2 productpage-v1 ratings-v1 reviews-v1 reviews-v2 reviews-v3 sleep
+
+kubectl delete svc details fortio httpbin productpage ratings reviews sleep
+
+kubectl get all -A
 ```
