@@ -133,7 +133,11 @@ kubectl get destinationrules -o yaml
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/bookinfo-gateway.yaml
 kubectl get deployments. --all-namespaces
 kubectl get svc
-kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0 &
+
+# Port forward in background for access Productpage application
+# Allow port 9080/TCP
+kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0 > /dev/null 2>&1 &
+# Access URL: http://master:9080/productpage
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/rbac-config-ON.yaml
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/platform/kube/rbac/rbac-config-ON.yaml

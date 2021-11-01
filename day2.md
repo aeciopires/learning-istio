@@ -39,19 +39,18 @@ export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
 #----------------- Traffic request
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
 kubectl get destinationrules -o yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 kubectl get virtualservices
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 kubectl get virtualservice reviews -o yaml
+
+# Remove configurations
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Traffic shifting
@@ -61,51 +60,48 @@ kubectl get virtualservice reviews -o yaml
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 
+# Remove configurations
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Fault injection
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml 
 kubectl get virtualservice ratings -o yaml
 
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
 
+# Remove configurations
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Request timeout
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
-
-kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-normal.yaml
+kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
+
+# Remove configurations
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Circuit breaking
 vim $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
-
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
 kubectl get destinationrule httpbin -o yaml
+
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/sample-client/fortio-deploy.yaml
 FORTIO_POD=$(kubectl get pod | grep fortio | awk '{ print $1 }')
 
@@ -117,49 +113,52 @@ kubectl exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 3 -qps 0 -n 3
 
 kubectl exec -it $FORTIO_POD  -c istio-proxy  -- sh -c 'curl localhost:15000/stats' | grep httpbin | grep pending
 
+# Remove configurations
 kubectl delete destinationrule httpbin
 kubectl delete deploy httpbin fortio-deploy
 kubectl delete svc httpbin
 
 #----------------- Mirroring
 vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
-vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
+
+vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v2.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/service-httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-sleep.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/virtual-service-httpbin.yaml
 
 vim $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/destination-rule-httpbin.yaml
+
 kubectl get pods
-kubectl exec -ti sleep-674f75ff4d-5bsnf -c sleep -- sh -c 'curl http://httpbin:8000/headers'
-kubectl logs httpbin-v1-b9985cc7d-t5f4z  httpbin
-kubectl logs httpbin-v2-5cdb74d4c7-2lc27 httpbin
+SLEEP_POD=$(kubectl get pod | grep sleep | awk '{ print $1 }' | head -n1)
+kubectl exec -ti $SLEEP_POD -c sleep -- sh -c 'curl http://httpbin:8000/headers'
+
+HTTPBIN_V1_POD=$(kubectl get pod | grep httpbin-v1 | awk '{ print $1 }' | head -n1)
+kubectl logs $HTTPBIN_V1_POD  httpbin
+
+HTTPBIN_V2_POD=$(kubectl get pod | grep httpbin-v1 | awk '{ print $1 }' | head -n1)
+kubectl logs $HTTPBIN_V2_POD httpbin
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
-
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
+
 kubectl get virtualservices.networking.istio.io
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 
 kubectl get virtualservices.networking.istio.io httpbin -o yaml
-kubectl exec -ti sleep-674f75ff4d-5bsnf -c sleep -- sh -c 'curl http://httpbin:8000/headers'
-kubectl logs httpbin-v1-b9985cc7d-t5f4z  httpbin
-kubectl logs httpbin-v2-5cdb74d4c7-2lc27 httpbin
-kubectl exec -ti sleep-674f75ff4d-5bsnf -c sleep -- sh -c 'curl http://httpbin:8000/headers'
-kubectl logs httpbin-v2-5cdb74d4c7-2lc27 httpbin
-kubectl logs httpbin-v1-b9985cc7d-t5f4z  httpbin
+kubectl exec -ti $SLEEP_POD -c sleep -- sh -c 'curl http://httpbin:8000/headers'
+kubectl logs $HTTPBIN_V1_POD httpbin
+kubectl logs $HTTPBIN_V2_POD httpbin
+kubectl exec -ti $SLEEP_POD -c sleep -- sh -c 'curl http://httpbin:8000/headers'
+kubectl logs $HTTPBIN_V1_POD httpbin
+kubectl logs $HTTPBIN_V2_POD httpbin
 ```
