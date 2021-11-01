@@ -149,12 +149,12 @@ kubectl logs $HTTPBIN_V2_POD httpbin
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
-
 kubectl get virtualservices.networking.istio.io
 
 vim $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
-
+kubectl apply -f $COMPLEMENTARY_FILES/mirroring/mirroring-httpbin.yaml
 kubectl get virtualservices.networking.istio.io httpbin -o yaml
+
 kubectl exec -ti $SLEEP_POD -c sleep -- sh -c 'curl http://httpbin:8000/headers'
 kubectl logs $HTTPBIN_V1_POD httpbin
 kubectl logs $HTTPBIN_V2_POD httpbin
