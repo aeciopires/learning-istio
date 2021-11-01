@@ -137,7 +137,7 @@ istioctl x precheck
 istioctl install --set profile=demo -y
 
 # Install Addons (grafana, prometheus, kiali, jaeger, zipkin)
-kubectl apply -f samples/addons
+kubectl apply -f $ISTIO_DIR_BASE/samples/addons
 kubectl rollout status deployment/kiali -n istio-system
 kubectl rollout status deployment/grafana -n istio-system
 kubectl rollout status deployment/prometheus -n istio-system
