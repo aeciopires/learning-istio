@@ -51,14 +51,6 @@ helm install istio-egress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-egress
 
  kubectl get pods -n istio-system
 
-# Uninstall with helm
-# helm delete istio-egress -n istio-system
-# helm delete istio-ingress -n istio-system
-# helm delete istiod -n istio-system
-# helm delete istio-base -n istio-system
-# kubectl delete namespace istio-system
-# kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
-
 #----------------- Egress
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml
 kubectl get deployments.
@@ -93,4 +85,12 @@ vim $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 kubectl apply -f $COMPLEMENTARY_FILES/retry-policy/virtualservice.yaml
 
 kubectl delete -f $COMPLEMENTARY_FILES/retry-policy/
+
+# Uninstall Istio with helm
+helm delete istio-egress -n istio-system
+helm delete istio-ingress -n istio-system
+helm delete istiod -n istio-system
+helm delete istio-base -n istio-system
+kubectl delete namespace istio-system
+kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
 ```
