@@ -10,8 +10,6 @@
 
 # Day 2
 
-Comandos executados em sequencia durante o treinamento.
-
 Estratégias de gerenciamento de tráfego (*traffic management*):
 
 > * **traffic request** => roteamento baseado nas configurações das requisições (requests), como por exemplo campos do header.

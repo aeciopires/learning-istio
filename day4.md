@@ -10,7 +10,7 @@
 
 # Day 4
 
-Comandos executados em sequencia durante o treinamento.
+Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
 #------- Specifics (master)
