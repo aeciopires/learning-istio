@@ -23,9 +23,12 @@ export PATH="$PATH:$ISTIO_DIR_BASE/bin"
 export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
 #----------------- Uninstall Istio
+# Uninstall App and Istio
 kubectl delete -f $ISTIO_DIR_BASE/samples/addons
 istioctl manifest generate --set profile=demo | kubectl delete --ignore-not-found=true -f -
-kubectl get virtualservices.networking.istio.io --all-namespaces
+kubectl delete namespace istio-system
+kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
+kubectl label namespace default istio-injection-
 
 #----------------- Install Helm
 # Reference: https://helm.sh/docs/intro/install/
@@ -49,7 +52,8 @@ helm install istio-ingress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-ingre
 helm install istio-egress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-egress \
     -n istio-system
 
- kubectl get pods -n istio-system
+kubectl get pods -n istio-system
+kubectl label namespace default istio-injection=enabled
 
 #----------------- Egress
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml

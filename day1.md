@@ -136,6 +136,13 @@ istioctl x precheck
 # Install profile of demonstration
 istioctl install --set profile=demo -y
 
+# Install Addons (grafana, prometheus, kiali, jaeger, zipkin)
+kubectl apply -f samples/addons
+kubectl rollout status deployment/kiali -n istio-system
+kubectl rollout status deployment/grafana -n istio-system
+kubectl rollout status deployment/prometheus -n istio-system
+kubectl rollout status deployment/jaeger -n istio-system
+
 # List api-resources and crd
 kubectl api-resources | grep istio
 kubectl get crd | grep istio
@@ -182,9 +189,7 @@ kubectl port-forward svc/grafana 3000:3000 -n istio-system --address=0.0.0.0
 kubectl port-forward svc/prometheus 9090:9090 -n istio-system --address=0.0.0.0
 # Access URL: http://master:9090
 
-# Uninstall App and Istio
-kubectl delete -f $ISTIO_DIR_BASE/samples/addons
-istioctl manifest generate --set profile=demo | kubectl delete --ignore-not-found=true -f -
-kubectl delete namespace istio-system
-kubectl label namespace default istio-injection-
+# Allow port 16685/TCP
+kubectl port-forward svc/tracing 16685:80 -n istio-system --address=0.0.0.0
+# Access URL: http://master:16685
 ```

@@ -1,4 +1,5 @@
-apiVersion: "authentication.istio.io/v1alpha1"
+#apiVersion: "authentication.istio.io/v1alpha1"
+apiVersion: security.istio.io/v1beta1
 kind: "Policy"
 metadata:
   name: "httpbin"
