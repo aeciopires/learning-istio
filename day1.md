@@ -175,9 +175,6 @@ kubectl describe gateways.networking.istio.io bookinfo-gateway
 kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0 > /dev/null 2>&1 &
 # Access URL: http://master:9080/productpage
 
-kubectl apply -f $ISTIO_DIR_BASE/samples/addons
-kubectl rollout status deployment/kiali -n istio-system
-
 # Port forward in background for access Kiali
 # Allow port 20001/TCP
 kubectl port-forward svc/kiali 20001:20001 -n istio-system --address=0.0.0.0 > /dev/null 2>&1 &
