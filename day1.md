@@ -135,8 +135,6 @@ istioctl x precheck
 
 # Install profile of demonstration
 istioctl install --set profile=demo -y
-# Or:
-kubectl apply -f $ISTIO_DIR_BASE/install/kubernetes/istio-demo.yaml
 
 # List api-resources and crd
 kubectl api-resources | grep istio
