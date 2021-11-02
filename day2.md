@@ -28,9 +28,13 @@ Estratégias de gerenciamento de tráfego (*traffic management*):
 Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
-# Loop for test the access in application
+# Loop for test the access in productpage application
 # Run in your compute
 for aux in $(seq 1 1000); do curl -I -X GET http://master:9080/productpage; done
+
+# Loop for test the access in httpbin application
+# Run in your compute
+for aux in $(seq 1 1000); do curl -I -X GET http://master:8000; done
 
 #------- Specifics (master)
 sudo su
@@ -136,20 +140,28 @@ kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-al
 vim $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml
+kubectl get deployment
+kubectl get services
+
+# Port forward in background for access HTTPBin application
+# Allow port 8000/TCP
+kubectl port-forward svc/httpbin 8000:8000 -n default --address=0.0.0.0 > /dev/null 2>&1 &
+# Access URL: http://master:8000
 
 vim $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/circuit-braker/circuit-breaker.yaml
+kubectl get destinationrule
 kubectl get destinationrule httpbin -o yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/sample-client/fortio-deploy.yaml
 FORTIO_POD=$(kubectl get pod | grep fortio | awk '{ print $1 }')
 
-kubectl exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -curl  http://httpbin:8000/get
+kubectl exec -it $FORTIO_POD  -c fortio -- /usr/bin/fortio load -curl http://httpbin:8000/get
 
-kubectl exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 2 -qps 0 -n 20 -loglevel Warning http://httpbin:8000/get
+kubectl exec -it $FORTIO_POD  -c fortio -- /usr/bin/fortio load -c 2 -qps 0 -n 20 -loglevel Warning http://httpbin:8000/get
 
-kubectl exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 3 -qps 0 -n 30 -loglevel Warning http://httpbin:8000/get
+kubectl exec -it $FORTIO_POD  -c fortio -- /usr/bin/fortio load -c 3 -qps 0 -n 30 -loglevel Warning http://httpbin:8000/get
 
 kubectl exec -it $FORTIO_POD  -c istio-proxy  -- sh -c 'curl localhost:15000/stats' | grep httpbin | grep pending
 

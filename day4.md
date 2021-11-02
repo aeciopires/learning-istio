@@ -13,9 +13,13 @@
 Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
-# Loop for test the access in application
+# Loop for test the access in productpage application
 # Run in your compute
 for aux in $(seq 1 1000); do curl -I -X GET http://master:9080/productpage; done
+
+# Loop for test the access in httpbin application
+# Run in your compute
+for aux in $(seq 1 1000); do curl -I -X GET http://master:8000; done
 
 #------- Specifics (master)
 sudo su
