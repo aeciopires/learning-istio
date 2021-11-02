@@ -28,6 +28,10 @@ Estratégias de gerenciamento de tráfego (*traffic management*):
 Os comandos a seguir foram executados apenas no **master**.
 
 ```bash
+# Loop for test the access in application
+# Run in your compute
+for aux in $(seq 1 1000); do curl -I -X GET http://master:9080/productpage; done
+
 #------- Specifics (master)
 sudo su
 export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
