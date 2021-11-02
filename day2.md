@@ -41,21 +41,34 @@ export PATH="$PATH:$ISTIO_DIR_BASE/bin"
 # Complementary files
 export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
+# Remove resources of day 1
+kubectl get gateway
+kubectl get virtualservice
+kubectl delete gateway bookinfo-gateway
+kubectl delete virtualservice bookinfo
+
 #----------------- Traffic request
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/destination-rule-all.yaml
+kubectl get destinationrules
 kubectl get destinationrules -o yaml
+kubectl get pods -o wide
+kubectl get deployments -o wide
+kubectl get services -o wide
 
+# Routing traffic for v1 of details, productpage, ratings and reviews applications
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 kubectl get virtualservices
 
+# Routing traffic of reviews per user
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 kubectl get virtualservice reviews -o yaml
+kubectl describe virtualservice reviews
 
 # Remove configurations
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
