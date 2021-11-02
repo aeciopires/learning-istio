@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: sleep
-        image: tutum/curl
+        image: curlimages/curl
         command: ["/bin/sleep","infinity"]
         imagePullPolicy: IfNotPresent

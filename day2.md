@@ -171,6 +171,7 @@ kubectl delete deploy httpbin fortio-deploy
 kubectl delete svc httpbin
 
 #----------------- Mirroring
+# Preparing applications, services, virtualservices and destinationrules for mirroring
 vim $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/mirroring/deployment-httpbin-v1.yaml
