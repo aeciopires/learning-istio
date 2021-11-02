@@ -74,9 +74,11 @@ kubectl describe virtualservice reviews
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Traffic shifting
+# Routing traffic for v1 of details, productpage, ratings and reviews applications
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
-kubectl get virtualservice reviews -o yaml
+kubectl get virtualservices
 
+# Routing traffic of reviews per weight
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
@@ -85,18 +87,22 @@ kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-rev
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Fault injection
+# Routing traffic for v1 of details, productpage, ratings and reviews applications
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
+# Routing traffic of reviews per user
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 
+# Routing traffic of ratings per user and request timeout
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
 
 kubectl get virtualservice ratings -o yaml
 
+# Routing traffic of ratings per user and http code
 vim $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
 
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-ratings-test-abort.yaml
@@ -105,16 +111,20 @@ kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-rat
 kubectl delete -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
 #----------------- Request timeout
+# Routing traffic for v1 of details, productpage, ratings and reviews applications
 kubectl apply -f $ISTIO_DIR_BASE/samples/bookinfo/networking/virtual-service-all-v1.yaml
 
+# Routing traffic for v2 of reviews
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-normal.yaml
 
+# Delay Injected in requests for ratings
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-ratings-delay.yaml
 
+# Simulating timeout failure of reviews
 vim $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/request-timeout/virtual-service-reviews-timeout.yaml
