@@ -33,9 +33,13 @@ export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 #----------------- Uninstall Istio
 # Uninstall App and Istio
 kubectl delete -f $ISTIO_DIR_BASE/samples/addons
+
 istioctl manifest generate --set profile=demo | kubectl delete --ignore-not-found=true -f -
+
 kubectl delete namespace istio-system
+
 kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 kubectl delete crd
+
 kubectl label namespace default istio-injection-
 
 #----------------- Install Helm
@@ -49,17 +53,18 @@ helm version
 #----------------- Install Istio with Helm
 # Reference: https://istio.io/latest/docs/setup/install/helm/
 kubectl create namespace istio-system
+
 helm install istio-base $ISTIO_DIR_BASE/manifests/charts/base -n istio-system
 
-helm install istiod $ISTIO_DIR_BASE/manifests/charts/istio-control/istio-discovery \
-    -n istio-system
+helm install istiod $ISTIO_DIR_BASE/manifests/charts/istio-control/istio-discovery -n istio-system
 
-helm install istio-ingress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-ingress \
-    -n istio-system
+helm install istio-ingress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-ingress -n istio-system
 
-helm install istio-egress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-egress \
-    -n istio-system
+helm install istio-egress $ISTIO_DIR_BASE/manifests/charts/gateways/istio-egress -n istio-system
 
+kubectl apply -f $ISTIO_DIR_BASE/samples/addons
+
+helm ls -n istio-system
 kubectl get pods -n istio-system
 kubectl label namespace default istio-injection=enabled
 
