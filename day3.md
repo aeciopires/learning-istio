@@ -175,12 +175,14 @@ kubectl get svc
 kubectl port-forward svc/productpage 9080:9080 -n default --address=0.0.0.0 > /dev/null 2>&1 &
 # Access URL: http://master:9080/productpage
 
+# Enable authorization in namespace
 vim $COMPLEMENTARY_FILES/authorization/rbac/rbac-config-ON.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/rbac-config-ON.yaml
 
 vim $COMPLEMENTARY_FILES/authorization/rbac/namespace-policy.yaml
 
+# Authorize get and head HTTP methods in default namespace
 kubectl apply -f $COMPLEMENTARY_FILES/authorization/rbac/namespace-policy.yaml
 kubectl get authorizationpolicy
 kubectl get authorizationpolicy.security.istio.io
