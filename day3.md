@@ -31,6 +31,7 @@ export PATH="$PATH:$ISTIO_DIR_BASE/bin"
 export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
 #----------------- Authentication Policy
+kubectl get all --all-namespaces
 kubectl create ns giropops
 kubectl create ns strigus
 kubectl create ns girus
@@ -44,89 +45,110 @@ kubectl apply -f $ISTIO_DIR_BASE/samples/httpbin/httpbin.yaml -n girus
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml -n giropops
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml -n strigus
 kubectl apply -f $ISTIO_DIR_BASE/samples/sleep/sleep.yaml -n girus
+kubectl get deployments --all-namespaces
 kubectl get pods --all-namespaces
 
+# Testing the comunication between pods of namespaces
 SLEEP_POD_STRIGUS=$(kubectl get pod -n strigus | grep sleep | awk '{ print $1 }' | head -n1)
+
 kubectl exec -ti -n strigus $SLEEP_POD_STRIGUS -- curl http://httpbin.giropops:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
+kubectl exec -ti -n strigus $SLEEP_POD_STRIGUS -- curl http://httpbin.girus:8000/ip -s -o /dev/null -w "%{http_code}\n"
+
 SLEEP_POD_GIROPOPS=$(kubectl get pod -n giropops | grep sleep | awk '{ print $1 }' | head -n1)
+
 kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
 kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.girus:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
-kubectl get policies.authentication.istio.io --all-namespaces
-kubectl get meshpolicies.authentication.istio.io --all-namespaces
-kubectl get destinationrules.networking.istio.io --all-namespaces -o yaml | grep "host:"
+SLEEP_POD_GIRUS=$(kubectl get pod -n girus | grep sleep | awk '{ print $1 }' | head -n1)
 
+kubectl exec -ti -n girus $SLEEP_POD_GIRUS -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
+
+kubectl exec -ti -n girus $SLEEP_POD_GIRUS -- curl http://httpbin.giropops:8000/ip -s -o /dev/null -w "%{http_code}\n"
+
+# Enable MTLS in cluster
 vim $COMPLEMENTARY_FILES/authentication-policy/meshpolicy.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/meshpolicy.yaml
 
-kubectl exec -ti -n strigus $SLEEP_POD_STRIGUS -- curl http://httpbin.giropops:8000/ip -s -o /dev/null -w "%{http_code}\n"
+kubectl get authorizationpolicies.security.istio.io --all-namespaces
+kubectl get peerauthentications.security.istio.io --all-namespaces
+kubectl get requestauthentications.security.istio.io --all-namespaces
+kubectl get destinationrules.networking.istio.io --all-namespaces -o yaml | grep "host:"
 
-kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
-kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.girus:8000/ip -s -o /dev/null -w "%{http_code}\n"
-
+# Enable MTLS local services of cluster
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-meshpolicy.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-meshpolicy.yaml
 
-kubectl exec -ti -n strigus $SLEEP_POD_STRIGUS -- curl http://httpbin.giropops:8000/ip -s -o /dev/null -w "%{http_code}\n"
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
-kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
-
-kubectl exec -ti -n giropops $SLEEP_POD_GIROPOPS -- curl http://httpbin.girus:8000/ip -s -o /dev/null -w "%{http_code}\n"
-
+# Disable MTLS for services of girus namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-fix-girus-conn.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-fix-girus-conn.yaml
 
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
+
+# Remove configurations
 kubectl delete PeerAuthentication default
 kubectl delete destinationrules httpbin-girus -n girus
 kubectl delete destinationrules api-server -n istio-system
 kubectl delete destinationrules default -n istio-system
 
+# Enable MTLS for giropops namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-namespace.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-namespace.yaml
 
-for from in "giropops" "strigus"; do for to in "giropops" "strigus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
+# Enable MTLS for services of giropops namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-enable-mtls-namespace.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-enable-mtls-namespace.yaml
 
-for from in "giropops" "strigus"; do for to in "giropops" "strigus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
-
+# Testing the comunication between pods of namespaces
 for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
+# Enable MTLS for strigus namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-service.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-service.yaml
 
+# Testing the comunication between pods of namespaces
 for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
+# Enable MTLS for services of strigus namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-enable-mtls-service.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-enable-mtls-service.yaml
 
+# Testing the comunication between pods of namespaces
 for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
+# Enable MTLS only for port of specif service of strigus namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-specific-service.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/policy-enable-mtls-specific-service.yaml
 
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
+
+# Disable MTLS only for port of specif service of strigus namespace
 vim $COMPLEMENTARY_FILES/authentication-policy/destination-rule-specific-service.yaml
 
 kubectl apply -f $COMPLEMENTARY_FILES/authentication-policy/destination-rule-specific-service.yaml
 
-SLEEP_POD_GIRUS=$(kubectl get pod -n girus | grep sleep | awk '{ print $1 }' | head -n1)
-kubectl exec -ti -n girus $SLEEP_POD_GIRUS -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
-
-kubectl exec -ti -n girus $SLEEP_POD_GIRUS -- curl http://httpbin.giropops:8000/ip -s -o /dev/null -w "%{http_code}\n"
-
-kubectl exec $(kubectl get pod -l app=sleep -n girus -o jsonpath={.items..metadata.name}) -c sleep -n girus -- curl http://httpbin.strigus:8000/ip -s -o /dev/null -w "%{http_code}\n"
+# Testing the comunication between pods of namespaces
+for from in "giropops" "strigus" "girus"; do for to in "giropops" "strigus" "girus"; do kubectl exec $(kubectl get pod -l app=sleep -n ${from} -o jsonpath={.items..metadata.name}) -c sleep -n ${from} -- curl "http://httpbin.${to}:8000/ip" -s -o /dev/null -w "sleep.${from} to httpbin.${to}: %{http_code}\n"; done; done
 
 kubectl delete peerauthentication default -n giropops
 kubectl delete peerauthentication httpbin -n strigus

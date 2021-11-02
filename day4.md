@@ -114,5 +114,5 @@ kubectl delete deployment details-v1 httpbin-v1 httpbin-v2 productpage-v1 rating
 
 kubectl delete svc details fortio httpbin productpage ratings reviews sleep
 
-kubectl get all -A
+kubectl get all --all-namespaces
 ```
