@@ -22,21 +22,6 @@ As versões dos softwares utilizados foram:
 * Helm: 3.12.3
 * Istio: 1.11.4
 
-Instances:
-
-* type: on-demand (t2.large 2 CPU e 8 GB de memória)
-* HD: 30 GB
-* SO: Ubuntu 22.04 64 bits
-* login: ubuntu
-* SSH: 22/TCP
-* key: teste-aecio-treinamento-istio
-
-```bash
-ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@master
-ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@worker1
-ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@worker2
-```
-
 # Day 1
 
 Veja os comandos [aqui](day1.md)
