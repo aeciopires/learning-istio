@@ -16,6 +16,7 @@ Crie um cluster k8s usando uma das opções abaixo:
 * [kubeadm](kubeadm.md);
 * [kind](kind.md);
 
+Instale o helm com as instruções da página: [helm](helm.md).
 
 Instale o Istio com os seguintes comandos:
 
@@ -24,19 +25,23 @@ Instale o Istio com os seguintes comandos:
 # References:
 # https://istio.io/latest/docs/setup/getting-started/
 # Allow all these ports: https://istio.io/latest/docs/ops/deployment/requirements/
-curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.11.4 sh -
-export ISTIO_DIR_BASE="/home/ubuntu/istio-1.11.4"
-cd $ISTIO_DIR_BASE
+ISTIO_VERSION=1.20.2
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION="$ISTIO_VERSION" sh -
+export ISTIO_DIR_BASE="$HOME/istio-$ISTIO_VERSION"
+cd $ISTIO_DIR_BASE/bin
 export PATH="$PATH:$ISTIO_DIR_BASE/bin"
+istioctl x precheck 
 
 # Complementary files
 git clone https://github.com/aeciopires/learning-istio
 export COMPLEMENTARY_FILES=/home/ubuntu/learning-istio/files
 
+# Check istio requirements
 istioctl x precheck
 
 # Install profile of demonstration
 istioctl install --set profile=demo -y
+istioctl verify-install
 
 # Install Addons (grafana, prometheus, kiali, jaeger, zipkin)
 kubectl apply -f $ISTIO_DIR_BASE/samples/addons

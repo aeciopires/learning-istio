@@ -20,7 +20,7 @@ As versões dos softwares utilizados foram:
 * Kubernetes (kubeadm): 1.29.1
 * kubectl: 1.29.1
 * Helm: 3.12.3
-* Istio: 1.11.4
+* Istio: 1.20.2
 
 # Day 1
 
