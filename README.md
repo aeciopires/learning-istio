@@ -16,15 +16,17 @@ Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instânci
 
 As versões dos softwares utilizados foram:
 
-* Docker: 20.04
-* Kubernetes: 1.22.2
-* Helm: 3.7.1
+* Docker: 25.0.2
+* Kubernetes (kubeadm): 1.29.1
+* kubectl: 1.29.1
+* Helm: 3.12.3
 * Istio: 1.11.4
 
 Instances:
 
 * type: on-demand (t2.large 2 CPU e 8 GB de memória)
-* SO: Ubuntu 20.04 64 bits
+* HD: 30 GB
+* SO: Ubuntu 22.04 64 bits
 * login: ubuntu
 * SSH: 22/TCP
 * key: teste-aecio-treinamento-istio

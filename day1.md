@@ -24,23 +24,22 @@ sudo systemctl stop ufw
 sudo systemctl disable ufw
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y vim traceroute telnet git tcpdump elinks curl wget openssl netcat net-tools jq
+sudo apt install -y vim traceroute telnet git tcpdump elinks curl wget openssl netcat net-tools jq gpg acl uidmap
 
 # Add aliases in files: ~/.bashrc and /root/.bashrc
 alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias grep='grep --color=auto'
 alias k='kubectl'
-alias kmongo='kubectl run --rm -it mongoshell --image=mongo:latest -n default -- bash'
-alias kmysql='kubectl run --rm -it mysql --image=mysql:5.7 -n default -- bash'
-alias kredis='kubectl run --rm -it redis-cli --image=redis:latest -n default -- bash'
-alias kssh='kubectl run ssh-client -it --rm --image=kroniak/ssh-client -n default -- bash'
-alias nettools='kubectl run --rm -it nettools --image=travelping/nettools:latest -n default -- bash'
-alias live='curl parrot.live'
 alias l='ls -CF'
 alias la='ls -A'
+alias live='curl parrot.live'
 alias ll='ls -alF'
 alias ls='ls --color=auto'
+alias nettools='kubectl run --rm -it nettools-$(< /dev/urandom tr -dc a-z-0-9 | head -c${1:-4}) --image=aeciopires/nettools:1.0.0 -n default -- bash'
+alias randompass='< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-16}'
+alias sc='source ~/.bashrc'
+alias show-hidden-files='du -sch .[!.]* * |sort -h'
 alias gitlog='git log -p'
 
 # Apply new aliases
@@ -67,34 +66,60 @@ cat > /etc/docker/daemon.json <<EOF
   "storage-driver": "overlay2"
 }
 EOF
+exit
 
-sudo mkdir -p /etc/systemd/system/docker.service.d
+dockerd-rootless-setuptool.sh install
 sudo systemctl daemon-reload
 sudo systemctl restart docker
+sudo systemctl restart containerd
+sudo systemctl enable docker
+sudo systemctl enable containerd
+sudo usermod -aG docker $USER
+sudo setfacl -m user:$USER:rw /var/run/docker.sock
+sudo setfacl -m user:$USER:rw /var/run/containerd/containerd.sock
 
 # Check whether the Cgroup driver has been set correctly
 # If the output was Cgroup Driver: systemd, all right!
 docker info | grep -i cgroup
 
+# Reference: https://github.com/containerd/containerd/discussions/8033
+# Edit /etc/containerd/config.toml file and uncomment the line
+# Before:
+#  disabled_plugins = ["cri"]
+# After:
+#  #disabled_plugins = ["cri"]
+# Now, run the command:
+sudo systemctl restart containerd.service
+
+
 # Install Kubernetes with kubeadm
 # References:
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+K8S_VERSION='1.29'
 sudo swapoff -a
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/k8s.list
-cat /etc/apt/sources.list.d/k8s.list
-sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
+sudo curl -fsSL "https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+cat /etc/apt/sources.list.d/kubernetes.list
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 kubectl version --client
 
 
+
+
 #------- Specifics (master)
-kubeadm config images pull
-kubeadm init
+# Config allow system network comunication
+sudo modprobe br_netfilter ip_vs_rr ip_vs_wrr ip_vs_sh nf_conntrack_ipv4 ip_vs
+sudo sysctl net.ipv4.conf.all.forwarding=1
+echo "net.ipv4.conf.all.forwarding=1" | sudo tee -a /etc/sysctl.conf
+
+
+sudo kubeadm config images pull
+sudo kubeadm init
 # Reset
-# kubeadm reset
-# rm -rf /etc/cni/net.d
+# sudo kubeadm reset
+# sudo rm -rf /etc/cni/net.d
 
 # Config kubectl
 mkdir -p $HOME/.kube
@@ -102,21 +127,28 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl get nodes
 
-# Config pod network (weave-net)
-sudo modprobe br_netfilter ip_vs_rr ip_vs_wrr ip_vs_sh nf_conntrack_ipv4 ip_vs
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
-kubectl get pods -A
-kubectl get nodes
+# Install weavenet or calico
+# WeaveNet:
+#   https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#install
+#   https://www.pluralsight.com/cloud-guru/labs/aws/setting-up-kubernetes-networking-with-weave-net
+# Calico:
+#   https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises
+
 
 
 #------- Specifics (worker1 and worker2)
 # Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
 #
 # In master node print a join command for add worker node in cluster
-kubeadm token create --print-join-command
+sudo kubeadm token create --print-join-command
 #
 # Example of command to run in worker node:
-# kubeadm join 10.0.35.25:6443 --token xzlzjw.bksen5z6somtgh22 --discovery-token-ca-cert-hash sha256:86e507a7af3de3b47aceff4c9a2466e965e72ff7236a37031ea76258425b5c72
+kubeadm join 172.31.17.64:6443 --token st7hlu.6hbl4c6f2crh08ys \
+	--discovery-token-ca-cert-hash sha256:331afc84c3c71a369d314ad3be27d738ccc1535fa2492876fcfaec42c5fa3135
+
+
+
+
 
 #------- Specifics (master)
 # References:
