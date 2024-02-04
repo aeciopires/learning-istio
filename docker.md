@@ -3,10 +3,12 @@
 Instale o Docker CE (Community Edition) com os seguintes comandos:
 
 ```bash
-sudo su
-curl -fsSL https://get.docker.com | bash
+curl -fsSL https://get.docker.com | sudo bash
 
-cat > /etc/docker/daemon.json <<EOF
+# References:
+# https://stackoverflow.com/questions/18836853/sudo-cat-eof-file-doesnt-work-sudo-su-does
+# https://earthly.dev/blog/managing-k8s-with-kubeadm/
+sudo bash -c 'cat > /etc/docker/daemon.json <<EOF
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
   "log-driver": "json-file",
@@ -15,8 +17,8 @@ cat > /etc/docker/daemon.json <<EOF
   },
   "storage-driver": "overlay2"
 }
-EOF
-exit
+EOF'
+
 
 # Add your user to the Docker group
 sudo apt install -y acl uidmap

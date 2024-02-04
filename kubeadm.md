@@ -17,6 +17,8 @@ ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@work
 ssh -o ServerAliveInterval=30 -i ~/teste-aecio-treinamento-istio.pem ubuntu@worker2
 ```
 
+Instale o **Docker** em cada instância com as instruções da página: [docker](docker.md).
+
 Execute os seguintes comandos de acordo com a instância.
 
 ```bash
@@ -32,26 +34,6 @@ sudo systemctl disable ufw
 sudo apt update
 sudo apt upgrade -y
 sudo apt install -y vim traceroute telnet git tcpdump elinks curl wget openssl netcat net-tools jq gpg acl uidmap
-
-# Add aliases in files: ~/.bashrc and /root/.bashrc
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias grep='grep --color=auto'
-alias k='kubectl'
-alias l='ls -CF'
-alias la='ls -A'
-alias live='curl parrot.live'
-alias ll='ls -alF'
-alias ls='ls --color=auto'
-alias nettools='kubectl run --rm -it nettools-$(< /dev/urandom tr -dc a-z-0-9 | head -c${1:-4}) --image=aeciopires/nettools:1.0.0 -n default -- bash'
-alias randompass='< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-16}'
-alias sc='source ~/.bashrc'
-alias show-hidden-files='du -sch .[!.]* * |sort -h'
-alias gitlog='git log -p'
-
-# Apply new aliases
-source ~/.bashrc
-source /root/.bashrc
 
 # Reboot system
 sudo reboot
@@ -69,10 +51,39 @@ docker info | grep -i cgroup
 # Now, run the command:
 sudo systemctl restart containerd.service
 
+# Reference:
+# https://comtechies.com/setup-kubernetes-cluster-kubeadm.html
+# https://devopscube.com/setup-kubernetes-cluster-kubeadm/
+# Config allow system network comunication
+# Execute the following commands on all the nodes to enable IPtables bridged traffic and to enable SWAP.
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# sysctl params required by setup, params persist across reboots
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+# Apply sysctl params without reboot
+sudo sysctl --system
+
+sudo swapoff -a
+(crontab -l 2>/dev/null; echo "@reboot /sbin/swapoff -a") | crontab - || true
 
 # Install Kubernetes with kubeadm
 # References:
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+# https://earthly.dev/blog/managing-k8s-with-kubeadm/
+# https://www.densify.com/kubernetes-tools/kubeadm/
+# https://stackoverflow.com/questions/43201643/kubeadm-and-weave-not-working-together#43204264
+# https://devopscube.com/setup-kubernetes-cluster-kubeadm/
 K8S_VERSION='1.29'
 sudo swapoff -a
 sudo curl -fsSL "https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -84,17 +95,21 @@ sudo apt-mark hold kubelet kubeadm kubectl
 kubectl version --client
 
 
-
+# Add the node IP to KUBELET_EXTRA_ARGS.
+INTEFACE_NAME='eth0'
+sudo apt-get install -y jq
+export local_ip="$(ip --json a s | jq -r --arg interface "$INTEFACE_NAME" '.[] | if .ifname == $interface then .addr_info[] | if .family == "inet" then .local else empty end else empty end')"
+sudo bash -c "cat > /etc/default/kubelet << EOF
+KUBELET_EXTRA_ARGS=--node-ip=$local_ip
+EOF"
 
 #------- Specifics (master)
-# Config allow system network comunication
-sudo modprobe br_netfilter ip_vs_rr ip_vs_wrr ip_vs_sh nf_conntrack_ipv4 ip_vs
-sudo sysctl net.ipv4.conf.all.forwarding=1
-echo "net.ipv4.conf.all.forwarding=1" | sudo tee -a /etc/sysctl.conf
-
+IPADDR="$local_ip"
+NODENAME=$(hostname -s)
+POD_CIDR="192.168.0.0/16"
 
 sudo kubeadm config images pull
-sudo kubeadm init
+sudo kubeadm init --apiserver-advertise-address=$IPADDR  --apiserver-cert-extra-sans=$IPADDR  --pod-network-cidr=$POD_CIDR --node-name $NODENAME --ignore-preflight-errors Swap
 # Reset
 # sudo kubeadm reset
 # sudo rm -rf /etc/cni/net.d
@@ -105,16 +120,21 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl get nodes
 
-# Install weavenet or calico
-# WeaveNet:
-#   https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#install
-#   https://www.pluralsight.com/cloud-guru/labs/aws/setting-up-kubernetes-networking-with-weave-net
-# Calico:
-#   https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises
+# You verify all the cluster component health statuses using the following command.
+kubectl get --raw='/readyz?verbose'
+kubectl cluster-info
 
+# Reference:
+# https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises
+# Kubeadm does not configure any network plugin. You need to install a network plugin of your choice for kubernetes pod networking and enable network policy.
+# I am using the Calico network plugin for this setup.
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/tigera-operator.yaml
+
+curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/custom-resources.yaml -O
+
+kubectl create -f custom-resources.yaml
 
 # Install MetalLB following the instructions of the page: https://metallb.universe.tf/installation/
-
 
 #------- Specifics (worker1 and worker2)
 # Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
@@ -123,5 +143,5 @@ kubectl get nodes
 sudo kubeadm token create --print-join-command
 #
 # Example of command to run in worker node:
-kubeadm join 172.31.17.64:6443 --token st7hlu.6hbl4c6f2crh08ys \
-	--discovery-token-ca-cert-hash sha256:331afc84c3c71a369d314ad3be27d738ccc1535fa2492876fcfaec42c5fa3135
+sudo kubeadm join 172.31.23.105:6443 --token iax219.i23cr4o1hcnln4t7 \
+	--discovery-token-ca-cert-hash sha256:daf0c3356f3ec0c108d492c71ff3d719ef4ac4e5af4bdfcca786a1e0c123e469
