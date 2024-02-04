@@ -1,3 +1,10 @@
+<!-- TOC -->
+
+- [Contribuindo](#contribuindo)
+- [Dica](#dica)
+
+<!-- TOC -->
+
 # Contribuindo
 
 Sua contribuição é muito bem vinda!
@@ -10,7 +17,7 @@ Execute os passos a seguir sempre que desejar melhorar o conteúdo deste reposit
 * Clone o repositório resultante do fork para o seu computador.
 * Adicione a URL do repositório de origem com o comando a seguir.
 
-```
+```bash
 git remote -v
 git remote add upstream git@github.com:aeciopires/learning-istio.git
 git remote -v
@@ -18,13 +25,13 @@ git remote -v
 
 * Crie uma branch usando o padrão:
 
-```
+```bash
 git checkout -b BRANCH_NAME
 ```
 
 * Certifique-se de que está na branch correta, usando o comando a seguir.
 
-```
+```bash
 git branch
 ```
 
@@ -34,7 +41,9 @@ git branch
 * Commit as suas alterações na branch recém criada, de preferência faça um commit para cada arquivo editado/criado.
 * Envie os commits para o repositório remoto com o comando:
 
-```git push --set-upstream origin BRANCH_NAME```.
+```bash
+git push --set-upstream origin BRANCH_NAME
+```
 
 * Crie um Pull Request (PR) para a branch `main` do repositório original. Veja este [tutorial](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)
 * Atualize o conteúdo com as sugestões do revisor (se necessário).
@@ -47,25 +56,25 @@ git pull upstream main
 
 * Remova a branch local após a aprovação e merge do seu PR, usando o comando:
 
-```
+```bash
 git branch -d BRANCH_NAME
 ```
 
 * Atualize a branch ``main`` do seu repositório local.
 
-```
+```bash
 git push origin main
 ```
 
 * Envie a exclusão da branch local para o seu repositório no GitHub com o comando:
 
-```
+```bash
 git push --delete origin BRANCH_NAME
 ```
 
 * Para manter seu fork em sincronia com o repositório original, execute estes comandos:
 
-```
+```bash
 git pull upstream main
 git push origin main
 ```

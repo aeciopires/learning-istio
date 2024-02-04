@@ -1,16 +1,15 @@
 <!-- TOC -->
 
-- [Requirements](#requirements)
-- [General Packages](#general-packages)
-- [Docker](#docker)
+- [Requisitos](#requisitos)
+- [Pacotes gerais](#pacotes-gerais)
 - [Kubectl](#kubectl)
 - [Kind](#kind)
 
 <!-- TOC -->
 
-# Requirements
+# Requisitos
 
-# General Packages
+# Pacotes gerais
 
 Instale os seguintes pacotes de acordo com o sistema operacional.
 
@@ -18,42 +17,6 @@ Ubuntu 20.04/22.04:
 
 ```bash
 sudo apt install -y vim telnet git curl wget openssl netcat net-tools jq
-```
-
-# Docker
-
-Instale o Docker CE (Community Edition) com os seguintes comandos:
-
-```bash
-sudo su
-curl -fsSL https://get.docker.com | bash
-
-cat > /etc/docker/daemon.json <<EOF
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
-exit
-
-# Add your user to the Docker group
-sudo apt install -y acl uidmap
-dockerd-rootless-setuptool.sh install
-sudo usermod -aG docker $USER
-sudo setfacl -m user:$USER:rw /var/run/docker.sock
-sudo setfacl -m user:$USER:rw /var/run/containerd/containerd.sock
-
-# Start the Docker service
-sudo systemctl start docker
-sudo systemctl start containerd
-
-# Configure Docker to boot up with the OS
-sudo systemctl enable docker
-sudo systemctl enable containerd
 ```
 
 # Kubectl
@@ -95,15 +58,15 @@ Referências:
 Instale o kind com os seguintes comandos.
 
 ```bash
-VERSION=v0.20.0
+VERSION=v0.21.0
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/$VERSION/kind-$(uname)-amd64
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 ```
 
-Para criar um cluster com múltiplos nós locais com o Kind, crie um arquivo do tipo YAML para definir a quantidade e o tipo de nós no cluster que você deseja. 
+Para criar um cluster com múltiplos nós locais com o Kind, crie um arquivo do tipo YAML para definir a quantidade e o tipo de nós no cluster que você deseja.
 
-No exemplo a seguir, será criado o arquivo $HOME/kind-3nodes.yaml para especificar um cluster com 1 nó master (que executará o control plane do Kubernetes) e 2 workers (que executará o data plane do Kubernetes).
+No exemplo a seguir, será criado o arquivo ``$HOME/kind-3nodes.yaml`` para especificar um cluster com 1 nó master (que executará o control plane do Kubernetes) e 2 workers (que executará o data plane do Kubernetes).
 
 ```yaml
 cat << EOF > $HOME/kind-3nodes.yaml
@@ -113,7 +76,7 @@ cat << EOF > $HOME/kind-3nodes.yaml
 # Metal LB in Kind: https://kind.sigs.k8s.io/docs/user/loadbalancer
 # Ingress in Kind: https://kind.sigs.k8s.io/docs/user/ingress
 
-# Config compatible with kind v0.20.0
+# Config compatible with kind v0.21.0
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -121,7 +84,7 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 nodes:
   - role: control-plane
-    image: kindest/node:v1.29.0@sha256:eaa1450915475849a73a9227b8f201df25e55e268e5d619312131292e324d570
+    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
     kubeadmConfigPatches:
     - |
       kind: InitConfiguration
@@ -131,16 +94,14 @@ nodes:
     extraPortMappings:
     - containerPort: 80
       hostPort: 80
-      listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
     - containerPort: 443
       hostPort: 443
-      listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
   - role: worker
-    image: kindest/node:v1.29.0@sha256:eaa1450915475849a73a9227b8f201df25e55e268e5d619312131292e324d570
+    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
   - role: worker
-    image: kindest/node:v1.29.0@sha256:eaa1450915475849a73a9227b8f201df25e55e268e5d619312131292e324d570
+    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
 EOF
 ```
 
@@ -161,6 +122,9 @@ Para destruir o cluster, execute o seguinte comando que irá selecionar e remove
 ```bash
 kind delete clusters $(kind get clusters)
 ```
+
+Instale o [MetalLB](https://metallb.universe.tf/) usando as informações da página:
+https://kind.sigs.k8s.io/docs/user/loadbalancer/
 
 Referências:
 

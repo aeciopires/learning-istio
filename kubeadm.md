@@ -56,35 +56,6 @@ source /root/.bashrc
 # Reboot system
 sudo reboot
 
-# Install Docker
-# References:
-# https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#instala%C3%A7%C3%A3o-do-docker-e-do-kubernetes
-sudo su
-cd /home/ubuntu
-curl -fsSL https://get.docker.com | bash
-
-cat > /etc/docker/daemon.json <<EOF
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
-exit
-
-dockerd-rootless-setuptool.sh install
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-sudo systemctl restart containerd
-sudo systemctl enable docker
-sudo systemctl enable containerd
-sudo usermod -aG docker $USER
-sudo setfacl -m user:$USER:rw /var/run/docker.sock
-sudo setfacl -m user:$USER:rw /var/run/containerd/containerd.sock
-
 # Check whether the Cgroup driver has been set correctly
 # If the output was Cgroup Driver: systemd, all right!
 docker info | grep -i cgroup
@@ -142,6 +113,8 @@ kubectl get nodes
 #   https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises
 
 
+# Install MetalLB following the instructions of the page: https://metallb.universe.tf/installation/
+
 
 #------- Specifics (worker1 and worker2)
 # Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
@@ -152,4 +125,3 @@ sudo kubeadm token create --print-join-command
 # Example of command to run in worker node:
 kubeadm join 172.31.17.64:6443 --token st7hlu.6hbl4c6f2crh08ys \
 	--discovery-token-ca-cert-hash sha256:331afc84c3c71a369d314ad3be27d738ccc1535fa2492876fcfaec42c5fa3135
-

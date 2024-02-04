@@ -1,3 +1,16 @@
+<!-- TOC -->
+
+- [learning-istio](#learning-istio)
+- [Configurações do Ambiente](#configurações-do-ambiente)
+- [Day 1](#day-1)
+- [Day 2](#day-2)
+- [Day 3](#day-3)
+- [Day 4](#day-4)
+- [Security group/firewall](#security-groupfirewall)
+- [Referências](#referências)
+
+<!-- TOC -->
+
 # learning-istio
 
 > Foi combinado com a [LinuxTips](https://www.linuxtips.io), via email, a publicação deste repositório como uma forma de contribuir com a comunidade e ajudar na atualização do material do curso. O próprio [Jefferson Fernando](https://twitter.com/badtux_), representante da LinuxTips, começou a divulgação deste repositório junto à comunidade neste [grupo no Telegram](https://t.me/joinchat/GmIMiRVkN55gwDhTlDWCqA).
@@ -6,7 +19,7 @@ Esta documentação foi gerada durante o estudo do curso **[Descomplicando Istio
 
 **É recomendado ter um bom domínio sobre orquestração de conteinêres com Docker e Kubernetes** antes de começar a estudar o Istio. Os links citados nas referências podem ajudar nisso. Você também pode aprender através dos cursos [Descomplicando Docker](https://www.linuxtips.io/products/descomplicando-o-docker) e [Descomplicando Kubernetes](https://www.linuxtips.io/products/descomplicando-o-kubernetes).
 
-Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 utilizando o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio. 
+Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 utilizando o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio.
 
 **Em ambientes de teste, homologação e produção**, que ficam na cloud, é uma boa ideia utilizar serviços gerenciados como: [EKS](https://aws.amazon.com/eks), [GKE](https://cloud.google.com/kubernetes-engine), [AKS](https://azure.microsoft.com/en-us/free/kubernetes-service), [DOKS](https://www.digitalocean.com/products/kubernetes/), entre outros. Em ambientes on-premisses, o [k0s](https://k0sproject.io) e o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) podem ser utilizados.
 
