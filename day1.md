@@ -18,7 +18,7 @@ Crie um **cluster Kubernetes** usando uma das opções abaixo:
 * [kubeadm](kubeadm.md);
 * [kind](kind.md);
 
-Instale o **Helm** com as instruções da página: [helm](helm.md).
+Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
 
 Instale o **Istio** com os seguintes comandos:
 

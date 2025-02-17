@@ -7,7 +7,6 @@
 
 <!-- TOC -->
 
-
 # Day 4
 
 Os comandos a seguir foram executados apenas no **master**.
@@ -43,12 +42,7 @@ kubectl get crd | grep --color=never 'istio.io' | awk '{print $1}' | xargs -n1 k
 kubectl label namespace default istio-injection-
 
 #----------------- Install Helm
-# Reference: https://helm.sh/docs/intro/install/
-cd $HOME
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-chmod 700 $HOME/get_helm.sh
-$HOME/get_helm.sh
-helm version
+# Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
 
 #----------------- Install Istio with Helm
 # Reference: https://istio.io/latest/docs/setup/install/helm/

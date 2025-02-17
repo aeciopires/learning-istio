@@ -29,11 +29,11 @@ Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instânci
 
 As versões dos softwares utilizados foram:
 
-* Docker: 25.0.2
-* Kubernetes (kubeadm): 1.29.1
-* kubectl: 1.29.1
-* Helm: 3.12.3
-* Istio: 1.20.2
+- Docker: 27.4.0
+- Kubernetes (kubeadm): 1.32.1
+- kubectl: 1.32.1
+- Helm: 3.17.0
+- Istio: 1.24
 
 # Day 1
 
@@ -74,20 +74,15 @@ Fonte:
 
 # Referências
 
-* https://github.com/badtuxx/DescomplicandoKubernetes
-* https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md
-* http://blog.aeciopires.com/primeiros-passos-com-docker/
-* https://helm.sh/docs/
-* https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
-* https://istio.io/latest/docs/setup/getting-started/
-* https://istio.io/latest/docs/ops/deployment/requirements/
-* https://istio.io/latest/docs/setup/install/istioctl/
-* https://istio.io/latest/docs/setup/install/helm/
-* https://www.alibabacloud.com/blog/kubernetes-configure-liveness-and-readiness-probes_594833 
-* https://medium.com/sitewards/deploying-on-kubernetes-10-health-checking-a4986e807afe 
-* https://githubmemory.com/repo/istio/istio/issues/32963 
-* https://support.sisense.com/kb/en/article/pod-in-crashloopbackoff-state-readinessliveness-probe-failed-get-httppod-ip8082actuatorhealth-dial-tcp-pod-ip8082-connect-connection-refused 
-* https://forums.rancher.com/t/liveness-probe-failed-connection-refused/20837 
-* https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796
-* https://www.udemy.com/course/istio-hands-on-for-kubernetes/
-* https://academy.tetrate.io
+- https://github.com/badtuxx/DescomplicandoKubernetes
+- http://blog.aeciopires.com/primeiros-passos-com-docker/
+- https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+- https://istio.io/latest/docs/overview/what-is-istio/
+- https://istio.io/latest/docs/setup/getting-started/
+- https://istio.io/latest/docs/setup/install/istioctl/
+- https://istio.io/latest/docs/setup/install/helm/
+- https://www.alibabacloud.com/blog/kubernetes-configure-liveness-and-readiness-probes_594833 
+- https://medium.com/sitewards/deploying-on-kubernetes-10-health-checking-a4986e807afe 
+- https://support.sisense.com/kb/en/article/pod-in-crashloopbackoff-state-readinessliveness-probe-failed-get-httppod-ip8082actuatorhealth-dial-tcp-pod-ip8082-connect-connection-refused 
+- https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796
+- https://www.udemy.com/course/istio-hands-on-for-kubernetes/

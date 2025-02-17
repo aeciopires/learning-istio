@@ -2,8 +2,11 @@
 
 - [Requisitos](#requisitos)
 - [Pacotes gerais](#pacotes-gerais)
-- [Kubectl](#kubectl)
-- [Kind](#kind)
+- [asdf](#asdf)
+- [Docker](#docker)
+- [Helm](#helm)
+- [kubectl](#kubectl)
+- [kind](#kind)
 
 <!-- TOC -->
 
@@ -13,62 +16,126 @@
 
 Instale os seguintes pacotes de acordo com o sistema operacional.
 
-Ubuntu 20.04/22.04:
+Ubuntu 24.04:
 
 ```bash
-sudo apt install -y vim telnet git curl wget openssl netcat net-tools jq
+sudo apt install -y vim telnet netcat-openbsd git elinks curl wget openssl net-tools jq
 ```
 
-# Kubectl
+# asdf
 
-Instale o kubectl com os seguintes comandos.
+Execute os seguintes comandos:
+
+> Atenção!!! Para atualizar o asdf utilize APENAS o seguinte comando:
 
 ```bash
-sudo su
-
-VERSION=v1.29.1
-KUBECTL_BIN=kubectl
-
-function install_kubectl {
-if [ -z $(which $KUBECTL_BIN) ]; then
-    curl -LO https://storage.googleapis.com/kubernetes-release/release/$VERSION/bin/linux/amd64/$KUBECTL_BIN
-    chmod +x ${KUBECTL_BIN}
-    mv ${KUBECTL_BIN} /usr/local/bin/${KUBECTL_BIN}
-    ln -sf /usr/local/bin/${KUBECTL_BIN} /usr/bin/${KUBECTL_BIN}
-else
-    echo "Kubectl is most likely installed"
-fi
-}
-
-install_kubectl
-
-which kubectl
-
-kubectl version --client
-
-exit
+asdf update
 ```
 
-Referências:
-* https://kubernetes.io/docs/reference/kubectl/overview/
-* https://kubernetes.io/docs/tasks/tools/install-kubectl/
-
-# Kind
-
-Instale o kind com os seguintes comandos.
+> Se tentar reinstalar ou atualizar mudando a versão nos comandos seguintes, será necessário reinstalar todos os plugins/comandos instalados antes, por isso é muito importante fazer backup do diretório $HOME/.asdf.
 
 ```bash
-VERSION=v0.21.0
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/$VERSION/kind-$(uname)-amd64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
+ASDF_VERSION="v0.15.0"
+git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch $ASDF_VERSION
+
+# Adicionando no $HOME/.bashrc
+echo ". \"\$HOME/.asdf/asdf.sh\"" >> ~/.bashrc
+echo ". \"\$HOME/.asdf/completions/asdf.bash\"" >> ~/.bashrc
+source ~/.bashrc
+```
+
+Fonte: https://asdf-vm.com/guide/introduction.html
+
+# Docker
+
+Instale o **Docker** com as instruções da página: [docker](docker.md).
+
+# Helm
+
+Execute os seguintes comandos para instalar o helm:
+
+> Antes de continuar, se tiver o helm instalado via apt, remova-o com os seguintes comandos:
+
+```bash
+sudo apt remove helm
+# ou
+sudo rm /usr/local/bin/helm
+sudo rm /etc/apt/sources.list.d/helm-stable-debian.list
+```
+
+> Antes de prosseguir, certifique-se de ter instalado o comando [asdf](#asdf).
+
+Documentação: https://helm.sh/docs/
+
+```bash
+VERSION="3.17.0"
+
+asdf plugin list all | grep helm
+asdf plugin add helm https://github.com/Antiarchitect/asdf-helm.git
+asdf latest helm
+
+asdf install helm $VERSION
+asdf list helm
+
+# Definindo a versão padrão
+asdf global helm $VERSION
+asdf list helm
+```
+
+# kubectl
+
+Execute os seguintes comandos.
+
+Documentação: https://kubernetes.io/docs/reference/kubectl/overview/
+
+```bash
+VERSION_OPTION_1="1.32.1"
+
+asdf plugin list all | grep kubectl
+asdf plugin add kubectl https://github.com/asdf-community/asdf-kubectl.git
+asdf latest kubectl
+
+asdf install kubectl $VERSION_OPTION_1
+asdf list kubectl
+
+# Definindo a versão padrão
+asdf global kubectl $VERSION_OPTION_1
+asdf list kubectl
+
+# Criando um link simbólico
+sudo ln -s $HOME/.asdf/shims/kubectl /usr/local/bin/kubectl
+```
+
+# kind
+
+O kind (Kubernetes in Docker) é outra alternativa para executar o Kubernetes num ambiente local para testes e aprendizado, mas não é recomendado para uso em produção.
+
+Para instalar o kind execute os seguintes comandos.
+
+> Antes de continuar, se tiver o kind instalado, remova-o com o seguinte comando:
+
+```bash
+sudo rm /usr/local/bin/kind
+```
+
+> Antes de prosseguir, certifique-se de ter instalado o comando [asdf](#asdf).
+
+```bash
+VERSION="0.26.0"
+asdf plugin list all | grep kind
+asdf plugin add kind https://github.com/johnlayton/asdf-kind.git
+asdf latest kind
+asdf install kind $VERSION
+asdf list kind
+# Definindo a versão padrão
+asdf global kind $VERSION
 ```
 
 Para criar um cluster com múltiplos nós locais com o Kind, crie um arquivo do tipo YAML para definir a quantidade e o tipo de nós no cluster que você deseja.
 
 No exemplo a seguir, será criado o arquivo ``$HOME/kind-3nodes.yaml`` para especificar um cluster com 1 nó master (que executará o control plane do Kubernetes) e 2 workers (que executará o data plane do Kubernetes).
 
-```yaml
+```bash
 cat << EOF > $HOME/kind-3nodes.yaml
 # References:
 # Kind release image: https://github.com/kubernetes-sigs/kind/releases
@@ -76,7 +143,7 @@ cat << EOF > $HOME/kind-3nodes.yaml
 # Metal LB in Kind: https://kind.sigs.k8s.io/docs/user/loadbalancer
 # Ingress in Kind: https://kind.sigs.k8s.io/docs/user/ingress
 
-# Config compatible with kind v0.21.0
+# Config compatible with kind v0.26.0
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -84,7 +151,7 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 nodes:
   - role: control-plane
-    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
+    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
     kubeadmConfigPatches:
     - |
       kind: InitConfiguration
@@ -94,14 +161,16 @@ nodes:
     extraPortMappings:
     - containerPort: 80
       hostPort: 80
+      listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
     - containerPort: 443
       hostPort: 443
+      listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
   - role: worker
-    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
+    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
   - role: worker
-    image: kindest/node:v1.29.1@sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
+    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
 EOF
 ```
 
@@ -123,13 +192,10 @@ Para destruir o cluster, execute o seguinte comando que irá selecionar e remove
 kind delete clusters $(kind get clusters)
 ```
 
-Instale o [MetalLB](https://metallb.universe.tf/) usando as informações da página:
-https://kind.sigs.k8s.io/docs/user/loadbalancer/
-
 Referências:
+- https://github.com/badtuxx/DescomplicandoKubernetes/blob/master/day-1/DescomplicandoKubernetes-Day1.md#kind
+- https://kind.sigs.k8s.io/docs/user/quick-start/
+- https://github.com/kubernetes-sigs/kind/releases
+- https://kubernetes.io/blog/2020/05/21/wsl-docker-kubernetes-on-the-windows-desktop/#kind-kubernetes-made-easy-in-a-container
 
-* https://github.com/badtuxx/DescomplicandoKubernetes/blob/master/day-1/DescomplicandoKubernetes-Day1.md#kind 
-* https://kind.sigs.k8s.io
-* https://kind.sigs.k8s.io/docs/user/quick-start/
-* https://github.com/kubernetes-sigs/kind/releases
-* https://kubernetes.io/blog/2020/05/21/wsl-docker-kubernetes-on-the-windows-desktop/#kind-kubernetes-made-easy-in-a-container
+Repositório alternativo para uso do kind com nginx-controller, linkerd e outras ferramentas: https://github.com/rafaelperoco/kind
