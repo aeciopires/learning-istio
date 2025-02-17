@@ -8,6 +8,9 @@
 - [Day 4](#day-4)
 - [Security group/firewall](#security-groupfirewall)
 - [Referências](#referências)
+  - [Documentação do Istio](#documentação-do-istio)
+- [Mantenedores](#mantenedores)
+- [Licença](#licença)
 
 <!-- TOC -->
 
@@ -77,12 +80,28 @@ Fonte:
 - https://github.com/badtuxx/DescomplicandoKubernetes
 - http://blog.aeciopires.com/primeiros-passos-com-docker/
 - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
-- https://istio.io/latest/docs/overview/what-is-istio/
-- https://istio.io/latest/docs/setup/getting-started/
-- https://istio.io/latest/docs/setup/install/istioctl/
-- https://istio.io/latest/docs/setup/install/helm/
 - https://www.alibabacloud.com/blog/kubernetes-configure-liveness-and-readiness-probes_594833 
 - https://medium.com/sitewards/deploying-on-kubernetes-10-health-checking-a4986e807afe 
 - https://support.sisense.com/kb/en/article/pod-in-crashloopbackoff-state-readinessliveness-probe-failed-get-httppod-ip8082actuatorhealth-dial-tcp-pod-ip8082-connect-connection-refused 
 - https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796
 - https://www.udemy.com/course/istio-hands-on-for-kubernetes/
+
+## Documentação do Istio
+
+- https://istio.io/latest/docs/overview/what-is-istio/
+- https://istio.io/latest/docs/overview/why-choose-istio/
+- https://istio.io/latest/docs/overview/dataplane-modes/
+- https://istio.io/latest/docs/concepts/
+- https://istio.io/latest/docs/setup/
+- https://istio.io/latest/docs/ambient/
+- https://istio.io/latest/docs/tasks/
+- https://istio.io/latest/docs/examples/
+- https://istio.io/latest/docs/ops/
+
+# Mantenedores
+
+- Aécio dos Santos Pires ([linkedin.com/in/aeciopires](https://www.linkedin.com/in/aeciopires))
+
+# Licença
+
+GPL-3.0 Aécio dos Santos Pires
