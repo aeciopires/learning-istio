@@ -206,8 +206,8 @@ Repositório alternativo para uso do kind com nginx-controller, linkerd e outras
 Execute os seguintes comandos para instalar o [MetalLB](https://metallb.universe.tf):
 
 > Referências:
-> * https://github.com/rafaelperoco/kind/blob/main/createCluster.sh
-> * https://metallb.universe.tf/installation/
+> - https://github.com/rafaelperoco/kind/blob/main/createCluster.sh
+> - https://metallb.universe.tf/installation/
 
 ```bash
 # actually apply the changes, returns nonzero returncode on errors only

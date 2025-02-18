@@ -1,4 +1,4 @@
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: httpbin
@@ -6,11 +6,13 @@ spec:
   hosts:
     - httpbin
   http:
-  - route:
-    - destination:
-        host: httpbin
-        subset: v1
-      weight: 100
-    mirror:
-      host: httpbin
-      subset: v2
+    - route:
+      - destination:
+          host: httpbin
+          subset: v1
+        weight: 100
+mirror:
+  host: httpbin
+  subset: v2
+mirrorPercentage:
+  value: 100.0

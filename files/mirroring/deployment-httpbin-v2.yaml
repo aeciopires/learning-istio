@@ -3,11 +3,11 @@ kind: Deployment
 metadata:
   name: httpbin-v2
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: httpbin
       version: v2
-  replicas: 1
   template:
     metadata:
       labels:
