@@ -7,6 +7,7 @@
 - [Helm](#helm)
 - [kubectl](#kubectl)
 - [kind](#kind)
+- [MetalLB](#metallb)
 
 <!-- TOC -->
 
@@ -199,3 +200,76 @@ Referências:
 - https://kubernetes.io/blog/2020/05/21/wsl-docker-kubernetes-on-the-windows-desktop/#kind-kubernetes-made-easy-in-a-container
 
 Repositório alternativo para uso do kind com nginx-controller, linkerd e outras ferramentas: https://github.com/rafaelperoco/kind
+
+# MetalLB
+
+Execute os seguintes comandos para instalar o [MetalLB](https://metallb.universe.tf):
+
+> Referências:
+> * https://github.com/rafaelperoco/kind/blob/main/createCluster.sh
+> * https://metallb.universe.tf/installation/
+
+```bash
+# actually apply the changes, returns nonzero returncode on errors only
+kubectl get configmap kube-proxy -n kube-system -o yaml | \
+sed -e "s/strictARP: false/strictARP: true/" | \
+kubectl apply -f - -n kube-system
+
+# Install and upgrade Helm repositories
+helm repo add metallb https://metallb.github.io/metallb
+helm repo update
+
+# Install MetalLB and check if it is installed
+helm upgrade --install metallb metallb/metallb \
+  --create-namespace \
+  --namespace metallb-system \
+  --version 0.14.9 \
+  --set "controller.tolerations[0].key=node-role.kubernetes.io/master" \
+  --set "controller.tolerations[0].effect=NoSchedule" \
+  --set speaker.tolerateMaster=true \
+  --wait --debug --timeout=900s
+```
+
+> Pode demorar uns 5 minutos até os daemonsets do MetalLB ficarem health.
+
+Configure o endereçamento IP a ser usado pelo ingress gerenciado pelo MetalLB.
+
+```bash
+# Install jq package
+sudo apt update
+sudo apt install -y jq
+
+# Get default gateway interface
+KIND_ADDRESS=$(docker network inspect kind | jq '.[].IPAM | .Config | .[0].Subnet' | cut -d \" -f 2 | cut -d"." -f1-3)
+
+# Radomize Loadbalancer IP Range
+#KIND_ADDRESS_END=$(shuf -i 100-150 -n1)
+KIND_ADDRESS_END="100"
+NETWORK_SUBMASK="27"
+
+# Create address range
+KIND_LB_RANGE="$(echo $KIND_ADDRESS.$KIND_ADDRESS_END)/$NETWORK_SUBMASK"
+
+cat << EOF > $HOME/metallb-ingress-address.yaml
+# References:
+# https://metallb.universe.tf/configuration/#layer-2-configuration
+
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+spec:
+  addresses:
+  - $KIND_LB_RANGE
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: example
+spec:
+  ipAddressPools:
+  - first-pool
+EOF
+
+kubectl apply -f $HOME/metallb-ingress-address.yaml --namespace metallb-system
+```

@@ -7,7 +7,6 @@
 
 <!-- TOC -->
 
-
 # Day 2
 
 Estratégias de gerenciamento de tráfego (*traffic management*):
@@ -23,7 +22,6 @@ Estratégias de gerenciamento de tráfego (*traffic management*):
 > * **circuit breaking** => roteamento baseado em cenários em que ocorre problemas de conectividade ou falha de um ou mais microsserviços que formam uma ou mais aplicações.
 > 
 > * **mirroring** => espelhamento de tráfego, bem útil para testes de uma versão nova de um aplicação sem impactar a versão em uso no ambiente de produção. Necessário ter o ambiente de produção replicado (duplica o custo). Necessário ter o ambiente de produção replicado (duplica o custo).O Istio descarta as requisições espelhadas após chegarem nas aplicações para evitar duplicidade no processamento para o usuário final.
-
 
 Os comandos a seguir foram executados apenas no **master**.
 

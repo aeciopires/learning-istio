@@ -7,7 +7,6 @@
 
 <!-- TOC -->
 
-
 # Day 3
 
 Os comandos a seguir foram executados apenas no **master**.

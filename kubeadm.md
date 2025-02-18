@@ -134,7 +134,7 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/cu
 
 kubectl create -f custom-resources.yaml
 
-# Install MetalLB following the instructions of the page: https://metallb.universe.tf/installation/
+# Instale o **MetalLB** com as instruções da página: [metallb](kind.md#metallb).
 
 #------- Specifics (worker1 and worker2)
 # Allow all these ports: https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar

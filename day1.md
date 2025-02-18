@@ -20,6 +20,8 @@ Crie um **cluster Kubernetes** usando uma das opções abaixo:
 
 Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
 
+Instale o **MetalLB** com as instruções da página: [metallb](kind.md#metallb).
+
 Instale o **Istio** com os seguintes comandos:
 
 ```bash
@@ -29,53 +31,69 @@ Instale o **Istio** com os seguintes comandos:
 # https://istio.io/latest/docs/setup/install/helm/
 # Allow all these ports: https://istio.io/latest/docs/ops/deployment/requirements/
 
-# Configure the Helm repository:
+# Configure the Helm repository (ambient mode):
+# https://istio.io/latest/docs/ambient/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
-# Create the namespace, istio-system, for the Istio components:
-kubectl create namespace istio-system
+# Install the Istio base components
+helm -n istio-system install istio-base istio/base --create-namespace --wait
 
-# Install the Istio base chart which contains cluster-wide Custom Resource Definitions (CRDs) which must be installed prior to the deployment of the Istio control plane.
-helm install istio-base istio/base -n istio-system --set defaultRevision=default
+# Install or upgrade the Kubernetes Gateway API CRDs
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+  { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
 
-# Validate the CRD installation with the helm ls command:
-helm ls -n istio-system
+# Install the Istiod, the control plane component that manages and configures the proxies to route traffic within the mesh
+helm -n istio-system install istiod istio/istiod --set profile=ambient --wait
 
-# Install the Istio discovery chart which deploys the istiod service:
-helm install istiod istio/istiod -n istio-system --wait --timeout=900s
+# Install CNI node agent. It is responsible for detecting the pods that belong to the ambient mesh, and configuring the traffic redirection between pods and the ztunnel node proxy (which will be installed later).
+helm -n istio-system install istio-cni istio/cni --set profile=ambient --wait
 
-# Check istiod service is successfully installed and its pods are running:
-kubectl get deployments -n istio-system --output wide
+# Install ztunnel DaemonSet, which is the node proxy component of Istio’s ambient mode.
+helm -n istio-system install ztunnel istio/ztunnel --wait
 
-# Install an ingress gateway:
-kubectl create namespace istio-ingress
-helm install istio-ingress istio/gateway -n istio-ingress --wait --timeout=900s
+# Install Ingress gateway
+helm -n istio-system install istio-ingress istio/gateway --create-namespace --wait
+
+# Validate the installation
+helm -n istio-system ls
+helm -n istio-system status istio-base
+helm -n istio-system status istiod
+helm -n istio-system status istio-cni
+helm -n istio-system status ztunnel
+helm -n istio-system status istio-ingress
+kubectl -n istio-system get all --output wide
 
 # To uninstall istio follow the instructions of the page
-# https://istio.io/latest/docs/setup/install/helm/#uninstall
+# https://istio.io/latest/docs/ambient/install/helm/#uninstall
 ```
+
+Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
+
+> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/latest/docs/ambient/getting-started/deploy-sample-app/.
 
 Baixe este repositório para obter os arquivos complementares
 
 ```bash
+cd /tmp
 git clone https://github.com/aeciopires/learning-istio
-export COMPLEMENTARY_FILES=$HOME/learning-istio/files
+export COMPLEMENTARY_FILES=/tmp/learning-istio/files
 ```
 
-Faça o deploy da aplicação de exemplo chamada **Bookinfo**:
+Instale a aplicação de exemplo:
 
 ```bash
 MY_NAMESPACE='myapp'
 kubectl create namespace $MY_NAMESPACE
 
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.20/samples/bookinfo/platform/kube/bookinfo.yaml -n $MY_NAMESPACE
+kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo.yaml
+kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo-versions.yaml
 ```
 
 Visualize os objetos/recursos da aplicação:
 
 ```bash
-kubectl get all -n $MY_NAMESPACE
+kubectl -n $MY_NAMESPACE get all 
 ```
 
 Teste o acesso a aplicação com o seguinte comando:
@@ -84,79 +102,77 @@ Teste o acesso a aplicação com o seguinte comando:
 kubectl -n $MY_NAMESPACE exec "$(kubectl -n $MY_NAMESPACE get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 ```
 
-Crie um ingressGateway e um VirtualService para a aplicação ser exposta fora do cluster usando o Istio e o loadbalancer.
+Crie um ingressGateway e um HTTPRoute para a aplicação ser exposta fora do cluster usando o Istio e o loadbalancer.
 
 ```bash
 kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo-gateway.yaml
 ```
 
-Obtenha as informações a cerca do IP e Porta do IngressGateway usado pela aplicação:
+Por padrão, o Istio cria um serviço LoadBalancer para um gateway. Como você acessará esse gateway por um túnel, não precisa de um balanceador de carga. Altere o tipo de serviço para ClusterIP na anotation do gateway:
 
 ```bash
-INGRESS_HOST=$(kubectl get svc istio-ingress -n istio-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-
-INGRESS_PORT=$(kubectl get svc istio-ingress -n istio-ingress -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
-
-SECURE_INGRESS_PORT=$(kubectl get svc istio-ingress -n istio-ingress -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
-
-GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
-
-echo "$GATEWAY_URL"
-
-curl "http://$GATEWAY_URL/productpage"
+kubectl -n $MY_NAMESPACE annotate gateway bookinfo-gateway networking.istio.io/service-type=ClusterIP 
 ```
+
+Para verificar o status do gateway, execute o seguinte comando:
+
+```bash
+kubectl -n $MY_NAMESPACE get gateway
+```
+
+Crie um port-forward para acessar a página do produto Bookinfo por meio do gateway que acabou de provisionar.
+
+```bash
+kubectl -n $MY_NAMESPACE port-forward svc/bookinfo-gateway-istio 8080:80
+```
+
+Usando o navegador, acesse a página http://localhost:8080/productpage.
 
 Visualize os objetos da aplicação recém Bookinfo.
 
 ```bash
-kubectl -n $MY_NAMESPACE get gateway
-kubectl -n $MY_NAMESPACE get virtualservices -o yaml
-kubectl -n $MY_NAMESPACE get services
-kubectl -n $MY_NAMESPACE get pods
-kubectl -n $MY_NAMESPACE get virtualservices.networking.istio.io bookinfo -o yaml
-kubectl -n $MY_NAMESPACE get virtualservices.networking.istio.io
-kubectl -n $MY_NAMESPACE describe virtualservices.networking.istio.io bookinfo
-kubectl -n $MY_NAMESPACE get gateways.networking.istio.io
-kubectl -n $MY_NAMESPACE describe gateways.networking.istio.io bookinfo-gateway
+kubectl -n $MY_NAMESPACE get gateway,httproute,service,pods,deployments,replicaset
 ```
 
-Crie um port-forward para acessar a aplicação:
+Instale os seguintes addons para o Istio:
+
+- [Grafana](https://grafana.com)
+- [Prometheus](https://prometheus.io)
+- [Kiali](https://kiali.io)
+- [Jaeger](https://www.jaegertracing.io)
 
 ```bash
-# Port forward in background for access Productpage application
-# Allow port 9080/TCP
-kubectl -n $MY_NAMESPACE port-forward svc/productpage 9080:9080 --address=0.0.0.0
-# Access URL: http://localhost:9080/productpage
-```
-
-Instale os seguintes addons para o Istio: [Grafana](https://grafana.com), [Prometheus](https://prometheus.io), [Kiali](https://kiali.io), [Jaeger](https://www.jaegertracing.io), [zipkin](https://zipkin.io/).
-
-```bash
+cd /tmp
 git clone https://github.com/istio/istio
 
-kubectl apply -f $HOME/istio/samples/addons
+# Instalando os addons
+kubectl apply -f /tmp/istio/samples/addons/grafana.yaml
+kubectl apply -f /tmp/istio/samples/addons/prometheus.yaml
+kubectl apply -f /tmp/istio/samples/addons/kiali.yaml
+kubectl apply -f /tmp/istio/samples/addons/jaeger.yaml
 
-kubectl rollout status deployment/kiali -n istio-system
+# Verificando o status da instalação dos addons
 kubectl rollout status deployment/grafana -n istio-system
 kubectl rollout status deployment/prometheus -n istio-system
+kubectl rollout status deployment/kiali -n istio-system
 kubectl rollout status deployment/jaeger -n istio-system
 ```
 
 Inicie um port-forward para cada addon.
 
 ```bash
-kubectl -n istio-system port-forward service/kiali 20001:20001
 kubectl -n istio-system port-forward service/grafana 3000:3000
 kubectl -n istio-system port-forward service/prometheus 9090:9090
-kubectl -n istio-system port-forward service/tracing 8080:80
+kubectl -n istio-system port-forward service/kiali 20001:20001
+kubectl -n istio-system port-forward service/tracing 8081:80
 ```
 
 Acesse cada addon nos seguintes endereços:
 
-* Kiali: http://localhost:20001
-* Grafana: http://localhost:3000
+* Grafana: http://localhost:3000 (login: admin, senha: admin)
 * Prometheus: http://localhost:9090
-* Jaeger: http://localhost:8080
+* Kiali: http://localhost:20001
+* Jaeger: http://localhost:8081
 
 Liste os objetos do Istio e addons com os seguintes comandos:
 
