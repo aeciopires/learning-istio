@@ -72,12 +72,13 @@ Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
 > Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/latest/docs/ambient/getting-started/deploy-sample-app/.
 
-Baixe este repositório para obter os arquivos complementares
+Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-cd /tmp
-git clone https://github.com/aeciopires/learning-istio
-export COMPLEMENTARY_FILES=/tmp/learning-istio/files
+export ISTIO_RELEASE=1.24
+export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
+export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
+export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
 ```
 
 Instale a aplicação de exemplo:
@@ -86,8 +87,8 @@ Instale a aplicação de exemplo:
 MY_NAMESPACE='myapp'
 kubectl create namespace $MY_NAMESPACE
 
-kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo.yaml
-kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo-versions.yaml
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo.yaml"
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo-versions.yaml"
 ```
 
 Visualize os objetos/recursos da aplicação:
@@ -105,7 +106,7 @@ kubectl -n $MY_NAMESPACE exec "$(kubectl -n $MY_NAMESPACE get pod -l app=ratings
 Crie um ingressGateway e um HTTPRoute para a aplicação ser exposta fora do cluster usando o Istio e o loadbalancer.
 
 ```bash
-kubectl -n $MY_NAMESPACE apply -f $COMPLEMENTARY_FILES/bookinfo-gateway.yaml
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/gateway-api/bookinfo-gateway.yaml"
 ```
 
 Por padrão, o Istio cria um serviço LoadBalancer para um gateway. Como você acessará esse gateway por um túnel, não precisa de um balanceador de carga. Altere o tipo de serviço para ClusterIP na anotation do gateway:
@@ -128,6 +129,10 @@ kubectl -n $MY_NAMESPACE port-forward svc/bookinfo-gateway-istio 8080:80
 
 Usando o navegador, acesse a página http://localhost:8080/productpage.
 
+<p align="center">
+  <img src="images/bookinfo.png" alt="Bookinfo productpage">
+</p>
+
 Visualize os objetos da aplicação recém Bookinfo.
 
 ```bash
@@ -142,14 +147,11 @@ Instale os seguintes addons para o Istio:
 - [Jaeger](https://www.jaegertracing.io)
 
 ```bash
-cd /tmp
-git clone https://github.com/istio/istio
-
 # Instalando os addons
-kubectl apply -f /tmp/istio/samples/addons/grafana.yaml
-kubectl apply -f /tmp/istio/samples/addons/prometheus.yaml
-kubectl apply -f /tmp/istio/samples/addons/kiali.yaml
-kubectl apply -f /tmp/istio/samples/addons/jaeger.yaml
+kubectl apply -f "$ISTIO_ADDONS_URL/grafana.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/prometheus.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/kiali.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/jaeger.yaml"
 
 # Verificando o status da instalação dos addons
 kubectl rollout status deployment/grafana -n istio-system
@@ -174,6 +176,24 @@ Acesse cada addon nos seguintes endereços:
 * Kiali: http://localhost:20001
 * Jaeger: http://localhost:8081
 
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/latest/docs/ambient/getting-started/secure-and-visualize/):
+
+```bash
+kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
+```
+
+Envie tráfego para o aplicativo Bookinfo, para que o Kiali gere o gráfico de tráfego:
+
+```bash
+for i in $(seq 1 10000); do curl -sSI -o /dev/null http://localhost:8080/productpage; done
+```
+
+Veja o resultado conforme mostrado na imagem a seguir:
+
+<p align="center">
+  <img src="images/bookinfo_kiali.png" alt="Bookinfo visualized on Kiali">
+</p>
+
 Liste os objetos do Istio e addons com os seguintes comandos:
 
 ```bash
@@ -181,10 +201,4 @@ kubectl api-resources | grep istio
 kubectl get crd | grep istio
 kubectl get all -n istio-system
 kubectl get all -n istio-ingress
-```
-
-Permita que o Istio gerencie as aplicações de determinado namespace:
-
-```bash
-kubectl label namespace $MY_NAMESPACE istio-injection=enabled
 ```
