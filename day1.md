@@ -13,10 +13,9 @@ Comandos executados em sequência durante o treinamento.
 
 Instale o **Docker** com as instruções da página: [docker](docker.md).
 
-Crie um **cluster Kubernetes** usando uma das opções abaixo:
+Crie um **cluster Kubernetes** usando o kind conforme a documentação a seguir:
 
-* [kubeadm](kubeadm.md);
-* [kind](kind.md);
+- [kind](kind.md);
 
 Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
 

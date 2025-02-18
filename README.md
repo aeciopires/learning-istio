@@ -22,18 +22,18 @@ Esta documentação foi gerada durante o estudo do curso **[Descomplicando Istio
 
 **É recomendado ter um bom domínio sobre orquestração de conteinêres com Docker e Kubernetes** antes de começar a estudar o Istio. Os links citados nas referências podem ajudar nisso. Você também pode aprender através dos cursos [Descomplicando Docker](https://www.linuxtips.io/products/descomplicando-o-docker) e [Descomplicando Kubernetes](https://www.linuxtips.io/products/descomplicando-o-kubernetes).
 
-Para fins de aprendizado, o Kubernetes foi provisionado manualmente em instâncias EC2 utilizando o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) para entender os requisitos de rede, hardware, software e o funcionamento dos componentes do Kubernetes e Istio.
+Para fins de aprendizado, o Kubernetes foi provisionado utilizando o [kind](kind.md).
 
 **Em ambientes de teste, homologação e produção**, que ficam na cloud, é uma boa ideia utilizar serviços gerenciados como: [EKS](https://aws.amazon.com/eks), [GKE](https://cloud.google.com/kubernetes-engine), [AKS](https://azure.microsoft.com/en-us/free/kubernetes-service), [DOKS](https://www.digitalocean.com/products/kubernetes/), entre outros. Em ambientes on-premisses, o [k0s](https://k0sproject.io) e o [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/) podem ser utilizados.
 
-**Em ambientes de desenvolvimento** é uma boa ideia utilizar o [kind](https://kind.sigs.k8s.io/), [microk8s](https://microk8s.io), [k3d](https://k3d.io) ou [minikube](https://minikube.sigs.k8s.io/). Este [repositório de Rafael Peroco](https://github.com/rafaelperoco/kind) cria um cluster Kubernetes utilizando o kind e inicia vários serviços. Ele dá a opção de usar o Service Mesh com o [Istio](https://istio.io) e o [Linkerd](https://linkerd.io).
+**Em ambientes de desenvolvimento** é uma boa ideia utilizar o [kind](https://kind.sigs.k8s.io/), [microk8s](https://microk8s.io), [k3d](https://k3d.io) ou [minikube](https://minikube.sigs.k8s.io/).
 
 # Configurações do Ambiente
 
 As versões dos softwares utilizados foram:
 
 - Docker: 27.4.0
-- Kubernetes (kubeadm): 1.32.1
+- Kubernetes (kind): 1.32.1
 - kubectl: 1.32.1
 - Helm: 3.17.0
 - Istio: 1.24
