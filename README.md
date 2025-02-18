@@ -4,8 +4,6 @@
 - [Configurações do Ambiente](#configurações-do-ambiente)
 - [Day 1](#day-1)
 - [Day 2](#day-2)
-- [Day 3](#day-3)
-- [Day 4](#day-4)
 - [Referências](#referências)
   - [Documentação do Istio](#documentação-do-istio)
 - [Mantenedores](#mantenedores)
@@ -45,14 +43,6 @@ Veja os comandos [aqui](day1.md)
 
 Veja os comandos [aqui](day2.md)
 
-# Day 3
-
-Veja os comandos [aqui](day3.md)
-
-# Day 4
-
-Veja os comandos [aqui](day4.md)
-
 # Referências
 
 - https://github.com/badtuxx/DescomplicandoKubernetes
@@ -66,15 +56,15 @@ Veja os comandos [aqui](day4.md)
 
 ## Documentação do Istio
 
-- https://istio.io/latest/docs/overview/what-is-istio/
-- https://istio.io/latest/docs/overview/why-choose-istio/
-- https://istio.io/latest/docs/overview/dataplane-modes/
-- https://istio.io/latest/docs/concepts/
-- https://istio.io/latest/docs/setup/
-- https://istio.io/latest/docs/ambient/
-- https://istio.io/latest/docs/tasks/
-- https://istio.io/latest/docs/examples/
-- https://istio.io/latest/docs/ops/
+- https://istio.io/v1.24/docs/overview/what-is-istio/
+- https://istio.io/v1.24/docs/overview/why-choose-istio/
+- https://istio.io/v1.24/docs/overview/dataplane-modes/
+- https://istio.io/v1.24/docs/concepts/
+- https://istio.io/v1.24/docs/setup/
+- https://istio.io/v1.24/docs/ambient/
+- https://istio.io/v1.24/docs/tasks/
+- https://istio.io/v1.24/docs/examples/
+- https://istio.io/v1.24/docs/ops/
 
 # Mantenedores
 
