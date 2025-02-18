@@ -6,7 +6,6 @@
 - [Day 2](#day-2)
 - [Day 3](#day-3)
 - [Day 4](#day-4)
-- [Security group/firewall](#security-groupfirewall)
 - [Referências](#referências)
   - [Documentação do Istio](#documentação-do-istio)
 - [Mantenedores](#mantenedores)
@@ -53,27 +52,6 @@ Veja os comandos [aqui](day3.md)
 # Day 4
 
 Veja os comandos [aqui](day4.md)
-
-# Security group/firewall
-
-> Para o Kubernetes e o Istio funcionarem corretamente, foi necessário liberar um conjunto de **40 portas** no security group associado as instâncias EC2, citados nos prints do diretório images.
-
-Fonte:
-
-* https://github.com/badtuxx/DescomplicandoKubernetes/blob/main/pt/day_one/descomplicando_kubernetes.md#portas-que-devemos-nos-preocupar
-* https://istio.io/latest/docs/ops/deployment/requirements/
-
-<p align="center">
-  <img src="images/sec1.png" alt="Rules of security group - part 1">
-</p>
-
-<p align="center">
-  <img src="images/sec2.png" alt="Rules of security group - part 2">
-</p>
-
-<p align="center">
-  <img src="images/sec3.png" alt="Rules of security group - part 3">
-</p>
 
 # Referências
 
