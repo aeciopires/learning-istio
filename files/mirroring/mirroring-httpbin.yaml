@@ -6,13 +6,13 @@ spec:
   hosts:
     - httpbin
   http:
-    - route:
-      - destination:
-          host: httpbin
-          subset: v1
-        weight: 100
-mirror:
-  host: httpbin
-  subset: v2
-mirrorPercentage:
-  value: 100.0
+  - route:
+    - destination:
+        host: httpbin
+        subset: v1
+      weight: 100
+    mirror:
+      host: httpbin
+      subset: v2
+    mirrorPercentage:
+      value: 100.0

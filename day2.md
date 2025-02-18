@@ -230,5 +230,49 @@ Nesta tarefa, você primeiro forçará todo o tráfego para a ``v1`` de um servi
 
 Faça deploy do httpbin com os comandos a seguir.
 
+```bash
+export LEARNING_ISTIO_TAG_REPOSITORY=v2.0.0
+export LEARNING_ISTIO_BASE_URL="https://raw.githubusercontent.com/aeciopires/learning-istio/refs/tags/$LEARNING_ISTIO_TAG_REPOSITORY/"
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/deployment-httpbin-v1.yaml"
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/deployment-httpbin-v2.yaml"
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/deployment-curl-sleep.yaml"
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/service-httpbin.yaml"
+```
 
+Crie uma regra de rota padrão para rotear todo o tráfego para a ``v1`` do serviço HTTPBin:
 
+```bash
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/destination-rule-httpbin.yaml"
+```
+
+Agora, com todo o tráfego direcionado para ``httpbin:v1``, envie requisições ao serviço com o seguinte comando.
+
+```bash
+kubectl -n $MY_NAMESPACE exec deploy/curl -c curl -- curl -sS http://httpbin:8000/headers
+```
+
+Verifique os logs dos pods ``httpbin-v1`` e ``httpbin-v2``. Você deve ver entradas de log de acesso para ``v1`` e nenhuma para ``v2``:
+
+```bash
+kubectl -n $MY_NAMESPACE logs deploy/httpbin-v1 -c httpbin
+kubectl -n $MY_NAMESPACE logs deploy/httpbin-v2 -c httpbin
+```
+
+Altere a regra de rota para espelhar o tráfego para ``httpbin-v2``:
+
+```bash
+kubectl -n $MY_NAMESPACE apply -f "$LEARNING_ISTIO_BASE_URL/files/mirroring/mirroring-httpbin.yaml"
+```
+
+Envie o tráfego novamente:
+
+Agora, você deve ver o registro de acesso para ``v1`` e ``v2``. Os registros de acesso criados em ``v2`` são as solicitações espelhadas que estão realmente indo para ``v1``.
+
+Agora execute os seguintes comandos para remover as configurações anteriores.
+
+```bash
+kubectl -n $MY_NAMESPACE delete virtualservice httpbin
+kubectl -n $MY_NAMESPACE delete destinationrule httpbin
+kubectl -n $MY_NAMESPACE delete deploy httpbin-v1 httpbin-v2 curl
+kubectl -n $MY_NAMESPACE delete svc httpbin
+```
