@@ -74,7 +74,7 @@ Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.24
+export ISTIO_RELEASE=1.25
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"

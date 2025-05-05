@@ -69,7 +69,7 @@ sudo rm /etc/apt/sources.list.d/helm-stable-debian.list
 Documentação: https://helm.sh/docs/
 
 ```bash
-VERSION="3.17.0"
+VERSION="3.17.3"
 
 asdf plugin list all | grep helm
 asdf plugin add helm https://github.com/Antiarchitect/asdf-helm.git
@@ -122,7 +122,7 @@ sudo rm /usr/local/bin/kind
 > Antes de prosseguir, certifique-se de ter instalado o comando [asdf](#asdf).
 
 ```bash
-VERSION="0.26.0"
+VERSION="0.27.0"
 asdf plugin list all | grep kind
 asdf plugin add kind https://github.com/johnlayton/asdf-kind.git
 asdf latest kind
@@ -144,7 +144,7 @@ cat << EOF > $HOME/kind-3nodes.yaml
 # Metal LB in Kind: https://kind.sigs.k8s.io/docs/user/loadbalancer
 # Ingress in Kind: https://kind.sigs.k8s.io/docs/user/ingress
 
-# Config compatible with kind v0.26.0
+# Config compatible with kind v0.27.0
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:

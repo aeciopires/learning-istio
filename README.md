@@ -32,8 +32,8 @@ As versões dos softwares utilizados foram:
 - Docker: 27.4.0
 - Kubernetes (kind): 1.32.1
 - kubectl: 1.32.1
-- Helm: 3.17.0
-- Istio: 1.24
+- Helm: 3.17.3
+- Istio: 1.25
 
 # Day 1
 
