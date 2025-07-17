@@ -69,7 +69,7 @@ sudo rm /etc/apt/sources.list.d/helm-stable-debian.list
 Documentação: https://helm.sh/docs/
 
 ```bash
-VERSION="3.17.3"
+VERSION="3.18.4"
 
 asdf plugin list all | grep helm
 asdf plugin add helm https://github.com/Antiarchitect/asdf-helm.git
@@ -90,7 +90,7 @@ Execute os seguintes comandos.
 Documentação: https://kubernetes.io/docs/reference/kubectl/overview/
 
 ```bash
-VERSION_OPTION_1="1.32.1"
+VERSION_OPTION_1="1.33.1"
 
 asdf plugin list all | grep kubectl
 asdf plugin add kubectl https://github.com/asdf-community/asdf-kubectl.git
@@ -122,7 +122,7 @@ sudo rm /usr/local/bin/kind
 > Antes de prosseguir, certifique-se de ter instalado o comando [asdf](#asdf).
 
 ```bash
-VERSION="0.27.0"
+VERSION="0.29.0"
 asdf plugin list all | grep kind
 asdf plugin add kind https://github.com/johnlayton/asdf-kind.git
 asdf latest kind
@@ -144,7 +144,7 @@ cat << EOF > $HOME/kind-3nodes.yaml
 # Metal LB in Kind: https://kind.sigs.k8s.io/docs/user/loadbalancer
 # Ingress in Kind: https://kind.sigs.k8s.io/docs/user/ingress
 
-# Config compatible with kind v0.27.0
+# Config compatible with kind v0.29.0
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -152,7 +152,7 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 nodes:
   - role: control-plane
-    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
+    image: kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f
     kubeadmConfigPatches:
     - |
       kind: InitConfiguration
@@ -169,9 +169,9 @@ nodes:
       listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
   - role: worker
-    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
+    image: kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f
   - role: worker
-    image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
+    image: kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f
 EOF
 ```
 
@@ -223,7 +223,7 @@ helm repo update
 helm upgrade --install metallb metallb/metallb \
   --create-namespace \
   --namespace metallb-system \
-  --version 0.14.9 \
+  --version 0.15.2 \
   --set "controller.tolerations[0].key=node-role.kubernetes.io/master" \
   --set "controller.tolerations[0].effect=NoSchedule" \
   --set speaker.tolerateMaster=true \

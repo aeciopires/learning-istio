@@ -21,38 +21,65 @@ Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
 
 Instale o **MetalLB** com as instruções da página: [metallb](kind.md#metallb).
 
+Crie variáveis de ambiente uteis para baixar os arquivos complementares
+
+```bash
+export ISTIO_RELEASE=1.26
+export VERSION_ISTIO="${ISTIO_RELEASE}.2"
+export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
+export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
+export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
+export MY_NAMESPACE='myapp'
+export ISTIO_HTTPBIN_URL="$ISTIO_BASE_URL/httpbin/"
+```
+
 Instale o **Istio** com os seguintes comandos:
 
 ```bash
 #------- Specifics (master)
 # References:
-# https://istio.io/v1.24/docs/setup/getting-started/
-# https://istio.io/v1.24/docs/setup/install/helm/
-# Allow all these ports: https://istio.io/v1.24/docs/ops/deployment/requirements/
+# https://istio.io/v1.26/docs/setup/getting-started/
+# https://istio.io/v1.26/docs/setup/install/helm/
+# Allow all these ports: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Configure the Helm repository (ambient mode):
-# https://istio.io/v1.24/docs/ambient/install/helm/
+# https://istio.io/v1.26/docs/ambient/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
 # Install the Istio base components
-helm -n istio-system install istio-base istio/base --create-namespace --wait
+helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --create-namespace --wait --debug --timeout 900s
 
 # Install or upgrade the Kubernetes Gateway API CRDs
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-  { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
 
 # Install the Istiod, the control plane component that manages and configures the proxies to route traffic within the mesh
-helm -n istio-system install istiod istio/istiod --set profile=ambient --wait
+helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
 
 # Install CNI node agent. It is responsible for detecting the pods that belong to the ambient mesh, and configuring the traffic redirection between pods and the ztunnel node proxy (which will be installed later).
-helm -n istio-system install istio-cni istio/cni --set profile=ambient --wait
+helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
+```
 
+> ATTENTION!!! If you receive the bellow error while trying to tail the log of istio-cni pod: 
+``failed to create fsnotify watcher: too many open files``, fix using the follow commands:
+
+```bash
+sudo sysctl -w fs.inotify.max_user_watches=2099999999
+sudo sysctl -w fs.inotify.max_user_instances=2099999999
+sudo sysctl -w fs.inotify.max_queued_events=2099999999
+```
+
+Reference: https://serverfault.com/questions/1137211/failed-to-create-fsnotify-watcher-too-many-open-files
+
+Back to install Istio components using these commands:
+
+```bash
 # Install ztunnel DaemonSet, which is the node proxy component of Istio’s ambient mode.
-helm -n istio-system install ztunnel istio/ztunnel --wait
+helm -n istio-system install ztunnel istio/ztunnel --version $VERSION_ISTIO --wait --debug --timeout 900s
 
 # Install Ingress gateway
-helm -n istio-system install istio-ingress istio/gateway --create-namespace --wait
+helm -n istio-system install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
 
 # Validate the installation
 helm -n istio-system ls
@@ -64,26 +91,16 @@ helm -n istio-system status istio-ingress
 kubectl -n istio-system get all --output wide
 
 # To uninstall istio follow the instructions of the page
-# https://istio.io/v1.24/docs/ambient/install/helm/#uninstall
+# https://istio.io/v1.26/docs/ambient/install/helm/#uninstall
 ```
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/v1.24/docs/ambient/getting-started/deploy-sample-app/.
-
-Crie variáveis de ambiente uteis para baixar os arquivos complementares
-
-```bash
-export ISTIO_RELEASE=1.25
-export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
-export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
-export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
-```
+> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/v1.26/docs/ambient/getting-started/deploy-sample-app/.
 
 Instale a aplicação de exemplo:
 
 ```bash
-MY_NAMESPACE='myapp'
 kubectl create namespace $MY_NAMESPACE
 
 kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo.yaml"
@@ -132,7 +149,7 @@ Usando o navegador, acesse a página http://localhost:8080/productpage.
   <img src="images/bookinfo.png" alt="Bookinfo productpage">
 </p>
 
-Visualize os objetos da aplicação recém Bookinfo.
+Visualize os objetos da aplicação Bookinfo.
 
 ```bash
 kubectl -n $MY_NAMESPACE get gateway,httproute,service,pods,deployments,replicaset
@@ -175,7 +192,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.24/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.26/docs/ambient/getting-started/secure-and-visualize/):
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
