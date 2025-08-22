@@ -208,7 +208,7 @@ Você espera que a página inicial do Bookinfo carregue sem erros em aproximadam
 
 Veja os tempos de resposta da página da web:
 
-Abra o menu **Ferramentas do desenvolvedor** no seu navegador. Abra a guia **Rede**. 
+Abra o menu **Ferramentas do desenvolvedor** no seu navegador. Abra a guia **Rede**.
 
 Recarregue a página da web ``/productpage``. Você verá que a página realmente carrega em cerca de 6 segundos.
 

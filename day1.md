@@ -78,8 +78,17 @@ helm -n istio-system install ztunnel istio/ztunnel --version $VERSION_ISTIO --wa
 
 # Instale o Ingress gateway
 helm -n istio-system install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
+```
 
-# Valide a installation dos componentes do Istio
+> ATENÇÃO!!! Se durante a instalação do Istio Gateway você encontrar o seguinte erro:
+>
+> ``Error: INSTALLATION FAILED: values don't meet the specifications of the schema(s) in the following chart(s): gateway: - at '': additional properties '_internal_defaults_do_not_set' not allowed``
+>
+> Isso foi reportado neste Issue: https://github.com/istio/istio/issues/57354 e tem um fix neste pull request: https://github.com/istio/istio/pull/57426
+
+Valide a instalação dos componentes do Istio com os seguintes comandos:
+
+```bash
 helm -n istio-system ls
 helm -n istio-system status istio-base
 helm -n istio-system status istiod
@@ -91,7 +100,7 @@ kubectl -n istio-system get all --output wide
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/v1.27/docs/ambient/getting-started/deploy-sample-app/.
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.27/docs/ambient/getting-started/deploy-sample-app
 
 Instale a aplicação de exemplo:
 
