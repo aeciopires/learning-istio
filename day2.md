@@ -278,3 +278,5 @@ kubectl -n $MY_NAMESPACE delete destinationrule httpbin
 kubectl -n $MY_NAMESPACE delete deploy httpbin-v1 httpbin-v2 curl
 kubectl -n $MY_NAMESPACE delete svc httpbin
 ```
+
+Para desinstalar o Istio, execute os comandos da página: [UNINSTALL_ISTIO.md](UNINSTALL_ISTIO.md).
