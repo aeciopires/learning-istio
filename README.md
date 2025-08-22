@@ -34,20 +34,20 @@ As versões dos softwares utilizados foram:
 - Kubernetes (kind): 1.33.1
 - kubectl: 1.33.1
 - Helm: 3.18.4
-- Istio: 1.26
+- Istio: 1.27
 
 # Requisitos para executar o Istio
 
-Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.26/docs/setup/platform-setup/docker/
+Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.27/docs/setup/platform-setup/docker/
 
-Veja as provedores de Kubernetes suportados: https://istio.io/v1.26/docs/ambient/install/platform-prerequisites/
+Veja as provedores de Kubernetes suportados: https://istio.io/v1.27/docs/ambient/install/platform-prerequisites/
 
-Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.26/docs/releases/supported-releases/#support-status-of-istio-releases
+Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.27/docs/releases/supported-releases/#support-status-of-istio-releases
 
 Veja mais detalhes sobre os requisitos da aplicação em:
 
-- https://istio.io/v1.26/docs/ops/deployment/application-requirements/
-- https://istio.io/v1.26/docs/ops/deployment/platform-requirements/
+- https://istio.io/v1.27/docs/ops/deployment/application-requirements/
+- https://istio.io/v1.27/docs/ops/deployment/platform-requirements/
 
 # Day 1
 
@@ -70,15 +70,15 @@ Veja os comandos [aqui](day2.md)
 
 ## Documentação do Istio
 
-- https://istio.io/v1.26/docs/overview/what-is-istio/
-- https://istio.io/v1.26/docs/overview/why-choose-istio/
-- https://istio.io/v1.26/docs/overview/dataplane-modes/
-- https://istio.io/v1.26/docs/concepts/
-- https://istio.io/v1.26/docs/setup/
-- https://istio.io/v1.26/docs/ambient/
-- https://istio.io/v1.26/docs/tasks/
-- https://istio.io/v1.26/docs/examples/
-- https://istio.io/v1.26/docs/ops/
+- https://istio.io/v1.27/docs/overview/what-is-istio/
+- https://istio.io/v1.27/docs/overview/why-choose-istio/
+- https://istio.io/v1.27/docs/overview/dataplane-modes/
+- https://istio.io/v1.27/docs/concepts/
+- https://istio.io/v1.27/docs/setup/
+- https://istio.io/v1.27/docs/ambient/
+- https://istio.io/v1.27/docs/tasks/
+- https://istio.io/v1.27/docs/examples/
+- https://istio.io/v1.27/docs/ops/
 
 # Mantenedores
 

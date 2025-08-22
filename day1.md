@@ -24,8 +24,8 @@ Instale o **MetalLB** com as instruções da página: [metallb](kind.md#metallb)
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.26
-export VERSION_ISTIO="${ISTIO_RELEASE}.2"
+export ISTIO_RELEASE=1.27
+export VERSION_ISTIO="${ISTIO_RELEASE}.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -38,12 +38,12 @@ Instale o **Istio** com os seguintes comandos:
 ```bash
 #------- Specifics (master)
 # References:
-# https://istio.io/v1.26/docs/setup/getting-started/
-# https://istio.io/v1.26/docs/setup/install/helm/
+# https://istio.io/v1.27/docs/setup/getting-started/
+# https://istio.io/v1.27/docs/setup/install/helm/
 # Allow all these ports: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Configure the Helm repository (ambient mode):
-# https://istio.io/v1.26/docs/ambient/install/helm/
+# https://istio.io/v1.27/docs/ambient/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
@@ -91,12 +91,12 @@ helm -n istio-system status istio-ingress
 kubectl -n istio-system get all --output wide
 
 # To uninstall istio follow the instructions of the page
-# https://istio.io/v1.26/docs/ambient/install/helm/#uninstall
+# https://istio.io/v1.27/docs/ambient/install/helm/#uninstall
 ```
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/v1.26/docs/ambient/getting-started/deploy-sample-app/.
+> Documentação de referência para os arquivos e comandos mostrados a seguir:https://istio.io/v1.27/docs/ambient/getting-started/deploy-sample-app/.
 
 Instale a aplicação de exemplo:
 
@@ -192,7 +192,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.26/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.27/docs/ambient/getting-started/secure-and-visualize/):
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
