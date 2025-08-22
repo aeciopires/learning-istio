@@ -11,15 +11,13 @@
 
 Comandos executados em sequência durante o treinamento.
 
-Instale o **Docker** com as instruções da página: [docker](docker.md).
+Instale o **Docker** com as instruções da página: [INSTALL_REQUIREMENTS.md#docker](INSTALL_REQUIREMENTS.md#docker).
 
-Crie um **cluster Kubernetes** usando o kind conforme a documentação a seguir:
+Crie um **cluster Kubernetes** usando o kind conforme as instruções da página: [INSTALL_REQUIREMENTS.md#kind](INSTALL_REQUIREMENTS.md#kind);
 
-- [kind](kind.md);
+Instale o **Helm** com as instruções da página: [INSTALL_REQUIREMENTS.md#helm](INSTALL_REQUIREMENTS.md#helm).
 
-Instale o **Helm** com as instruções da página: [helm](kind.md#helm).
-
-Instale o **MetalLB** com as instruções da página: [metallb](kind.md#metallb).
+Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#metallb](INSTALL_REQUIREMENTS.md#metallb).
 
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
