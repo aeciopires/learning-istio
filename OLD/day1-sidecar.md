@@ -40,23 +40,23 @@ Instale o **Istio** com os seguintes comandos:
 # https://istio.io/v1.27/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
-# Configure o repositório Helm (usando o ambient mode):
-# https://istio.io/v1.27/docs/ambient/install/helm/
+# Configure o repositório Helm (usando o sidecar mode):
+# https://istio.io/v1.27/docs/setup/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
 # Instale os componentes base do Istio
-helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --create-namespace --wait --debug --timeout 900s
+helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --set defaultRevision=default --create-namespace --wait --debug --timeout 900s
 
 # Instale ou atualize o Kubernetes Gateway API CRDs
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
 
-# Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
-helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
-
 # Instale o CNI node agent. Ele é responsável por detectar os pods que pertencem  ao ambiente mesh, e configura o encaminhamento de tráfego entre os pods e o ztunnel node proxy (que será instalado mais adiante).
-helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
+helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --wait --debug --timeout 900s
+
+# Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
+helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --wait --debug --timeout 900s
 ```
 
 > ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log do istio-cni: 
@@ -73,9 +73,6 @@ Referência: https://serverfault.com/questions/1137211/failed-to-create-fsnotify
 Continuação da instalação dos componentes do Istio com os seguintes comandos:
 
 ```bash
-# Instale o ztunnel DaemonSet, que é o componente daemonset do node proxy do Istio no ambient mode.
-helm -n istio-system install ztunnel istio/ztunnel --version $VERSION_ISTIO --wait --debug --timeout 900s
-
 # Instale o Ingress gateway
 helm -n istio-system install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
 ```
@@ -95,14 +92,13 @@ helm -n istio-system ls
 helm -n istio-system status istio-base
 helm -n istio-system status istiod
 helm -n istio-system status istio-cni
-helm -n istio-system status ztunnel
 helm -n istio-system status istio-ingress
 kubectl -n istio-system get all --output wide
 ```
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.27/docs/ambient/getting-started/deploy-sample-app
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.27/docs/examples/bookinfo/
 
 Instale a aplicação de exemplo:
 
@@ -221,10 +217,17 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.27/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Sidecar mode https://istio.io/v1.27/docs/setup/getting-started/). O comando abaixo adiciona o label ``istio-injection=enabled`` em determinado namespace, permitindo que o Istio injete os sidecars automaticamente nos pods criados nesse namespace.
 
 ```bash
-kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
+kubectl label namespace $MY_NAMESPACE istio-injection=enabled
+```
+
+Depois disse execute o comando abaixo para reiniciar os pods da aplicação Bookinfo, para que os sidecars sejam injetados.
+
+```bash
+kubectl -n $MY_NAMESPACE rollout restart deployment
+kubectl -n $MY_NAMESPACE get pods
 ```
 
 Envie tráfego para o aplicativo Bookinfo, para que o Kiali gere o gráfico de tráfego:

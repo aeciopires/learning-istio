@@ -61,18 +61,47 @@ export MY_NAMESPACE='myapp'
 export ISTIO_HTTPBIN_URL="$ISTIO_BASE_URL/httpbin/"
 ```
 
-Crie um port-forward para acessar a página do produto Bookinfo por meio do gateway que acabou de provisionar.
+Use o comando abaixo para obter o IP do gateway.
 
 ```bash
-MY_NAMESPACE='myapp'
+export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}')
+echo $GATEWAY_IP
+```
+
+Use o navegador, acesse a página http://GATEWAY_IP:80/productpage.
+
+> ATENÇÃO!!! Substitua GATEWAY_IP pelo valor obtido no comando anterior.
+> O gateway faz uso da porta 80/TCP para tráfego HTTP.
+> Você deve ver a página do produto Bookinfo.
+
+<p align="center">
+  <img src="images/bookinfo.png" alt="Bookinfo productpage">
+</p>
+
+> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop, será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
+> Comandos para reiniciar o serviço docker-mac-net-connect:
+
+```bash
+sudo brew services stop docker-mac-net-connect
+sudo brew services start docker-mac-net-connect
+sudo brew services info docker-mac-net-connect
+```
+
+Outra opção é criar um port-forward para acessar a página do produto Bookinfo.
+
+```bash
 kubectl -n $MY_NAMESPACE port-forward svc/bookinfo-gateway-istio 8080:80
 ```
 
-Usando o navegador, acesse a página http://localhost:8080/productpage.
+Use o navegador, acesse a página http://localhost:8080/productpage.
 
 Envie tráfego para o aplicativo Bookinfo, para que o Kiali gere o gráfico de tráfego:
 
 ```bash
+# Abordagem 1: Usando o IP do gateway
+for i in $(seq 1 10000); do curl -sSI -o /dev/null http://${GATEWAY_IP}/productpage; done
+
+# Abordagem 2: Usando o endereço da aplicação via port-forward
 for i in $(seq 1 10000); do curl -sSI -o /dev/null http://localhost:8080/productpage; done
 ```
 
@@ -153,7 +182,7 @@ Transfira 50% do tráfego de ``reviews:v1`` para ``reviews:v3`` com o seguinte c
 kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/networking/virtual-service-reviews-50-v3.yaml"
 ```
 
-Supondo que você decida que o microsserviço ``reviews:v3`` é estável, você pode rotear 100% do tráfego para ``reviews:v3`` aplicando este comando:   
+Supondo que você decida que o microsserviço ``reviews:v3`` é estável, você pode rotear 100% do tráfego para ``reviews:v3`` aplicando este comando:
 
 ```bash
 kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/networking/virtual-service-reviews-v3.yaml"
