@@ -1,0 +1,119 @@
+# Use existing secret for API key
+datadog:
+  # If using secret created in Step 2:
+  apiKeyExistingSecret: datadog-secret
+  
+  # Or provide API key directly (NOT recommended for production):
+  # apiKey: <YOUR_DATADOG_API_KEY>
+  
+  # Datadog site (use datadoghq.eu for EU)
+  site: datadoghq.com
+  
+  # Enable/disable features
+  #containerExcludeLogs: "kube_namespace:^monitoring$|kube_namespace:^datadog$|kube_namespace:^istio-system$|kube_namespace:^kube-system$|kube_namespace:^default$|kube_namespace:^kube-node-lease$|kube_namespace:^kube-public$|kube_namespace:^local-path-storage$|kube_namespace:^metallb-system$"
+  #containerIncludeLogs: "kube_namespace:myapp"
+  # Or add annotations to specific pods/deployments for log collection:
+  # Example: ad.datadoghq.com/istio-proxy.logs: '[{"source":"proxyv2", "service":"proxyv2"}]'
+
+  logs:
+    enabled: true
+    # When "containerCollectAll" is disabled (default) you don’t need to add any filtering
+    # because everything is excluded by default.
+    #containerCollectAll: true
+
+  apm:
+    portEnabled: true
+    socketEnabled: true
+  
+  processAgent:
+    enabled: true
+    processCollection: true
+  
+  #systemProbe:
+  #  enabled: true
+  
+  # Network Performance Monitoring
+  #networkMonitoring:
+  #  enabled: true
+  
+  # Cluster Agent
+  clusterAgent:
+    enabled: true
+    replicas: 2
+    metricsProvider:
+      enabled: true
+  
+  # Enable Kubernetes event collection
+  kubeStateMetricsEnabled: true
+  kubeStateMetricsCore:
+    enabled: true
+
+# Agent configuration
+agents:
+  # Use DaemonSet (default)
+  enabled: true
+  
+  # Image configuration
+  image:
+    repository: gcr.io/datadoghq/agent
+    tag: 7
+    pullPolicy: IfNotPresent
+  
+  # Resource limits
+  containers:
+    agent:
+      env:
+        - name: DD_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DD_KUBELET_TLS_VERIFY
+          value: "false"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    processAgent:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 200Mi
+        limits:
+          cpu: 100m
+          memory: 200Mi
+    traceAgent:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 200Mi
+        limits:
+          cpu: 100m
+          memory: 200Mi
+
+# Cluster Agent configuration
+clusterAgent:
+  enabled: true
+  
+  image:
+    repository: gcr.io/datadoghq/cluster-agent
+    tag: '7.73.1'
+  
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Enable metrics provider for HPA
+  metricsProvider:
+    enabled: true
+
+# Kube State Metrics
+datadog-crds:
+  crds:
+    datadogMetrics: true

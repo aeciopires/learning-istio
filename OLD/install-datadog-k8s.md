@@ -116,17 +116,24 @@ Create a custom values file to configure the Datadog Agent. Save this as `datado
 datadog:
   # If using secret created in Step 2:
   apiKeyExistingSecret: datadog-secret
-  
+
   # Or provide API key directly (NOT recommended for production):
   # apiKey: <YOUR_DATADOG_API_KEY>
   
   # Datadog site (use datadoghq.eu for EU)
   site: datadoghq.com
-  
+
   # Enable/disable features
+  #containerExcludeLogs: "kube_namespace:^monitoring$|kube_namespace:^datadog$|kube_namespace:^istio-system$|kube_namespace:^kube-system$|kube_namespace:^default$|kube_namespace:^kube-node-lease$|kube_namespace:^kube-public$|kube_namespace:^local-path-storage$|kube_namespace:^metallb-system$"
+  #containerIncludeLogs: "kube_namespace:myapp"
+  # Or add annotations to specific pods/deployments for log collection:
+  # Example: ad.datadoghq.com/istio-proxy.logs: '[{"source":"proxyv2", "service":"proxyv2"}]'
+
   logs:
     enabled: true
-    containerCollectAll: true
+    # When "containerCollectAll" is disabled (default) you don’t need to add any filtering
+    # because everything is excluded by default.
+    #containerCollectAll: true
   
   apm:
     portEnabled: true

@@ -1,0 +1,15 @@
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: ingress-json-logging
+  namespace: myapp  # typically where ingress-gateway runs
+spec:
+  # 1. SELECTOR: This targets only the Ingress Gateway pods
+  selector:
+    matchLabels:
+      gateway.istio.io/managed: istio.io-gateway-controller # Check your specific label if different
+
+  # 2. OVERRIDE: Use the specific provider defined in MeshConfig
+  accessLogging:
+    - providers:
+      - name: json-gateway-log

@@ -4,6 +4,8 @@
 
 - [Descomplicando Istio](#descomplicando-istio)
 - [Day 1](#day-1)
+- [Customizando logs de acesso no Istio Gateway para incluir a métrica REQUEST\_TX\_DURATION](#customizando-logs-de-acesso-no-istio-gateway-para-incluir-a-métrica-request_tx_duration)
+- [Referências](#referências)
 
 <!-- TOC -->
 
@@ -57,87 +59,6 @@ helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --wait
 
 # Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
 helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --wait --debug --timeout 900s
-
-# Para incluir tokens específicos do Envoy, como %REQUEST_TX_DURATION% (que mede o tempo decorrido desde o primeiro byte da solicitação recebida até o último byte enviado), você deve atualizar o meshConfig.
-
-# Configure o log do envoy para enviar logs no formato JSON
-# cat <<EOF > istiod-values.yaml
-# # Istio Operator values to enable JSON access logs with custom metric
-# global:
-#   logAsJson: true
-# 
-# # Configure access logs in JSON format with custom metric 'REQUEST_TX_DURATION'
-# meshConfig:
-#   accessLogFile: /dev/stdout
-#   extensionProviders:
-#     - name: "file-log"
-#       envoyFileAccessLog:
-#         path: /dev/stdout
-#         logFormat:
-#           # Use 'labels' to generate JSON output
-#           labels:
-#             timestamp: "%START_TIME%"
-#             method: "%REQ(:METHOD)%"
-#             path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-#             protocol: "%PROTOCOL%"
-#             response_code: "%RESPONSE_CODE%"
-#             response_flags: "%RESPONSE_FLAGS%"
-#             bytes_received: "%BYTES_RECEIVED%"
-#             bytes_sent: "%BYTES_SENT%"
-#             duration: "%DURATION%"
-#             upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
-#             x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
-#             user_agent: "%REQ(USER-AGENT)%"
-#             request_id: "%REQ(X-REQUEST-ID)%"
-#             authority: "%REQ(:AUTHORITY)%"
-#             upstream_host: "%UPSTREAM_HOST%"
-#             # The custom metric you want
-#             request_tx_duration: "%REQUEST_TX_DURATION%"
-#   defaultProviders:
-#     accessLogging:
-#       - "file-log"
-# 
-# #------------------------------------------------------------------------------
-# # Configure access logs in Text format with custom metric 'REQUEST_TX_DURATION'
-# # For Datadog its recommended to use JSON format for better parsing
-# #meshConfig:
-# #  accessLogFile: /dev/stdout
-# #  # Define the provider explicitly
-# #  extensionProviders:
-# #    - name: "file-log"
-# #      envoyFileAccessLog:
-# #        path: /dev/stdout
-# #        logFormat:
-# #          text: |
-# #            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
-# #  # Tell Istio to use this provider for all traffic
-# #  defaultProviders:
-# #    accessLogging:
-# #      - "file-log"
-# EOF
-
-# Atualize o Istiod com o arquivo de configuração anterior
-#
-# helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO -f istiod-values.yaml --wait --debug --timeout 900s
-#
-# Isso será usado para criar um configmap istio com a configuração do log atualizado
-#
-# Validando a configuração do log do Envoy
-#
-# Não verifique o arquivo /etc/envoy/proxy/envoy_rev.json do container istio-proxy. Em vez disso, consulte o proxy Envoy para saber qual é a sua configuração ativa atual usando o istioctl. A configuração do log pode ser substituída dinamicamente, portanto, o arquivo no sistema de arquivos pode não refletir a configuração real em uso.
-#
-# istioctl proxy-config listener pod/POD_NAME -n myapp --port 9080 -o json | grep -C 5 "REQUEST_TX_DURATION"
-#
-# Substitua 9080 pela porta de serviço do seu aplicativo.
-#
-# Se você encontrar `%REQUEST_TX_DURATION%` aqui, significa que está configurado.
-#
-# Gere tráfego e verifique os logs: Envie uma solicitação para seu aplicativo e observe os logs do proxy Istio para verificar se o campo `%REQUEST_TX_DURATION%` está sendo registrado corretamente.
-#
-# Neste exemplo, o log do Envoy deve se parecer com o seguinte:
-# [2025-12-29T...] "GET /productpage ..." 200 - 0 123 5 4 "-" "curl/7.8" ... "10.244.0.5:9080" 
-#
-# O último número (por exemplo, 5) é a duração da sua transação (TX) em milisegundos.
 ```
 
 > ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log do istio-cni: 
@@ -337,3 +258,164 @@ kubectl get all -n istio-ingress
 ```
 
 Para desinstalar o Istio, execute os comandos da página: [UNINSTALL_ISTIO.md](UNINSTALL_ISTIO.md).
+
+# Customizando logs de acesso no Istio Gateway para incluir a métrica REQUEST_TX_DURATION
+
+Para incluir logs específicos do Envoy, como ``%REQUEST_TX_DURATION%`` (que mede o tempo decorrido desde o primeiro byte da solicitação recebida até o último byte enviado), você deve atualizar o ``meshConfig``.
+
+```bash
+# Configure o log do envoy para enviar logs no formato JSON
+cat <<EOF > istiod-values.yaml
+# Approach 1: Configure access logs in JSON format with custom metric 'REQUEST_TX_DURATION' for all Istio proxies
+#
+# Istio Operator values to enable JSON access logs with custom metric
+#global:
+#  logAsJson: true
+#
+# Configure access logs in JSON format with custom metric 'REQUEST_TX_DURATION'
+#meshConfig:
+#  accessLogFile: /dev/stdout
+#  extensionProviders:
+#    - name: "file-log"
+#      envoyFileAccessLog:
+#        path: /dev/stdout
+#        logFormat:
+#          # Use 'labels' to generate JSON output
+#          labels:
+#            timestamp: "%START_TIME%"
+#            method: "%REQ(:METHOD)%"
+#            path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+#            protocol: "%PROTOCOL%"
+#            response_code: "%RESPONSE_CODE%"
+#            response_flags: "%RESPONSE_FLAGS%"
+#            bytes_received: "%BYTES_RECEIVED%"
+#            bytes_sent: "%BYTES_SENT%"
+#            duration: "%DURATION%"
+#            upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+#            x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+#            user_agent: "%REQ(USER-AGENT)%"
+#            request_id: "%REQ(X-REQUEST-ID)%"
+#            authority: "%REQ(:AUTHORITY)%"
+#            upstream_host: "%UPSTREAM_HOST%"
+#            # The custom metric you want
+#            request_tx_duration: "%REQUEST_TX_DURATION%"
+#  defaultProviders:
+#    accessLogging:
+#      - "file-log"
+
+#------------------------------------------------------------------------------
+# # Approach 2: Configure access logs in JSON format with custom metric 'REQUEST_TX_DURATION' only in Gateways
+# Sidecars will use standard config unless 'defaultProviders' is uncommented below
+meshConfig:
+  accessLogFile: /dev/stdout
+  extensionProviders:
+    - name: "json-gateway-log"
+      envoyFileAccessLog:
+        path: /dev/stdout
+        logFormat:
+          labels:
+            timestamp: "%START_TIME%"
+            method: "%REQ(:METHOD)%"
+            path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+            protocol: "%PROTOCOL%"
+            response_code: "%RESPONSE_CODE%"
+            response_flags: "%RESPONSE_FLAGS%"
+            bytes_received: "%BYTES_RECEIVED%"
+            bytes_sent: "%BYTES_SENT%"
+            duration: "%DURATION%"
+            upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+            x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+            user_agent: "%REQ(USER-AGENT)%"
+            request_id: "%REQ(X-REQUEST-ID)%"
+            authority: "%REQ(:AUTHORITY)%"
+            upstream_host: "%UPSTREAM_HOST%"
+            # The custom metric you want
+            request_tx_duration: "%REQUEST_TX_DURATION%"
+  # Remove 'defaultProviders' so sidecars revert to the standard config above.
+  # defaultProviders: 
+  #   accessLogging: []
+
+#------------------------------------------------------------------------------
+# Approach 3: Configure access logs in Text format with custom metric 'REQUEST_TX_DURATION'
+# For Datadog its recommended to use JSON format for better parsing
+#meshConfig:
+#  accessLogFile: /dev/stdout
+#  # Define the provider explicitly
+#  extensionProviders:
+#    - name: "file-log"
+#      envoyFileAccessLog:
+#        path: /dev/stdout
+#        logFormat:
+#          text: |
+#            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
+#  # Tell Istio to use this provider for all traffic
+#  defaultProviders:
+#    accessLogging:
+#      - "file-log"
+EOF
+
+# Atualize o Istiod com o arquivo de configuração anterior
+helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO -f istiod-values.yaml --wait --debug --timeout 900s
+```
+
+Isso será usado para criar um configmap istio com a configuração do log atualizado
+
+Usando a **abordagem 2**, os logs personalizados ainda não serão aplicados em todos os containers do envoy. Para aplicar essa configuração apenas no Istio Gateway (e não em todos os sidecars), você pode criar um recurso Telemetry específico para o gateway, conforme mostrado abaixo:
+
+```bash
+cat <<EOF > telemetry-log-gateway.yaml
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: ingress-json-logging
+  namespace: myapp  # typically where ingress-gateway runs
+spec:
+  # 1. SELECTOR: This targets only the Ingress Gateway pods
+  selector:
+    matchLabels:
+      gateway.istio.io/managed: istio.io-gateway-controller # Check your specific label if different
+
+  # 2. OVERRIDE: Use the specific provider defined in MeshConfig
+  accessLogging:
+    - providers:
+      - name: json-gateway-log
+EOF
+
+kubectl apply -f telemetry-log-gateway.yaml
+```
+
+> ATENÇÃO!!! O campo `selector` no objeto Telemetry é usado para especificar a quais pods a configuração de log deve ser aplicada. Neste caso, estamos direcionando apenas os pods do Ingress Gateway, correspondendo aos seus labels. Você pode executar o seguinte comando para inspecionar os labels dos pods do Ingress Gateway de determinado namespace:
+
+```bash
+kubectl -n NAMESPACE get pods --show-labels
+```
+
+**Validando a configuração do log do Envoy**:
+
+Não verifique o arquivo ``/etc/envoy/proxy/envoy_rev.json`` do container ``istio-proxy``. Em vez disso, consulte o proxy Envoy para saber qual é a sua configuração ativa atual usando o istioctl. A configuração do log pode ser substituída dinamicamente, portanto, o arquivo no sistema de arquivos pode não refletir a configuração real em uso.
+
+```bash
+istioctl proxy-config listener pod/POD_NAME -n myapp --port 9080 -o json | grep -C 5 "REQUEST_TX_DURATION"
+```
+
+> ATENÇÃO!!! Substitua 9080 pela porta de serviço do seu aplicativo.
+
+Se você encontrar `%REQUEST_TX_DURATION%` aqui, significa que está configurado.
+
+Gere tráfego e verifique os logs: Envie uma solicitação para seu aplicativo e observe os logs do proxy Istio para verificar se o campo `%REQUEST_TX_DURATION%` está sendo registrado corretamente.
+
+Neste exemplo, o log do Envoy deve se parecer com o seguinte:
+
+```bash
+# [2025-12-29T...] "GET /productpage ..." 200 - 0 123 5 4 "-" "curl/7.8" ... "10.244.0.5:9080" 
+```
+
+O último número (por exemplo, 5) é a duração da sua transação (TX) em milisegundos.
+
+# Referências
+
+- https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/
+- https://gateway.envoyproxy.io/v1.5/tasks/observability/proxy-accesslog/
+- https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage
+- https://istio.io/latest/docs/tasks/observability/logs/access-log/
+- https://dev.to/aws-builders/understanding-istio-access-logs-2k5o
