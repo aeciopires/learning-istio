@@ -57,6 +57,87 @@ helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --wait
 
 # Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
 helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --wait --debug --timeout 900s
+
+# Para incluir tokens específicos do Envoy, como %REQUEST_TX_DURATION% (que mede o tempo decorrido desde o primeiro byte da solicitação recebida até o último byte enviado), você deve atualizar o meshConfig.
+
+# Configure o log do envoy para enviar logs no formato JSON
+# cat <<EOF > istiod-values.yaml
+# # Istio Operator values to enable JSON access logs with custom metric
+# global:
+#   logAsJson: true
+# 
+# # Configure access logs in JSON format with custom metric 'REQUEST_TX_DURATION'
+# meshConfig:
+#   accessLogFile: /dev/stdout
+#   extensionProviders:
+#     - name: "file-log"
+#       envoyFileAccessLog:
+#         path: /dev/stdout
+#         logFormat:
+#           # Use 'labels' to generate JSON output
+#           labels:
+#             timestamp: "%START_TIME%"
+#             method: "%REQ(:METHOD)%"
+#             path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+#             protocol: "%PROTOCOL%"
+#             response_code: "%RESPONSE_CODE%"
+#             response_flags: "%RESPONSE_FLAGS%"
+#             bytes_received: "%BYTES_RECEIVED%"
+#             bytes_sent: "%BYTES_SENT%"
+#             duration: "%DURATION%"
+#             upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+#             x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+#             user_agent: "%REQ(USER-AGENT)%"
+#             request_id: "%REQ(X-REQUEST-ID)%"
+#             authority: "%REQ(:AUTHORITY)%"
+#             upstream_host: "%UPSTREAM_HOST%"
+#             # The custom metric you want
+#             request_tx_duration: "%REQUEST_TX_DURATION%"
+#   defaultProviders:
+#     accessLogging:
+#       - "file-log"
+# 
+# #------------------------------------------------------------------------------
+# # Configure access logs in Text format with custom metric 'REQUEST_TX_DURATION'
+# # For Datadog its recommended to use JSON format for better parsing
+# #meshConfig:
+# #  accessLogFile: /dev/stdout
+# #  # Define the provider explicitly
+# #  extensionProviders:
+# #    - name: "file-log"
+# #      envoyFileAccessLog:
+# #        path: /dev/stdout
+# #        logFormat:
+# #          text: |
+# #            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
+# #  # Tell Istio to use this provider for all traffic
+# #  defaultProviders:
+# #    accessLogging:
+# #      - "file-log"
+# EOF
+
+# Atualize o Istiod com o arquivo de configuração anterior
+#
+# helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO -f istiod-values.yaml --wait --debug --timeout 900s
+#
+# Isso será usado para criar um configmap istio com a configuração do log atualizado
+#
+# Validando a configuração do log do Envoy
+#
+# Não verifique o arquivo /etc/envoy/proxy/envoy_rev.json do container istio-proxy. Em vez disso, consulte o proxy Envoy para saber qual é a sua configuração ativa atual usando o istioctl. A configuração do log pode ser substituída dinamicamente, portanto, o arquivo no sistema de arquivos pode não refletir a configuração real em uso.
+#
+# istioctl proxy-config listener pod/POD_NAME -n myapp --port 9080 -o json | grep -C 5 "REQUEST_TX_DURATION"
+#
+# Substitua 9080 pela porta de serviço do seu aplicativo.
+#
+# Se você encontrar `%REQUEST_TX_DURATION%` aqui, significa que está configurado.
+#
+# Gere tráfego e verifique os logs: Envie uma solicitação para seu aplicativo e observe os logs do proxy Istio para verificar se o campo `%REQUEST_TX_DURATION%` está sendo registrado corretamente.
+#
+# Neste exemplo, o log do Envoy deve se parecer com o seguinte:
+# [2025-12-29T...] "GET /productpage ..." 200 - 0 123 5 4 "-" "curl/7.8" ... "10.244.0.5:9080" 
+#
+# O último número (por exemplo, 5) é a duração da sua transação (TX) em milisegundos.
 ```
 
 > ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log do istio-cni: 
