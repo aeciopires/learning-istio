@@ -422,3 +422,8 @@ O último número (por exemplo, 5) é a duração da sua transação (TX) em mil
 - https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage
 - https://istio.io/latest/docs/tasks/observability/logs/access-log/
 - https://dev.to/aws-builders/understanding-istio-access-logs-2k5o
+- https://istio.io/latest/docs/reference/config/telemetry/
+- https://istio.io/latest/docs/reference/config/metrics/
+- https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details
+- https://preliminary.istio.io/latest/docs/reference/config/metrics/
+
