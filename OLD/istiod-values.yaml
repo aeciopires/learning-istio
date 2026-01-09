@@ -19,6 +19,7 @@
 #            path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
 #            protocol: "%PROTOCOL%"
 #            response_code: "%RESPONSE_CODE%"
+#            response_code_details: "%RESPONSE_CODE_DETAILS(X)%"
 #            response_flags: "%RESPONSE_FLAGS%"
 #            bytes_received: "%BYTES_RECEIVED%"
 #            bytes_sent: "%BYTES_SENT%"
@@ -51,6 +52,7 @@ meshConfig:
             path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
             protocol: "%PROTOCOL%"
             response_code: "%RESPONSE_CODE%"
+            response_code_details: "%RESPONSE_CODE_DETAILS(X)%"
             response_flags: "%RESPONSE_FLAGS%"
             bytes_received: "%BYTES_RECEIVED%"
             bytes_sent: "%BYTES_SENT%"
@@ -79,7 +81,7 @@ meshConfig:
 #        path: /dev/stdout
 #        logFormat:
 #          text: |
-#            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
+#            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_CODE_DETAILS(X)% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
 #  # Tell Istio to use this provider for all traffic
 #  defaultProviders:
 #    accessLogging:

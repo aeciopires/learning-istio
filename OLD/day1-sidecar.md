@@ -287,6 +287,7 @@ cat <<EOF > istiod-values.yaml
 #            path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
 #            protocol: "%PROTOCOL%"
 #            response_code: "%RESPONSE_CODE%"
+#            response_code_details: "%RESPONSE_CODE_DETAILS(X)%"
 #            response_flags: "%RESPONSE_FLAGS%"
 #            bytes_received: "%BYTES_RECEIVED%"
 #            bytes_sent: "%BYTES_SENT%"
@@ -319,6 +320,7 @@ meshConfig:
             path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
             protocol: "%PROTOCOL%"
             response_code: "%RESPONSE_CODE%"
+            response_code_details: "%RESPONSE_CODE_DETAILS(X)%"
             response_flags: "%RESPONSE_FLAGS%"
             bytes_received: "%BYTES_RECEIVED%"
             bytes_sent: "%BYTES_SENT%"
@@ -347,7 +349,7 @@ meshConfig:
 #        path: /dev/stdout
 #        logFormat:
 #          text: |
-#            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
+#            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_CODE_DETAILS(X)% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %REQUEST_TX_DURATION%
 #  # Tell Istio to use this provider for all traffic
 #  defaultProviders:
 #    accessLogging:
@@ -414,6 +416,7 @@ O último número (por exemplo, 5) é a duração da sua transação (TX) em mil
 
 # Referências
 
+- https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter#config-advanced-substitution-operators
 - https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/
 - https://gateway.envoyproxy.io/v1.5/tasks/observability/proxy-accesslog/
 - https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage

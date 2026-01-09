@@ -736,3 +736,4 @@ Would you like me to show you how to set up an Alert (Monitor) based on this new
 - https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage
 - https://istio.io/latest/docs/tasks/observability/logs/access-log/
 - https://dev.to/aws-builders/understanding-istio-access-logs-2k5o
+- https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter#config-advanced-substitution-operators
