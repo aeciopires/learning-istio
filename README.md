@@ -59,6 +59,7 @@ Veja os comandos [aqui](day2.md)
 
 # Referências
 
+- https://speakerdeck.com/aeciopires/introducao-a-service-mesh-usando-o-istio
 - https://github.com/badtuxx/DescomplicandoKubernetes
 - http://blog.aeciopires.com/primeiros-passos-com-docker/
 - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
