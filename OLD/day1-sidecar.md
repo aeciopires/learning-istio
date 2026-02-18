@@ -26,6 +26,7 @@ Crie variáveis de ambiente uteis para baixar os arquivos complementares
 ```bash
 export ISTIO_RELEASE=1.27
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
+export GATEWAY_API_VERSION="v1.3.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -52,7 +53,7 @@ helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --se
 
 # Instale ou atualize o Kubernetes Gateway API CRDs
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+  kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
 
 # Instale o CNI node agent. Ele é responsável por detectar os pods que pertencem  ao ambiente mesh, e configura o encaminhamento de tráfego entre os pods e o ztunnel node proxy (que será instalado mais adiante).
 helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --wait --debug --timeout 900s
@@ -61,14 +62,19 @@ helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --wait
 helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --wait --debug --timeout 900s
 ```
 
-> ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log do istio-cni: 
+Comando para verificar os logs do istio-cni: ``kubectl logs -f daemonset/istio-cni-node -n istio-system``
+
+> ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log dos pods do istio-cni: 
 ``failed to create fsnotify watcher: too many open files``, corrija com o seguintes comandos:
 
 ```bash
+helm uninstall istio-cni -n istio-system
 sudo sysctl -w fs.inotify.max_user_watches=2099999999
 sudo sysctl -w fs.inotify.max_user_instances=2099999999
 sudo sysctl -w fs.inotify.max_queued_events=2099999999
 ```
+
+Tente reinstalar o istio-cni novamente.
 
 Referência: https://serverfault.com/questions/1137211/failed-to-create-fsnotify-watcher-too-many-open-files
 
@@ -117,7 +123,7 @@ Visualize os objetos/recursos da aplicação:
 kubectl -n $MY_NAMESPACE get all 
 ```
 
-Teste o acesso a aplicação com o seguinte comando:
+Aguarde alguns minutos enquanto a aplicação inicia e teste o acesso a aplicação com o seguinte comando:
 
 ```bash
 kubectl -n $MY_NAMESPACE exec "$(kubectl -n $MY_NAMESPACE get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"

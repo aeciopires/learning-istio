@@ -6,7 +6,7 @@
 
 # uninstall-istio
 
-- Para desinstalar o Istio siga as instruções da página: https://istio.io/v1.27/docs/ambient/install/helm/#uninstall
+- Para desinstalar o Istio siga as instruções da página: https://istio.io/v1.29/docs/ambient/install/helm/#uninstall
 
 - Para remover o cluster Kind, execute o seguinte comando:
 

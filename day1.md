@@ -22,8 +22,9 @@ Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#m
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.27
+export ISTIO_RELEASE=1.29
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
+export GATEWAY_API_VERSION="v1.4.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -36,12 +37,12 @@ Instale o **Istio** com os seguintes comandos:
 ```bash
 #-------
 # Referencias:
-# https://istio.io/v1.27/docs/setup/getting-started/
-# https://istio.io/v1.27/docs/setup/install/helm/
+# https://istio.io/v1.29/docs/setup/getting-started/
+# https://istio.io/v1.29/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Configure o repositório Helm (usando o ambient mode):
-# https://istio.io/v1.27/docs/ambient/install/helm/
+# https://istio.io/v1.29/docs/ambient/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
@@ -50,7 +51,7 @@ helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --cr
 
 # Instale ou atualize o Kubernetes Gateway API CRDs
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+  kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
 
 # Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
 helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
@@ -59,14 +60,19 @@ helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --set 
 helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
 ```
 
-> ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log do istio-cni: 
+Comando para verificar os logs do istio-cni: ``kubectl logs -f daemonset/istio-cni-node -n istio-system``
+
+> ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log dos pods do istio-cni: 
 ``failed to create fsnotify watcher: too many open files``, corrija com o seguintes comandos:
 
 ```bash
+helm uninstall istio-cni -n istio-system
 sudo sysctl -w fs.inotify.max_user_watches=2099999999
 sudo sysctl -w fs.inotify.max_user_instances=2099999999
 sudo sysctl -w fs.inotify.max_queued_events=2099999999
 ```
+
+Tente reinstalar o istio-cni novamente.
 
 Referência: https://serverfault.com/questions/1137211/failed-to-create-fsnotify-watcher-too-many-open-files
 
@@ -102,7 +108,7 @@ kubectl -n istio-system get all --output wide
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.27/docs/ambient/getting-started/deploy-sample-app
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.29/docs/ambient/getting-started/deploy-sample-app
 
 Instale a aplicação de exemplo:
 
@@ -119,7 +125,7 @@ Visualize os objetos/recursos da aplicação:
 kubectl -n $MY_NAMESPACE get all 
 ```
 
-Teste o acesso a aplicação com o seguinte comando:
+Aguarde alguns minutos enquanto a aplicação inicia e teste o acesso a aplicação com o seguinte comando:
 
 ```bash
 kubectl -n $MY_NAMESPACE exec "$(kubectl -n $MY_NAMESPACE get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
@@ -221,7 +227,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.27/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.29/docs/ambient/getting-started/secure-and-visualize/):
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
