@@ -31,30 +31,30 @@ Estratégias de gerenciamento de tráfego (*traffic management*):
 
 Mais informações sobre os conceitos do Istio, podem ser encontrados nos links a seguir.
 
-- https://istio.io/v1.29/docs/overview/what-is-istio/
-- https://istio.io/v1.29/docs/overview/why-choose-istio/
-- https://istio.io/v1.29/docs/overview/dataplane-modes/
-- https://istio.io/v1.29/docs/concepts/
-- https://istio.io/v1.29/docs/concepts/traffic-management/
-- https://istio.io/v1.29/docs/concepts/security/
-- https://istio.io/v1.29/docs/concepts/observability/
-- https://istio.io/v1.29/docs/concepts/wasm/
-- https://istio.io/v1.29/docs/setup/
-- https://istio.io/v1.29/docs/ambient/
-- https://istio.io/v1.29/docs/examples/
-- https://istio.io/v1.29/docs/tasks/
-- https://istio.io/v1.29/docs/ops/
+- https://istio.io/v1.30/docs/overview/what-is-istio/
+- https://istio.io/v1.30/docs/overview/why-choose-istio/
+- https://istio.io/v1.30/docs/overview/dataplane-modes/
+- https://istio.io/v1.30/docs/concepts/
+- https://istio.io/v1.30/docs/concepts/traffic-management/
+- https://istio.io/v1.30/docs/concepts/security/
+- https://istio.io/v1.30/docs/concepts/observability/
+- https://istio.io/v1.30/docs/concepts/wasm/
+- https://istio.io/v1.30/docs/setup/
+- https://istio.io/v1.30/docs/ambient/
+- https://istio.io/v1.30/docs/examples/
+- https://istio.io/v1.30/docs/tasks/
+- https://istio.io/v1.30/docs/ops/
 
 # Traffic management
 
-> Para mais informações sobre este assunto, acesse a página: https://istio.io/v1.29/docs/concepts/traffic-management/
+> Para mais informações sobre este assunto, acesse a página: https://istio.io/v1.30/docs/concepts/traffic-management/
 
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.29
-export VERSION_ISTIO="${ISTIO_RELEASE}.0"
-export GATEWAY_API_VERSION="v1.4.0"
+export ISTIO_RELEASE=1.30
+export VERSION_ISTIO="${ISTIO_RELEASE}.2"
+export GATEWAY_API_VERSION="v1.6.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -108,7 +108,7 @@ for i in $(seq 1 10000); do curl -sSI -o /dev/null http://localhost:8080/product
 
 ## Request routing
 
-> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.29/docs/tasks/traffic-management/request-routing/#about-this-task
+> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.30/docs/tasks/traffic-management/request-routing/#about-this-task
 
 O Istio usa ``virtualservices`` para definir regras de rota. Execute o comando a seguir para aplicar serviços virtuais que roteiam todo o tráfego para ``v1`` de cada microsserviço:
 
@@ -129,11 +129,11 @@ Conforme mostra a figura abaixo, todo o tráfego entre as aplicações é destin
   <img src="images/bookinfo-request-routing-1.png" alt="Bookinfo productpage">
 </p>
 
-O resultado esperado é explicado na página: https://istio.io/v1.29/docs/tasks/traffic-management/request-routing/#test-the-new-routing-configuration
+O resultado esperado é explicado na página: https://istio.io/v1.30/docs/tasks/traffic-management/request-routing/#test-the-new-routing-configuration
 
 ## Route based on user identity
 
-> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.29/docs/tasks/traffic-management/request-routing/#route-based-on-user-identity
+> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.30/docs/tasks/traffic-management/request-routing/#route-based-on-user-identity
 
 Altere a configuração da rota para que todo o tráfego de um usuário específico seja roteado para uma versão de serviço específica. Nesse caso, todo o tráfego de um usuário chamado ``Jason`` será roteado para o serviço ``reviews:v2``.
 
@@ -160,7 +160,7 @@ kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-servi
 
 ## Traffic shifting
 
-> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.29/docs/tasks/traffic-management/traffic-shifting/
+> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.30/docs/tasks/traffic-management/traffic-shifting/
 
 Nesta tarefa, você enviará 50% do tráfego para ``reviews:v1`` e 50% para ``reviews:v3``. Então, você concluirá a migração enviando 100% do tráfego para ``reviews:v3``.
 
@@ -197,7 +197,7 @@ kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-servi
 
 ## Fault injection
 
-> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.29/docs/tasks/traffic-management/fault-injection/
+> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.30/docs/tasks/traffic-management/fault-injection/
 
 Nesta tarefa, você enviará 50% do tráfego para ``reviews:v1`` e 50% para ``reviews:v3``. Então, você concluirá a migração enviando 100% do tráfego para ``reviews:v3``.
 
@@ -242,7 +242,7 @@ Abra o menu **Ferramentas do desenvolvedor** no seu navegador. Abra a guia **Red
 
 Recarregue a página da web ``/productpage``. Você verá que a página realmente carrega em cerca de 6 segundos.
 
-O resultado é explicado na página: https://istio.io/v1.29/docs/tasks/traffic-management/fault-injection/#understanding-what-happened
+O resultado é explicado na página: https://istio.io/v1.30/docs/tasks/traffic-management/fault-injection/#understanding-what-happened
 
 Agora execute o seguinte comando para remover as configurações anteriores.
 
@@ -252,7 +252,7 @@ kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-servi
 
 ## Mirroring
 
-> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.29/docs/tasks/traffic-management/mirroring/
+> Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.30/docs/tasks/traffic-management/mirroring/
 
 Esta tarefa demonstra os recursos de espelhamento de tráfego do Istio.
 

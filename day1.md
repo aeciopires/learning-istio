@@ -22,9 +22,9 @@ Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#m
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.29
-export VERSION_ISTIO="${ISTIO_RELEASE}.0"
-export GATEWAY_API_VERSION="v1.4.0"
+export ISTIO_RELEASE=1.30
+export VERSION_ISTIO="${ISTIO_RELEASE}.2"
+export GATEWAY_API_VERSION="v1.6.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -37,27 +37,27 @@ Instale o **Istio** com os seguintes comandos:
 ```bash
 #-------
 # Referencias:
-# https://istio.io/v1.29/docs/setup/getting-started/
-# https://istio.io/v1.29/docs/setup/install/helm/
+# https://istio.io/v1.30/docs/setup/getting-started/
+# https://istio.io/v1.30/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Configure o repositório Helm (usando o ambient mode):
-# https://istio.io/v1.29/docs/ambient/install/helm/
+# https://istio.io/v1.30/docs/ambient/install/helm/
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
 # Instale os componentes base do Istio
-helm -n istio-system install istio-base istio/base --version $VERSION_ISTIO --create-namespace --wait --debug --timeout 900s
+helm -n istio-system upgrade --install istio-base istio/base --version $VERSION_ISTIO --create-namespace --wait --debug --timeout 900s
 
 # Instale ou atualize o Kubernetes Gateway API CRDs
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
 
 # Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
-helm -n istio-system install istiod istio/istiod --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
+helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
 
 # Instale o CNI node agent. Ele é responsável por detectar os pods que pertencem  ao ambiente mesh, e configura o encaminhamento de tráfego entre os pods e o ztunnel node proxy (que será instalado mais adiante).
-helm -n istio-system install istio-cni istio/cni --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
+helm -n istio-system upgrade --install istio-cni istio/cni --version $VERSION_ISTIO --set profile=ambient --wait --debug --timeout 900s
 ```
 
 Comando para verificar os logs do istio-cni: ``kubectl logs -f daemonset/istio-cni-node -n istio-system``
@@ -80,10 +80,10 @@ Continuação da instalação dos componentes do Istio com os seguintes comandos
 
 ```bash
 # Instale o ztunnel DaemonSet, que é o componente daemonset do node proxy do Istio no ambient mode.
-helm -n istio-system install ztunnel istio/ztunnel --version $VERSION_ISTIO --wait --debug --timeout 900s
+helm -n istio-system upgrade --install ztunnel istio/ztunnel --version $VERSION_ISTIO --wait --debug --timeout 900s
 
 # Instale o Ingress gateway
-helm -n istio-system install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
+helm -n istio-system upgrade --install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
 ```
 
 > ATENÇÃO!!! Se durante a instalação do Istio Gateway você encontrar o seguinte erro:
@@ -108,7 +108,7 @@ kubectl -n istio-system get all --output wide
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.29/docs/ambient/getting-started/deploy-sample-app
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.30/docs/ambient/getting-started/deploy-sample-app
 
 Instale a aplicação de exemplo:
 
@@ -227,7 +227,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.29/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.30/docs/ambient/getting-started/secure-and-visualize/):
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient
