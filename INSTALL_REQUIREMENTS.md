@@ -277,7 +277,7 @@ sudo apt install -y jq
 
 # Get default gateway interface
 # IPv4 can be in 0 or 1 array position of IPAM result of command bellow
-KIND_ADDRESS=$(docker network inspect kind | jq '.[].IPAM | .Config | .[0].Subnet' | cut -d \" -f 2 | cut -d"." -f1-3)
+KIND_ADDRESS=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | test("^[0-9]+\\.")) | .Subnet' | cut -d"." -f1-3)
 
 # Radomize Loadbalancer IP Range
 #KIND_ADDRESS_END=$(shuf -i 100-150 -n1)
