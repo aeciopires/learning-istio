@@ -5,6 +5,7 @@
 - [Requisitos para executar o Istio](#requisitos-para-executar-o-istio)
 - [Day 1](#day-1)
 - [Day 2](#day-2)
+- [Guia de Estudos: Istio e Envoy](#guia-de-estudos-istio-e-envoy)
 - [Referências](#referências)
   - [Documentação do Istio](#documentação-do-istio)
 - [Mantenedores](#mantenedores)
@@ -56,6 +57,10 @@ Veja os comandos [aqui](day1.md)
 # Day 2
 
 Veja os comandos [aqui](day2.md)
+
+# Guia de Estudos: Istio e Envoy
+
+Glossário, diagramas (mermaid), comandos e exercícios de troubleshooting sobre Istio (modos sidecar e ambient) e Envoy (arquitetura interna, xDS e o ciclo de vida de uma requisição), com todas as referências oficiais citadas. Veja [aqui](ISTIO_ENVOY_GUIA_DE_ESTUDOS.md).
 
 # Referências
 
