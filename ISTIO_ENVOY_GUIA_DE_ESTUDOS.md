@@ -36,8 +36,29 @@
   - [5.5. Prometheus + Grafana](#55-prometheus--grafana)
   - [5.6. Datadog](#56-datadog)
   - [5.7. Como detectar erros comuns através das métricas](#57-como-detectar-erros-comuns-através-das-métricas)
-- [6. Exercícios de troubleshooting](#6-exercícios-de-troubleshooting)
-  - [6.0. Preparando o ambiente dos laboratórios](#60-preparando-o-ambiente-dos-laboratórios)
+- [6. Logs do Istio e do Envoy](#6-logs-do-istio-e-do-envoy)
+  - [6.1. Nível de log do Envoy/istio-proxy (componentes e debug)](#61-nível-de-log-do-envoyistio-proxy-componentes-e-debug)
+  - [6.2. Nível de log do istiod](#62-nível-de-log-do-istiod)
+  - [6.3. Access log: habilitar e customizar campos](#63-access-log-habilitar-e-customizar-campos)
+  - [6.4. Latência e outras métricas visíveis apenas no log](#64-latência-e-outras-métricas-visíveis-apenas-no-log)
+  - [6.5. Comandos de troubleshooting usando logs](#65-comandos-de-troubleshooting-usando-logs)
+- [7. EnvoyFilter](#7-envoyfilter)
+  - [7.1. O que é e quando usar](#71-o-que-é-e-quando-usar)
+  - [7.2. Estrutura do objeto: workloadSelector, configPatches e match](#72-estrutura-do-objeto-workloadselector-configpatches-e-match)
+  - [7.3. `applyTo`: em qual camada da configuração o patch age](#73-applyto-em-qual-camada-da-configuração-o-patch-age)
+  - [7.4. `patch.operation`: como a requisição/configuração é manipulada](#74-patchoperation-como-a-requisiçãoconfiguração-é-manipulada)
+  - [7.5. Camadas de processamento e onde o EnvoyFilter se encaixa](#75-camadas-de-processamento-e-onde-o-envoyfilter-se-encaixa)
+  - [7.6. Exemplo prático: habilitando compressão gzip via EnvoyFilter](#76-exemplo-prático-habilitando-compressão-gzip-via-envoyfilter)
+  - [7.7. Comandos de troubleshooting de EnvoyFilter](#77-comandos-de-troubleshooting-de-envoyfilter)
+- [8. Configurações avançadas do Istio](#8-configurações-avançadas-do-istio)
+  - [8.1. Telemetry: habilitando/customizando métricas por workload](#81-telemetry-habilitandocustomizando-métricas-por-workload)
+  - [8.2. MeshConfig: configurações globais da malha](#82-meshconfig-configurações-globais-da-malha)
+  - [8.3. Certificados mTLS: plugando uma CA própria e rotação](#83-certificados-mtls-plugando-uma-ca-própria-e-rotação)
+  - [8.4. Sidecar: restringindo com quais endereços um workload se relaciona](#84-sidecar-restringindo-com-quais-endereços-um-workload-se-relaciona)
+  - [8.5. AuthorizationPolicy: autorizando apenas aplicações específicas](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas)
+  - [8.6. Autorizando por JWT e/ou mTLS (RequestAuthentication + AuthorizationPolicy)](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy)
+- [9. Exercícios de troubleshooting](#9-exercícios-de-troubleshooting)
+  - [9.0. Preparando o ambiente dos laboratórios](#90-preparando-o-ambiente-dos-laboratórios)
   - [Lab 1 - Pod fora da mesh (ambient)](#lab-1---pod-fora-da-mesh-ambient)
   - [Lab 2 - mTLS STRICT quebrando tráfego (sidecar)](#lab-2---mtls-strict-quebrando-tráfego-sidecar)
   - [Lab 3 - VirtualService/DestinationRule com host errado (503 / no healthy upstream)](#lab-3---virtualservicedestinationrule-com-host-errado-503--no-healthy-upstream)
@@ -49,7 +70,10 @@
   - [Lab 9 - Fault injection e timeout (retomando o Day 2)](#lab-9---fault-injection-e-timeout-retomando-o-day-2)
   - [Lab 10 - Circuit breaking e overflow detectados via métricas](#lab-10---circuit-breaking-e-overflow-detectados-via-métricas)
   - [Lab 11 - Medindo o tempo de convergência do istiod](#lab-11---medindo-o-tempo-de-convergência-do-istiod)
-- [7. Referências](#7-referências)
+  - [Lab 12 - Compressão gzip via EnvoyFilter não aplicada](#lab-12---compressão-gzip-via-envoyfilter-não-aplicada)
+  - [Lab 13 - AuthorizationPolicy negando (ou liberando) por engano](#lab-13---authorizationpolicy-negando-ou-liberando-por-engano)
+  - [Lab 14 - JWT inválido/ausente sendo rejeitado (ou não)](#lab-14---jwt-inválidoausente-sendo-rejeitado-ou-não)
+- [10. Referências](#10-referências)
 
 <!-- TOC -->
 
@@ -57,7 +81,7 @@
 
 Este documento é um **material de estudo** (glossário + diagramas + comandos + exercícios de troubleshooting) sobre **Istio** e **Envoy**, complementar aos arquivos [day1.md](day1.md) e [day2.md](day2.md) deste repositório.
 
-Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes oficiais listadas na seção [7. Referências](#7-referências) (documentação oficial do Istio, documentação oficial do Envoy e conteúdos publicados por Matt Klein, criador do Envoy). Nenhum comportamento interno foi inventado: onde a documentação oficial não detalha algo (ex.: código-fonte específico), isso é indicado explicitamente.
+Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes oficiais listadas na seção [10. Referências](#10-referências) (documentação oficial do Istio, documentação oficial do Envoy e conteúdos publicados por Matt Klein, criador do Envoy). Nenhum comportamento interno foi inventado: onde a documentação oficial não detalha algo (ex.: código-fonte específico), isso é indicado explicitamente.
 
 **Versão de referência:** Istio **1.30** (LTS, versão estável mais recente em 2026-08-10) e Envoy na versão empacotada por ela. A versão 1.31 do Istio está em status `alpha` (`1.31.0-alpha.0`) na data deste material, portanto **não é recomendada** como base de estudo/produção — por isso este guia segue o padrão já usado no restante do repositório (`ISTIO_RELEASE=1.30`), conforme confirmado em [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/) e nas releases do [github.com/istio/istio](https://github.com/istio/istio/releases/).
 
@@ -704,7 +728,7 @@ kubectl -n $MY_NAMESPACE exec $PP_POD -c istio-proxy -- tcpdump -i any -n port 9
 
 # 5. Observabilidade: métricas com Prometheus, Grafana e Datadog
 
-Esta seção documenta as métricas que o Istio e o Envoy expõem nativamente, como consultá-las via **Prometheus**/**Grafana** (ferramentas já instaladas nos addons do [day1.md](day1.md)) e via **Datadog**, e como usar essas métricas para **detectar** os mesmos tipos de erro reproduzidos nos laboratórios da seção [6](#6-exercícios-de-troubleshooting).
+Esta seção documenta as métricas que o Istio e o Envoy expõem nativamente, como consultá-las via **Prometheus**/**Grafana** (ferramentas já instaladas nos addons do [day1.md](day1.md)) e via **Datadog**, e como usar essas métricas para **detectar** os mesmos tipos de erro reproduzidos nos laboratórios da seção [9](#9-exercícios-de-troubleshooting).
 
 ## 5.1. Métricas padrão do Istio
 
@@ -887,7 +911,7 @@ flowchart LR
 
 ## 5.7. Como detectar erros comuns através das métricas
 
-Tabela de correlação entre **sintoma observável** e **métrica/consulta** a inspecionar, cruzando com os laboratórios da seção [6](#6-exercícios-de-troubleshooting):
+Tabela de correlação entre **sintoma observável** e **métrica/consulta** a inspecionar, cruzando com os laboratórios da seção [9](#9-exercícios-de-troubleshooting):
 
 | Sintoma | Métrica/consulta a checar | Causa provável |
 |---|---|---|
@@ -905,13 +929,565 @@ Fonte: seções [5.1](#51-métricas-padrão-do-istio) a [5.6](#56-datadog) deste
 
 ---
 
-# 6. Exercícios de troubleshooting
+# 6. Logs do Istio e do Envoy
+
+O Istio tem **dois mecanismos de log completamente distintos**: o log de **componentes** (mensagens internas de diagnóstico do processo, tanto do Envoy quanto do istiod) e o **access log** (uma linha por requisição/conexão processada pelo Envoy, usado nas seções [5.4](#54-response-flags-do-envoy) e nos Labs). Esta seção cobre os dois.
+
+## 6.1. Nível de log do Envoy/istio-proxy (componentes e debug)
+
+O Envoy organiza suas mensagens de log internas por **componente** (chamados de *loggers*), cada um com seu próprio nível. Os níveis válidos são, do mais verboso ao mais silencioso: **`trace, debug, info, warning, error, critical, off`**. Alguns dos componentes disponíveis: `admin`, `assert`, `backtrace`, `client`, `config`, `connection`, `conn_handler`, `filter`, `forward_proxy`, `grpc`, `http`, `http2`, `init`, `io`, `jwt`, `main`, `router`, `upstream`, entre outros.
+
+```bash
+export PP_POD=$(kubectl -n $MY_NAMESPACE get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}')
+
+# Lista o nível atual de TODOS os loggers do proxy
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE
+
+# Habilita "modo debug" em TODOS os componentes de uma vez (bem verboso!)
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level debug
+
+# Habilita debug só nos componentes mais úteis para troubleshooting de roteamento/mTLS
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level http:debug,router:debug,connection:debug,upstream:debug
+
+# Volta ao nível padrão (desabilita o modo debug)
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level info
+```
+
+> ATENÇÃO!!! Essa mudança é **temporária e não persistente**: ela é feita chamando a Admin API do proxy em tempo real (o mesmo endpoint `POST /logging` da seção [4.5](#45-comandos-avançados-de-troubleshooting-do-envoy)) e volta ao nível configurado na inicialização caso o Pod seja reiniciado.
+
+## 6.2. Nível de log do istiod
+
+O **istiod** (um binário Go) organiza suas próprias mensagens de log em **escopos** (*scopes*) — exemplos citados na documentação oficial: `default`, `ads` (Aggregated Discovery Service — o que processa e envia xDS), `model`, `authorization`, `ca`, `cache`. Os níveis válidos para istiod são **`none, error, warn, info, debug`**, com **`info`** como padrão de todos os escopos.
+
+```bash
+# Ver/alterar o nível de log do istiod é feito pela flag --log_output_level na inicialização,
+# por exemplo editando o Deployment ou (se instalado via istioctl/IstioOperator) o profile de instalação:
+#   --log_output_level=default:info,ads:debug,authorization:debug,model:warn
+
+# Alternativa em tempo real, sem reiniciar o istiod, via interface ControlZ:
+export ISTIOD=$(kubectl get pods -n istio-system -l app=istiod -o jsonpath='{.items[0].metadata.name}')
+kubectl -n istio-system port-forward "$ISTIOD" 9876:9876
+# Acesse http://localhost:9876 no navegador para ver/ajustar os escopos de log em tempo real
+```
+
+Fonte: [Istio / Component logging](https://istio.io/v1.30/docs/ops/diagnostic-tools/component-logging/).
+
+## 6.3. Access log: habilitar e customizar campos
+
+O **access log** é habilitado/desabilitado e customizado de duas formas (a Telemetry API, seção [8.1](#81-telemetry-habilitandocustomizando-métricas-por-workload), é a forma recomendada e granular; o `meshConfig`, seção [8.2](#82-meshconfig-configurações-globais-da-malha), é a forma global):
+
+```yaml
+# Forma recomendada: Telemetry API (pode ser aplicada por namespace/workload, não só mesh-wide)
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy
+```
+
+```bash
+# Forma global via meshConfig (ver seção 8.2) — helm upgrade, já que este repo instala via Helm:
+helm -n istio-system upgrade istiod istio/istiod --version $VERSION_ISTIO --reuse-values \
+  --set meshConfig.accessLogFile=/dev/stdout \
+  --set meshConfig.accessLogEncoding=JSON
+```
+
+O **formato padrão (TEXT)** do access log do Istio é, literalmente:
+
+```
+[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS%
+"%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%"
+"%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_CLUSTER_RAW% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%
+```
+
+Que produz uma linha como esta (exemplo oficial):
+
+```text
+[2020-11-25T21:26:18.409Z] "GET /status/418 HTTP/1.1" 418 - via_upstream - "-" 0 135 4 4 "-" "curl/7.73.0-DEV" "84961386-6d84-929d-98bd-c5aee93b5c88" "httpbin:8000" "10.44.1.27:80" outbound|8000||httpbin.foo.svc.cluster.local 10.44.1.23:37652 10.0.45.184:8000 10.44.1.23:46520 - default
+```
+
+**Adicionando informação ao log**: para customizar o formato (adicionar/remover campos), defina `providers[].name: envoy` no `Telemetry` e um `extensionProviders` do tipo `envoyFileAccessLog` no `meshConfig` (seção [8.2](#82-meshconfig-configurações-globais-da-malha)) com um `logFormat` próprio, reutilizando quaisquer *command operators* do Envoy (`%...%`), incluindo cabeçalhos de requisição/resposta arbitrários via `%REQ(<nome-do-header>)%`/`%RESP(<nome-do-header>)%` — por exemplo, para logar um header de tracing customizado ou um `X-Tenant-Id` de aplicação multi-tenant.
+
+Fonte: [Istio / Envoy Access Logs](https://istio.io/v1.30/docs/tasks/observability/logs/access-log/), [Envoy / Access logging](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage).
+
+## 6.4. Latência e outras métricas visíveis apenas no log
+
+Diferente das métricas agregadas do Prometheus (seção [5](#5-observabilidade-métricas-com-prometheus-grafana-e-datadog)), o access log registra a **latência de uma requisição individual**, o que é essencial para depurar um caso específico (ex.: um `X-Request-Id` reportado por um usuário). Os campos de tempo do Envoy, definidos oficialmente como:
+
+| Campo | Significado (oficial) |
+|---|---|
+| `%START_TIME%` | Timestamp de início da requisição (t0) |
+| `%REQUEST_DURATION%` | "Total duration in milliseconds of the request from the start time to the last byte of the request received from the downstream" — quanto tempo levou para receber a requisição inteira |
+| `%RESPONSE_DURATION%` | "Total duration in milliseconds of the request from the start time to the first byte read from the upstream host" — tempo até o primeiro byte de resposta do upstream (*time to first byte*) |
+| `%RESPONSE_TX_DURATION%` | "Total duration in milliseconds of the request from the first byte read from the upstream host to the last byte sent downstream" — tempo gasto **transmitindo** a resposta de volta |
+| `%DURATION%` | "Total duration in milliseconds of the request from the start time to the last byte out" — duração **total**, o campo usado por padrão no log do Istio |
+| `%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%` | Tempo gasto **apenas dentro do serviço upstream** (extraído do header de resposta que o próprio Envoy upstream adiciona) — é o campo que aparece por padrão no access log do Istio, logo após `%DURATION%` |
+
+```mermaid
+flowchart LR
+    T0["t0: START_TIME"] -->|REQUEST_DURATION| T1["t1: ultimo byte da requisicao recebido"]
+    T0 -->|RESPONSE_DURATION - TTFB| T2["t2: primeiro byte de resposta do upstream"]
+    T2 -->|RESPONSE_TX_DURATION| T3["t3: ultimo byte de resposta enviado ao downstream"]
+    T0 -->|"DURATION (total)"| T3
+```
+
+Na prática, para investigar **por que uma requisição específica foi lenta**, compare `%DURATION%` (tempo total no Envoy) com `%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%` (tempo só no serviço upstream): se a diferença for grande, o tempo foi gasto no próprio Envoy/rede (fila de conexão, TLS handshake, retries) e não na aplicação de destino.
+
+Fonte: [Envoy / Substitution Formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Envoy Access Logs](https://istio.io/v1.30/docs/tasks/observability/logs/access-log/).
+
+## 6.5. Comandos de troubleshooting usando logs
+
+```bash
+# Acompanhar o access log de um workload em tempo real
+kubectl -n $MY_NAMESPACE logs -f deploy/productpage-v1 -c istio-proxy
+
+# Filtrar apenas erros (resposta >= 400) usando grep no formato TEXT padrão
+kubectl -n $MY_NAMESPACE logs deploy/productpage-v1 -c istio-proxy | grep -E ' [45][0-9]{2} '
+
+# Se accessLogEncoding=JSON (seção 6.3), usar jq para filtrar/formatar
+kubectl -n $MY_NAMESPACE logs deploy/productpage-v1 -c istio-proxy | jq -r 'select(.response_code >= 400)'
+
+# Correlacionar uma requisição específica pelo X-Request-Id em TODOS os proxies do caminho
+# (productpage -> reviews -> ratings), útil para reconstruir o trace manualmente sem Jaeger
+REQ_ID="84961386-6d84-929d-98bd-c5aee93b5c88"
+for d in productpage-v1 reviews-v1 ratings-v1; do
+  echo "== $d =="
+  kubectl -n $MY_NAMESPACE logs deploy/$d -c istio-proxy | grep "$REQ_ID"
+done
+
+# Aumentar o log level (seção 6.1) só durante a reprodução do problema, depois voltar ao normal
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level debug
+# ... reproduzir o problema ...
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level info
+```
+
+---
+
+# 7. EnvoyFilter
+
+## 7.1. O que é e quando usar
+
+`EnvoyFilter` é o recurso do Istio que permite **customizar diretamente a configuração do Envoy gerada pelo istiod** — ele opera em um nível mais baixo que `VirtualService`/`DestinationRule`, manipulando a estrutura interna de listeners, filter chains, filtros HTTP/rede, rotas e clusters. A própria documentação recomenda cautela: é uma API de baixo nível, acoplada a detalhes internos do Envoy que podem mudar entre versões, e deve ser usada **apenas quando não existe outro recurso Istio de mais alto nível** (`VirtualService`, `DestinationRule`, `Telemetry`, etc.) que resolva a necessidade.
+
+## 7.2. Estrutura do objeto: workloadSelector, configPatches e match
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: <nome>
+  namespace: <namespace>
+spec:
+  workloadSelector:        # opcional; se omitido, aplica a todos os workloads do namespace
+    labels:
+      app: productpage
+  configPatches:
+    - applyTo: HTTP_FILTER              # ver seção 7.3
+      match:                            # condições para a patch ser aplicada
+        context: SIDECAR_OUTBOUND       # ANY | SIDECAR_INBOUND | SIDECAR_OUTBOUND | GATEWAY
+        listener:
+          portNumber: 9080
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:                            # ver seção 7.4
+        operation: INSERT_BEFORE
+        value: { ... }                  # configuração JSON/proto do objeto Envoy
+```
+
+- **`workloadSelector`**: "criteria used to select the specific set of pods/VMs on which this patch configuration should be applied" — sem ele, a patch atinge todos os workloads do namespace; se o `EnvoyFilter` estiver no **namespace raiz** (o namespace de instalação do Istio, ex.: `istio-system`), ele se estende a **todos os namespaces** da malha.
+- **`configPatches[].match`** (`EnvoyConfigObjectMatch`): define **onde** procurar no Envoy antes de aplicar a patch — `context` (o Envoy sendo gerado é de um sidecar inbound, outbound ou de um gateway), `listener` (porta, nome, filter chain por SNI/protocolo de transporte/aplicação), `filter`/`subFilter` (filtro de rede/HTTP específico pelo nome, ex.: `envoy.filters.network.http_connection_manager`), `routeConfiguration` e `cluster` (porta, serviço, subset).
+- **Ordem de aplicação**: quando há múltiplos `EnvoyFilter`, a ordem é — primeiro todos os `EnvoyFilter` do namespace raiz, depois todos os do namespace do workload, respeitando a ordem de criação dentro de cada grupo.
+
+## 7.3. `applyTo`: em qual camada da configuração o patch age
+
+| `applyTo` | Camada afetada |
+|---|---|
+| `LISTENER` | O listener inteiro (ex.: adicionar um novo listener) |
+| `FILTER_CHAIN` | Uma filter chain dentro de um listener |
+| `NETWORK_FILTER` | Um filtro de rede (L3/L4) dentro de uma filter chain — "modify an existing filter or add a new filter" |
+| `HTTP_FILTER` | Um filtro HTTP (L7) dentro do HTTP Connection Manager — mesmo texto oficial de "modify an existing filter or add a new filter" |
+| `ROUTE_CONFIGURATION` | A tabela de rotas usada pelo HTTP Connection Manager (só aceita operação `MERGE`) |
+| `VIRTUAL_HOST` | Um virtual host dentro de uma `ROUTE_CONFIGURATION` |
+| `HTTP_ROUTE` | Uma rota HTTP dentro do virtual host casado |
+| `CLUSTER` | Um cluster (saída do CDS) — também usado para **adicionar** novos clusters |
+| `EXTENSION_CONFIG` | Configuração de extensão via ECDS (só suportado por HTTP filters) |
+
+```mermaid
+flowchart TB
+    subgraph L["Listener  -  applyTo: LISTENER"]
+        LF["Listener Filters"]
+        subgraph FC["Filter Chain  -  applyTo: FILTER_CHAIN"]
+            subgraph NF["Network Filters  -  applyTo: NETWORK_FILTER"]
+                HCM["HTTP Connection Manager"]
+                subgraph HF["HTTP Filter Chain  -  applyTo: HTTP_FILTER"]
+                    CUSTOM["ex: envoy.filters.http.compressor (inserido via EnvoyFilter)"]
+                    ROUTERF["envoy.filters.http.router"]
+                end
+            end
+        end
+    end
+
+    subgraph RC["ROUTE_CONFIGURATION / VIRTUAL_HOST / HTTP_ROUTE"]
+        RT["Route table usada pelo HCM (RDS)"]
+    end
+
+    subgraph CL["CLUSTER"]
+        C["Definicoes de cluster (CDS)"]
+    end
+
+    HCM -.->|usa| RT
+    ROUTERF -.->|encaminha para| C
+```
+
+## 7.4. `patch.operation`: como a requisição/configuração é manipulada
+
+A **requisição em si** é manipulada indiretamente: o `EnvoyFilter` não intercepta a requisição diretamente, ele **insere/substitui/remove filtros** na cadeia que o Envoy executa para cada requisição (a mesma cadeia da seção [3.4](#34-life-of-a-request-o-ciclo-de-vida-de-uma-requisição-no-envoy)) — um filtro inserido via `INSERT_BEFORE` do `router`, por exemplo, processa a requisição **antes** dela ser roteada ao cluster de destino.
+
+| `operation` | Comportamento (oficial) |
+|---|---|
+| `MERGE` | "Merge the provided config with the generated config using proto merge semantics" |
+| `ADD` | "Add the provided config to an existing list (of listeners, clusters, virtual hosts, network filters, or http filters)" |
+| `REMOVE` | "Remove the selected object from the list. Does not require a value to be specified" |
+| `INSERT_BEFORE` | "Insert before the selected filter or sub filter. If no filter is selected, the specified filter will be inserted at the front of the list" |
+| `INSERT_AFTER` | "Insert after the selected filter or sub filter. If no filter is selected, the specified filter will be inserted at the end of the list" |
+| `INSERT_FIRST` | "Insert first in the list based on the presence of selected filter or not" |
+| `REPLACE` | "Replace contents of a named filter with new contents" — válido apenas para `HTTP_FILTER` e `NETWORK_FILTER` |
+
+## 7.5. Camadas de processamento e onde o EnvoyFilter se encaixa
+
+O diagrama da seção [7.3](#73-applyto-em-qual-camada-da-configuração-o-patch-age) já mostra as camadas; a regra prática mais importante é: **a ordem dos filtros HTTP importa**. Um filtro de autenticação/compressão precisa ser inserido **antes** do `envoy.filters.http.router` (que é sempre o último da cadeia — ver seção [3.2](#32-arquitetura-interna-listener-subsystem-x-cluster-subsystem)), senão a requisição já terá sido roteada ao upstream antes do seu filtro rodar. Por isso o padrão mais comum é `operation: INSERT_BEFORE` combinado com `match.listener.filterChain.filter.subFilter.name: envoy.filters.http.router`.
+
+## 7.6. Exemplo prático: habilitando compressão gzip via EnvoyFilter
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: enable-gzip-compression
+  namespace: myapp
+spec:
+  workloadSelector:
+    labels:
+      app: productpage
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.compressor
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            response_direction_config:
+              common_config:
+                min_content_length: 100
+                content_type:
+                  - text/html
+                  - application/json
+            compressor_library:
+              name: text_optimized
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+```
+
+Isso insere o filtro `envoy.filters.http.compressor` (com a biblioteca `gzip`) imediatamente antes do `router`, na cadeia **inbound** do sidecar do `productpage`: quando o cliente envia `Accept-Encoding: gzip`, o Envoy comprime a resposta antes de enviá-la, removendo `content-length` e adicionando `transfer-encoding: chunked`.
+
+Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.30/docs/reference/config/networking/envoy-filter/), [Envoy / Compressor filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter).
+
+## 7.7. Comandos de troubleshooting de EnvoyFilter
+
+```bash
+# Lista os EnvoyFilters aplicados no cluster/namespace
+kubectl get envoyfilter -A
+
+# istioctl analyze não valida profundamente o conteúdo do patch, mas sinaliza conflitos comuns
+istioctl analyze -n $MY_NAMESPACE
+
+# A forma MAIS CONFIÁVEL de confirmar que a patch foi aplicada: procurar o filtro
+# diretamente na configuração final recebida pelo Envoy (não no YAML aplicado)
+istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 9080 -o json | grep -A5 compressor
+
+# Ou via Admin API diretamente (seção 4.3), olhando o config_dump completo
+kubectl -n $MY_NAMESPACE port-forward $PP_POD 15000:15000 &
+curl -s http://localhost:15000/config_dump | grep -B5 -A30 "envoy.filters.http.compressor"
+kill %1
+```
+
+**Causas mais comuns de um `EnvoyFilter` "não fazer nada":**
+- `workloadSelector` não casa com nenhum label do Pod (ou está no namespace errado).
+- `match.context` errado (ex.: patch feito para `SIDECAR_INBOUND` mas o tráfego é `SIDECAR_OUTBOUND`, ou vice-versa).
+- `match.listener.portNumber`/`filterChain` não corresponde exatamente ao listener real (confira com `istioctl proxy-config listener`, seção [4.2](#42-istioctl-comandos-essenciais)).
+- Tentar `INSERT_AFTER`/`REPLACE` referenciando um `subFilter` que não existe com esse nome exato na versão do Envoy empacotada pelo Istio em uso.
+
+Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.30/docs/reference/config/networking/envoy-filter/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.30/docs/ops/diagnostic-tools/proxy-cmd/).
+
+---
+
+# 8. Configurações avançadas do Istio
+
+## 8.1. Telemetry: habilitando/customizando métricas por workload
+
+O recurso `Telemetry` (`telemetry.istio.io`) controla **métricas**, **access log** (seção [6.3](#63-access-log-habilitar-e-customizar-campos)) e **tracing** para toda a malha, um namespace ou um workload específico, em ordem de precedência: configuração do workload → do namespace → a global (`mesh-default`, no namespace raiz).
+
+```yaml
+# Habilita access log (envoy) e reduz cardinalidade de métricas em todo o mesh
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy
+  metrics:
+    - providers:
+        - name: prometheus
+      overrides:
+        - match:
+            metric: REQUEST_COUNT
+            mode: SERVER
+          tagOverrides:
+            response_code:
+              operation: REMOVE           # remove a dimensão response_code (menos cardinalidade)
+        - match:
+            metric: ALL_METRICS
+            mode: CLIENT
+          disabled: true                  # desliga métricas "client-side" nesse escopo
+```
+
+Campos principais: `selector`/`targetRefs` (no máximo um dos dois, escolhe o(s) workload(s) alvo), `metrics[].providers`, `metrics[].overrides[].match.metric` (`REQUEST_COUNT`, `REQUEST_DURATION`, `REQUEST_SIZE`, `RESPONSE_SIZE`, `TCP_OPENED_CONNECTIONS`, `TCP_CLOSED_CONNECTIONS`, `TCP_SENT_BYTES`, `TCP_RECEIVED_BYTES`, `ALL_METRICS`), `tagOverrides[].operation` (`UPSERT` para adicionar/alterar uma dimensão, `REMOVE` para excluí-la), e `tracing[].randomSamplingPercentage`/`disableSpanReporting`/`customTags`.
+
+Fonte: [Istio / Telemetry API reference](https://istio.io/v1.30/docs/reference/config/telemetry/).
+
+## 8.2. MeshConfig: configurações globais da malha
+
+O `meshConfig` é o "arquivo" central de configuração da malha — na prática, um objeto YAML guardado na chave `mesh:` do `ConfigMap` **`istio`**, no namespace `istio-system`, que o istiod observa (*watch*) e aplica dinamicamente.
+
+```bash
+# Ver a configuração atual da malha
+kubectl get configmap istio -n istio-system -o yaml
+```
+
+> ATENÇÃO!!! É possível editar esse `ConfigMap` diretamente com `kubectl edit`, mas **não é recomendado**: como este repositório instala o Istio via **Helm** ([day1.md](day1.md)), a próxima execução de `helm upgrade` sobrescreve qualquer edição manual. A forma correta e persistente de alterar o `meshConfig` neste repositório é via `--set` no `helm upgrade` do chart `istiod`:
+
+```bash
+helm -n istio-system upgrade istiod istio/istiod --version $VERSION_ISTIO --reuse-values \
+  --set meshConfig.accessLogFile=/dev/stdout \
+  --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY \
+  --set meshConfig.defaultConfig.holdApplicationUntilProxyStarts=true
+```
+
+Alguns campos úteis de `meshConfig`:
+
+| Campo | Função |
+|---|---|
+| `defaultConfig` (`ProxyConfig`) | Configuração padrão aplicada a **todo** sidecar/gateway **no momento da injeção** — mudanças aqui só valem para Pods **recriados** depois da alteração |
+| `extensionProviders` | Registra provedores externos (ex.: `envoyOtelAls`/`envoyFileAccessLog` para access log, `prometheus` para métricas, provedores de tracing como Zipkin/OpenTelemetry) que depois são referenciados pelo nome no `Telemetry` (seção [8.1](#81-telemetry-habilitandocustomizando-métricas-por-workload)) |
+| `outboundTrafficPolicy.mode` | `ALLOW_ANY` (padrão — tráfego de saída não registrado na malha é permitido) ou `REGISTRY_ONLY` (bloqueia qualquer destino que não seja um `ServiceEntry`/serviço conhecido) |
+| `accessLogFile` / `accessLogEncoding` | Ver seção [6.3](#63-access-log-habilitar-e-customizar-campos) |
+| `enableTracing` | Habilita a geração de spans/IDs de rastreamento |
+| `trustDomain` | Raiz de confiança usada para montar as identidades SPIFFE dos workloads (ex.: `cluster.local`) |
+| `defaultServiceExportTo` | Visibilidade padrão dos serviços entre namespaces (`*`, `.`, `~`) |
+
+Fonte: [Istio / MeshConfig reference](https://istio.io/v1.30/docs/reference/config/istio.mesh.v1alpha1/), [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/).
+
+## 8.3. Certificados mTLS: plugando uma CA própria e rotação
+
+Por padrão, o **istiod** atua como sua própria CA (Autoridade Certificadora) autoassinada — ver seção [2.5](#25-componentes-de-software-do-istio). Em produção, é comum **plugar uma CA própria** (própria empresa ou uma CA intermediária de uma CA corporativa já existente), no modo chamado *plug-in CA*.
+
+```bash
+# 1. Gere (ou obtenha da sua CA corporativa) 4 arquivos: root-cert.pem, ca-cert.pem (intermediária),
+#    ca-key.pem (chave privada da intermediária) e cert-chain.pem
+mkdir -p certs && cd certs
+make -f ../tools/certs/Makefile.selfsigned.mk root-ca
+make -f ../tools/certs/Makefile.selfsigned.mk cluster1-cacerts
+
+# 2. Crie o Secret "cacerts" ANTES de instalar/com o istiod já rodando
+kubectl create namespace istio-system
+kubectl create secret generic cacerts -n istio-system \
+  --from-file=cluster1/ca-cert.pem \
+  --from-file=cluster1/ca-key.pem \
+  --from-file=cluster1/root-cert.pem \
+  --from-file=cluster1/cert-chain.pem
+```
+
+O istiod monta esse Secret e passa a usá-lo como CA intermediária para assinar os certificados de workload (fluxo já detalhado na seção [2.5](#25-componentes-de-software-do-istio)); o certificado de cada workload tem validade padrão de **24 horas**, renovada automaticamente pelo `istio-agent` antes de expirar.
+
+**Rotação do certificado raiz** (quando a própria CA raiz precisa trocar, não apenas o certificado de workload) é um processo **manual**: gera-se um `root-cert.pem` combinado (contendo a CA antiga **e** a nova), atualiza-se o Secret `cacerts` com a nova CA intermediária + a raiz combinada, e aguarda-se até um tempo de vida de certificado (até 24h) para que todos os workloads rotacionem naturalmente antes de remover a CA antiga do bundle combinado.
+
+```bash
+# Verificar se o cluster está em modo plug-in CA (Secret presente) e ver a raiz de confiança atual
+kubectl get secret cacerts -n istio-system
+kubectl get configmap istio-ca-root-cert -n istio-system -o yaml
+```
+
+Fonte: [Istio / Plug in CA Certificates](https://istio.io/v1.30/docs/tasks/security/cert-management/plugin-ca-cert/), [Istio / Security Concepts](https://istio.io/v1.30/docs/concepts/security/).
+
+## 8.4. Sidecar: restringindo com quais endereços um workload se relaciona
+
+O recurso `Sidecar` (`networking.istio.io`) controla **quais hosts** (`egress`) e **quais portas** (`ingress`) o proxy de um workload enxerga — por padrão, o Envoy de cada Pod carrega a configuração de **todos** os serviços da malha, o que não escala bem em meshes grandes e aumenta a superfície de tráfego "acidental" entre times.
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: default
+  namespace: myapp
+spec:
+  egress:
+    - hosts:
+        - "myapp/*"          # qualquer serviço no próprio namespace
+        - "istio-system/*"   # necessário para os proxies falarem com istiod/telemetria
+        - "shared-apis/api.exemplo.com"   # apenas ESSE host específico em outro namespace
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY
+```
+
+Campos principais: `workloadSelector` (a quais Pods esse `Sidecar` se aplica — sem ele, aplica a todo o namespace), `ingress[].port`/`defaultEndpoint` (para onde o tráfego de entrada é encaminhado dentro do Pod, ex.: `127.0.0.1:8080`), `egress[].hosts` (lista no formato **`<namespace>/<dnsName>`**, aceitando `*` em ambas as partes), `egress[].captureMode` (`DEFAULT`, `IPTABLES` ou `NONE`) e `outboundTrafficPolicy.mode`. Um `Sidecar` sem `workloadSelector` colocado no **namespace raiz** funciona como o padrão de **toda a malha**.
+
+Fonte: [Istio / Sidecar reference](https://istio.io/v1.30/docs/reference/config/networking/sidecar/).
+
+## 8.5. AuthorizationPolicy: autorizando apenas aplicações específicas
+
+`AuthorizationPolicy` (`security.istio.io`) define **quem** (identidade mTLS/JWT) pode fazer **o quê** (método, path, porta) contra um workload. Ações possíveis: `ALLOW` (padrão), `DENY`, `AUDIT` (loga sem bloquear) e `CUSTOM` (delega a um serviço externo de autorização). Ordem de avaliação quando várias políticas coexistem: **`CUSTOM` → `DENY` → `ALLOW`**; se existir ao menos uma política `ALLOW` para o workload e nenhuma casar com a requisição, ela é **negada por padrão**.
+
+```yaml
+# Só o service account "productpage" (no namespace myapp) pode chamar GET em /reviews* do serviço reviews
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-allow-productpage
+  namespace: myapp
+spec:
+  selector:
+    matchLabels:
+      app: reviews
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/myapp/sa/bookinfo-productpage"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/reviews*"]
+```
+
+```yaml
+# Nega explicitamente qualquer tráfego vindo do namespace "dev" para "ratings"
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: ratings-deny-dev
+  namespace: myapp
+spec:
+  selector:
+    matchLabels:
+      app: ratings
+  action: DENY
+  rules:
+    - from:
+        - source:
+            namespaces: ["dev"]
+```
+
+Campos de `rules[].from[].source`: `principals` (identidade SPIFFE do peer mTLS, formato `<trust-domain>/ns/<namespace>/sa/<service-account>`), `namespaces`, `ipBlocks` (CIDR). Campos de `rules[].to[].operation`: `methods`, `paths`, `ports`, `hosts`. `rules[].when` permite condições adicionais usando atributos Istio (ex.: `request.auth.claims[iss]` — ver seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy)).
+
+> ATENÇÃO!!! `principals`/`namespaces`/`requestPrincipals` só funcionam de forma confiável com **mTLS habilitado** (`PeerAuthentication` `STRICT` — Lab 2) — sem mTLS, o Envoy não tem como verificar criptograficamente a identidade de origem, e a documentação recomenda fortemente usar mTLS `STRICT` junto com essas regras para evitar bypass de política.
+
+Fonte: [Istio / AuthorizationPolicy reference](https://istio.io/v1.30/docs/reference/config/security/authorization-policy/).
+
+## 8.6. Autorizando por JWT e/ou mTLS (RequestAuthentication + AuthorizationPolicy)
+
+A validação de **JWT** é feita pelo recurso `RequestAuthentication`, que **apenas valida** o token (assinatura, `issuer`, `audience`) e popula os atributos `request.auth.*`/`source.principal` do Envoy — ele **não bloqueia** requisições sem token por conta própria; o bloqueio é sempre feito combinando com uma `AuthorizationPolicy`.
+
+```yaml
+# 1. Valida qualquer JWT emitido por "testing@secure.istio.io" chegando no ingress gateway
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-example
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  jwtRules:
+    - issuer: "testing@secure.istio.io"
+      jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.30/security/tools/jwt/samples/jwks.json"
+      audiences: ["api-service"]
+      forwardOriginalToken: true
+```
+
+```yaml
+# 2. EXIGE que a requisição tenha um JWT válido (nega quem não tiver um "request principal")
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: require-jwt
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  action: DENY
+  rules:
+    - from:
+        - source:
+            notRequestPrincipals: ["*"]
+```
+
+Campos de `jwtRules[]`: `issuer` ("identifies the issuer that issued the JWT" — valida o claim `iss`), `jwksUri`/`jwks` (onde obter as chaves públicas — URL ou o JWKS embutido), `audiences` (valida o claim `aud`), `fromHeaders`/`fromParams` (onde procurar o token na requisição, com suporte a prefixo tipo `"Bearer "`), `outputPayloadToHeader` (encaminha o payload decodificado do JWT para a aplicação em um header) e `forwardOriginalToken`.
+
+**Combinando JWT *e* mTLS na mesma regra** (o cenário pedido: só aceitar um serviço se ele tiver identidade mTLS **e** um JWT válido de um usuário/serviço específico) — campos dentro do **mesmo** bloco `source` são combinados com **E** (AND):
+
+```yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-mtls-and-jwt
+  namespace: myapp
+spec:
+  selector:
+    matchLabels:
+      app: reviews
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/myapp/sa/bookinfo-productpage"]   # exige mTLS desse workload
+            requestPrincipals: ["testing@secure.istio.io/*"]                 # E exige JWT válido desse issuer
+      to:
+        - operation:
+            methods: ["GET"]
+```
+
+Fonte: [Istio / Authentication Policy (JWT)](https://istio.io/v1.30/docs/tasks/security/authentication/authn-policy/), [Istio / RequestAuthentication reference](https://istio.io/v1.30/docs/reference/config/security/request_authentication/), [Istio / AuthorizationPolicy reference](https://istio.io/v1.30/docs/reference/config/security/authorization-policy/).
+
+---
+
+# 9. Exercícios de troubleshooting
 
 Os laboratórios a seguir usam o cluster **kind** e o **Istio** já instalados conforme [day1.md](day1.md) (modo `ambient`) — o Lab 2 usa o modo `sidecar` (ver [OLD/day1-sidecar.md](OLD/day1-sidecar.md)) porque a falha que ele demonstra (mTLS `STRICT` x `PERMISSIVE`) é conceito de `PeerAuthentication`, válido nos dois modos, mas mais didático de observar com o Envoy sidecar.
 
 Cada laboratório segue o formato: **Objetivo → Provocar a falha → Diagnosticar → Corrigir → Referência**.
 
-## 6.0. Preparando o ambiente dos laboratórios
+## 9.0. Preparando o ambiente dos laboratórios
 
 ```bash
 export MY_NAMESPACE='myapp'
@@ -1320,9 +1896,195 @@ Se estiver usando o Prometheus dos addons, a consulta PromQL da seção [5.3](#5
 
 **Referência:** [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.30/docs/ops/diagnostic-tools/proxy-cmd/).
 
+## Lab 12 - Compressão gzip via EnvoyFilter não aplicada
+
+**Objetivo:** praticar o troubleshooting de um `EnvoyFilter` (seção [7](#7-envoyfilter)) que "não faz nada" por causa de um `match` incorreto — o erro mais comum com esse recurso.
+
+**Provocar a falha** (contexto errado: a patch mira o tráfego **outbound** do productpage, mas o que precisamos comprimir é a resposta que ele mesmo gera, ou seja, o tráfego **inbound**):
+
+```bash
+cat <<EOF | kubectl apply -n $MY_NAMESPACE -f -
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: enable-gzip-compression
+spec:
+  workloadSelector:
+    labels:
+      app: productpage
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_OUTBOUND
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.compressor
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+          compressor_library:
+            name: text_optimized
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+EOF
+
+# Teste: a resposta não vem comprimida, mesmo pedindo gzip
+kubectl -n $MY_NAMESPACE exec deploy/productpage-v1 -c istio-proxy -- \
+  curl -sS -o /dev/null -D - -H "Accept-Encoding: gzip" http://localhost:9080/productpage | grep -i content-encoding
+```
+
+**Diagnosticar:**
+
+```bash
+# Procure o filtro na configuração REAL do listener inbound (porta 9080) do productpage
+istioctl proxy-config listener deploy/productpage-v1.$MY_NAMESPACE --port 9080 -o json | grep -i compressor
+# Não encontra nada -> confirma que a patch não foi aplicada onde a requisição de fato passa
+
+istioctl analyze -n $MY_NAMESPACE
+```
+
+**Causa raiz:** `context: SIDECAR_OUTBOUND` faz a patch mirar o listener de **saída** do productpage (quando ele chama outros serviços), mas a resposta HTTP que queremos comprimir é servida no listener de **entrada** (`SIDECAR_INBOUND`, porta 9080) — exatamente o cenário descrito na seção [7.6](#76-exemplo-prático-habilitando-compressão-gzip-via-envoyfilter).
+
+**Corrigir:**
+
+```bash
+kubectl -n $MY_NAMESPACE patch envoyfilter enable-gzip-compression --type=json \
+  -p '[{"op":"replace","path":"/spec/configPatches/0/match/context","value":"SIDECAR_INBOUND"}]'
+
+istioctl proxy-config listener deploy/productpage-v1.$MY_NAMESPACE --port 9080 -o json | grep -i compressor
+```
+
+**Limpeza:**
+
+```bash
+kubectl -n $MY_NAMESPACE delete envoyfilter enable-gzip-compression
+```
+
+**Referência:** [Istio / EnvoyFilter reference](https://istio.io/v1.30/docs/reference/config/networking/envoy-filter/), seção [7.7](#77-comandos-de-troubleshooting-de-envoyfilter) deste guia.
+
+## Lab 13 - AuthorizationPolicy negando (ou liberando) por engano
+
+**Objetivo:** observar o efeito de uma `AuthorizationPolicy` mal escrita — um erro comum é esquecer que, assim que existe **qualquer** política `ALLOW` para um workload, **tudo que não casar** com nenhuma regra passa a ser **negado por padrão** (seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas)).
+
+**Provocar a falha:**
+
+```bash
+cat <<EOF | kubectl apply -n $MY_NAMESPACE -f -
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-allow-only-productpage
+spec:
+  selector:
+    matchLabels:
+      app: reviews
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/$MY_NAMESPACE/sa/bookinfo-productpage"]
+EOF
+
+# productpage continua funcionando, mas QUALQUER outro caller (ex.: um curl manual) passa a ser negado (RBAC: access denied)
+kubectl -n $MY_NAMESPACE run --rm -it curl-test --image=curlimages/curl --restart=Never -- \
+  curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://reviews.$MY_NAMESPACE.svc.cluster.local:9080/reviews/0
+```
+
+**Diagnosticar:**
+
+```bash
+# O access log do Envoy de "reviews" mostra RBAC: access denied com response_code 403
+kubectl -n $MY_NAMESPACE logs deploy/reviews-v1 -c istio-proxy | grep -i denied
+
+# istioctl x describe explica quais policies afetam o Pod alvo
+istioctl x describe pod "$(kubectl -n $MY_NAMESPACE get pod -l app=reviews -o jsonpath='{.items[0].metadata.name}')" -n $MY_NAMESPACE
+```
+
+**Causa raiz:** essa `AuthorizationPolicy` é o comportamento **esperado e correto** — qualquer origem que não seja o service account `bookinfo-productpage` é implicitamente negada, pois existe uma política `ALLOW` para `reviews` e nenhuma regra casa com o `curl-test`. É um erro comum interpretar esse 403 como "bug" quando na verdade é a política funcionando como projetada.
+
+**Corrigir (se a intenção era permitir mais origens):**
+
+```bash
+kubectl -n $MY_NAMESPACE delete authorizationpolicy reviews-allow-only-productpage
+```
+
+**Referência:** [Istio / AuthorizationPolicy reference](https://istio.io/v1.30/docs/reference/config/security/authorization-policy/), seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas) deste guia.
+
+## Lab 14 - JWT inválido/ausente sendo rejeitado (ou não)
+
+**Objetivo:** demonstrar a diferença entre **validar** um JWT (`RequestAuthentication`) e **exigir** um JWT válido (`AuthorizationPolicy` com `notRequestPrincipals`) — seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy).
+
+**Provocar o cenário (só `RequestAuthentication`, sem `AuthorizationPolicy`):**
+
+```bash
+cat <<EOF | kubectl apply -n $MY_NAMESPACE -f -
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-example
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  jwtRules:
+  - issuer: "testing@secure.istio.io"
+    jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.30/security/tools/jwt/samples/jwks.json"
+EOF
+
+# Requisição SEM token: ainda funciona (RequestAuthentication sozinho não bloqueia nada)
+kubectl -n $MY_NAMESPACE exec deploy/productpage-v1 -c istio-proxy -- \
+  curl -sS -o /dev/null -w "sem token: HTTP %{http_code}\n" http://localhost:9080/productpage
+
+# Requisição com token INVÁLIDO: agora sim é rejeitada com 401 (a assinatura não bate)
+kubectl -n $MY_NAMESPACE exec deploy/productpage-v1 -c istio-proxy -- \
+  curl -sS -o /dev/null -w "token invalido: HTTP %{http_code}\n" \
+  -H "Authorization: Bearer token-invalido-de-propósito" http://localhost:9080/productpage
+```
+
+**Diagnosticar:** o comportamento acima é o **esperado**: `RequestAuthentication` valida um token **se ele existir**, mas não torna o token obrigatório.
+
+**Corrigir (tornando o JWT obrigatório):**
+
+```bash
+cat <<EOF | kubectl apply -n $MY_NAMESPACE -f -
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: require-jwt-productpage
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  action: DENY
+  rules:
+  - from:
+    - source:
+        notRequestPrincipals: ["*"]
+EOF
+
+# Agora, sem token, a requisição é negada com 403 (não mais 200)
+kubectl -n $MY_NAMESPACE exec deploy/productpage-v1 -c istio-proxy -- \
+  curl -sS -o /dev/null -w "sem token apos fix: HTTP %{http_code}\n" http://localhost:9080/productpage
+```
+
+**Limpeza:**
+
+```bash
+kubectl -n $MY_NAMESPACE delete authorizationpolicy require-jwt-productpage
+kubectl -n $MY_NAMESPACE delete requestauthentication jwt-example
+```
+
+**Referência:** [Istio / Authentication Policy (JWT)](https://istio.io/v1.30/docs/tasks/security/authentication/authn-policy/), seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy) deste guia.
+
 ---
 
-# 7. Referências
+# 10. Referências
 
 **Istio (documentação oficial, versão 1.30):**
 
@@ -1351,6 +2113,17 @@ Se estiver usando o Prometheus dos addons, a consulta PromQL da seção [5.3](#5
 - [Istio / Grafana](https://istio.io/v1.30/docs/ops/integrations/grafana/)
 - [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/)
 - [Istio / DestinationRule reference](https://istio.io/v1.30/docs/reference/config/networking/destination-rule/)
+- [Istio / Component logging](https://istio.io/v1.30/docs/ops/diagnostic-tools/component-logging/)
+- [Istio / Envoy Access Logs](https://istio.io/v1.30/docs/tasks/observability/logs/access-log/)
+- [Istio / EnvoyFilter reference](https://istio.io/v1.30/docs/reference/config/networking/envoy-filter/)
+- [Istio / Telemetry API reference](https://istio.io/v1.30/docs/reference/config/telemetry/)
+- [Istio / MeshConfig reference](https://istio.io/v1.30/docs/reference/config/istio.mesh.v1alpha1/)
+- [Istio / Plug in CA Certificates](https://istio.io/v1.30/docs/tasks/security/cert-management/plugin-ca-cert/)
+- [Istio / Sidecar reference](https://istio.io/v1.30/docs/reference/config/networking/sidecar/)
+- [Istio / AuthorizationPolicy reference](https://istio.io/v1.30/docs/reference/config/security/authorization-policy/)
+- [Istio / Authentication Policy (JWT)](https://istio.io/v1.30/docs/tasks/security/authentication/authn-policy/)
+- [Istio / RequestAuthentication reference](https://istio.io/v1.30/docs/reference/config/security/request_authentication/)
+- [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/)
 - [github.com/istio/istio — Releases](https://github.com/istio/istio/releases/)
 
 **Envoy (documentação oficial):**
@@ -1366,6 +2139,8 @@ Se estiver usando o Prometheus dos addons, a consulta PromQL da seção [5.3](#5
 - [Envoy / Cluster statistics (GitHub)](https://github.com/envoyproxy/envoy/blob/main/docs/root/configuration/upstream/cluster_manager/cluster_stats.rst)
 - [Envoy / Substitution Formatter — Response Flags](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter)
 - [Envoy / Stats proto (prefixo `envoy_` e tags no formato Prometheus)](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto)
+- [Envoy / Access logging](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage)
+- [Envoy / Compressor filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter)
 
 **Prometheus, Grafana e Datadog:**
 
