@@ -59,7 +59,7 @@ func (u *Updater) Plan(results []toolversions.Result) (*PlanResult, error) {
 
 	plan.Files = append(plan.Files, UpdateREADME(string(readme), rv))
 
-	for _, name := range []string{"day1.md", "day2.md"} {
+	for _, name := range []string{"day1.md", "day1-sidecar.md", "day2.md"} {
 		path := filepath.Join(u.RepoRoot, name)
 		content, err := os.ReadFile(path)
 		if err != nil {

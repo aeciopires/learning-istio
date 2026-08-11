@@ -6,7 +6,10 @@
   - [Opção 1 (recomendada, qualquer versão do Ubuntu): script de instalação](#opção-1-recomendada-qualquer-versão-do-ubuntu-script-de-instalação)
   - [Opção 2: pacote `apt` (Ubuntu 26.04+)](#opção-2-pacote-apt-ubuntu-2604)
   - [Opção 3: pacote `apt` via `extrepo` (Ubuntu 24.04, Debian 11+)](#opção-3-pacote-apt-via-extrepo-ubuntu-2404-debian-11)
+  - [Opção 4: Homebrew (macOS, Intel ou Apple Silicon)](#opção-4-homebrew-macos-intel-ou-apple-silicon)
 - [Docker](#docker)
+  - [Linux (Ubuntu/Debian)](#linux-ubuntudebian)
+  - [macOS (Intel ou Apple Silicon)](#macos-intel-ou-apple-silicon)
 - [Helm](#helm)
 - [kubectl](#kubectl)
 - [istioctl](#istioctl)
@@ -17,6 +20,12 @@
 
 # Requisitos
 
+Sistemas operacionais/arquiteturas suportados por este guia e pelo CLI em
+[agents/upgrade](agents/upgrade): Linux (Ubuntu/Debian) em amd64/arm64, e
+**macOS em Intel (amd64) e Apple Silicon (arm64)**. Os comandos de cada
+seção abaixo indicam onde o passo difere entre Linux e macOS; quando não
+há distinção, o comando é o mesmo nos dois.
+
 # Pacotes gerais
 
 Instale os seguintes pacotes de acordo com o sistema operacional.
@@ -25,6 +34,15 @@ Ubuntu 22.04/24.04/26.04:
 
 ```bash
 sudo apt install -y vim telnet netcat-openbsd git elinks curl wget openssl net-tools jq
+```
+
+macOS (Intel ou Apple Silicon), via [Homebrew](https://brew.sh):
+
+```bash
+# Instale o Homebrew primeiro, se ainda não tiver:
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew install telnet netcat git elinks curl wget openssl jq
 ```
 
 # mise
@@ -94,7 +112,31 @@ source ~/.bashrc
 mise --version
 ```
 
+## Opção 4: Homebrew (macOS, Intel ou Apple Silicon)
+
+A Opção 1 (script `curl https://mise.run | sh`) também funciona sem
+alterações no macOS. Alternativamente, via [Homebrew](https://brew.sh):
+
+```bash
+brew install mise
+
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+echo 'export PATH="$HOME/.local/share/mise/shims:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+mise --version
+```
+
+> No macOS com shell `zsh` (padrão desde o macOS Catalina), troque
+> `~/.bashrc` por `~/.zshrc` e `mise activate bash` por `mise activate zsh`
+> nos comandos acima e nos das seções seguintes.
+
 Fonte: https://mise.jdx.dev/installing-mise.html
+
+> A partir daqui, os comandos `mise ...` das seções Helm, kubectl,
+> istioctl e kind são **idênticos em Linux e macOS** (Intel/amd64 e Apple
+> Silicon/arm64) - o mise e o registro de ferramentas que ele usa (aqua)
+> são multiplataforma, então não há instruções separadas por SO a partir
+> deste ponto.
 
 > Atalho: como este repositório já traz um arquivo
 > [`.tool-versions`](.tool-versions) com as versões de `kind`, `helm` e
@@ -118,6 +160,8 @@ Fonte: https://mise.jdx.dev/installing-mise.html
 O [Docker](https://www.docker.com) é a engine de containers usada para
 executar o cluster Kubernetes local (via kind) e os containers da
 aplicação de exemplo Bookinfo.
+
+## Linux (Ubuntu/Debian)
 
 Instale o Docker CE (Community Edition) com os seguintes comandos:
 
@@ -154,6 +198,27 @@ sudo systemctl start containerd
 sudo systemctl enable docker
 sudo systemctl enable containerd
 ```
+
+## macOS (Intel ou Apple Silicon)
+
+Instale o **Docker Desktop** (traz Docker CE + a VM Linux que executa os
+containers - suporta imagens/arquiteturas amd64 e arm64 nativamente):
+
+```bash
+brew install --cask docker
+open -a Docker
+```
+
+Ou baixe manualmente em https://www.docker.com/products/docker-desktop
+(escolha "Mac with Intel chip" ou "Mac with Apple chip" conforme seu
+hardware).
+
+> ATENÇÃO!!! No macOS, o cluster kind roda dentro da VM Linux do Docker
+> Desktop - o LoadBalancer do MetalLB (usado pelo gateway do Istio) não
+> fica acessível a partir do host por padrão. É necessário instalar o
+> [docker-mac-net-connect](https://github.com/chipmk/docker-mac-net-connect)
+> - veja o passo a passo em [day1.md](day1.md) ou
+> [day1-sidecar.md](day1-sidecar.md).
 
 # Helm
 
@@ -212,6 +277,8 @@ mise ls kubectl
 > Se algum programa/script não interativo não encontrar o `kubectl` (por
 > não passar pelos "shims" do mise), crie um link simbólico como reforço:
 > `sudo ln -s $HOME/.local/share/mise/shims/kubectl /usr/local/bin/kubectl`
+> (no macOS com Apple Silicon/Homebrew, use `/opt/homebrew/bin/kubectl` em
+> vez de `/usr/local/bin/kubectl` se preferir manter o padrão do Homebrew).
 
 # istioctl
 
@@ -353,6 +420,11 @@ Os operadores de clusters bare-metal ficam limitados a duas ferramentas menos ef
 O MetalLB visa corrigir esse desequilíbrio, oferecendo uma implementação de balanceador de carga de rede que se integra com equipamentos de rede padrão, para que os serviços externos em clusters bare-metal também "funcionem" da melhor forma possível.
 
 Execute os seguintes comandos para instalar o [MetalLB](https://metallb.universe.tf):
+
+> No macOS, o IP atribuído pelo MetalLB só fica acessível a partir do host
+> depois de instalar o `docker-mac-net-connect` - veja a nota em
+> [Docker#macos-intel-ou-apple-silicon](#macos-intel-ou-apple-silicon)
+> acima.
 
 > Referências:
 > - https://github.com/rafaelperoco/kind/blob/main/createCluster.sh

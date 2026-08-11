@@ -16,6 +16,10 @@ func testResolvedVersions() ResolvedVersions {
 		Kubectl:       "1.37.0",
 		MetalLB:       "0.17.0",
 		KindNodeK8s:   "1.36.1",
+		Grafana:       "12.0.0",
+		Prometheus:    "3.0.0",
+		Kiali:         "2.0.0",
+		Jaeger:        "2.0.0",
 	}
 }
 
@@ -219,6 +223,10 @@ func TestRenderVersionsEnv(t *testing.T) {
 		"KUBECTL_VERSION=1.37.0",
 		"METALLB_VERSION=0.17.0",
 		"KIND_NODE_K8S_VERSION=1.36.1",
+		"GRAFANA_VERSION=12.0.0",
+		"PROMETHEUS_VERSION=3.0.0",
+		"KIALI_VERSION=2.0.0",
+		"JAEGER_VERSION=2.0.0",
 	}
 	for _, want := range wantLines {
 		if !strings.Contains(env, want) {

@@ -14,7 +14,11 @@ fi
 
 log_step "Creating kind cluster '$CLUSTER_NAME' (node image: $KIND_NODE_IMAGE)"
 
-KIND_CONFIG_FILE="$(mktemp -t kind-config-XXXXXX.yaml)"
+# NB: "mktemp -t NAME.XXXXXX" is portable between GNU (Linux) and BSD
+# (macOS) mktemp; "mktemp -t NAME-XXXXXX.yaml" is not - BSD mktemp treats
+# the whole -t argument as a literal prefix instead of a template, so the
+# ".yaml" suffix never lands where you'd expect.
+KIND_CONFIG_FILE="$(mktemp "${TMPDIR:-/tmp}/kind-config.XXXXXX")"
 trap 'rm -f "$KIND_CONFIG_FILE"' EXIT
 
 cat >"$KIND_CONFIG_FILE" <<EOF

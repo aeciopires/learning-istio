@@ -46,10 +46,8 @@ METALLB_NETMASK="${METALLB_NETMASK:-27}"
 
 ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-${ISTIO_MINOR}/samples"
 ISTIO_BOOKINFO_URL="${ISTIO_BASE_URL}/bookinfo"
-# Not consumed by any script yet - available for an optional future
-# "install observability addons" script (Grafana/Prometheus/Kiali/Jaeger),
-# same URLs day1.md uses manually.
-# shellcheck disable=SC2034
+# Used by install-addons.sh (Grafana/Prometheus/Kiali/Jaeger) - the same
+# URLs day1.md/day1-sidecar.md use manually.
 ISTIO_ADDONS_URL="${ISTIO_BASE_URL}/addons"
 
 log_info()  { echo -e "\033[1;34m[INFO]\033[0m  $*"; }

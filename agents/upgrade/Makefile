@@ -23,12 +23,35 @@ help: ## Show this help
 ## --- Build / test the Go CLI (source in app/) ------------------------------
 
 .PHONY: build
-build: ## Build the istio-upgrade binary into bin/
+build: ## Build the istio-upgrade binary for the host OS/arch into bin/
 	go build -C $(APP_DIR) -ldflags "-X main.gitCommit=$(GIT_COMMIT)" -o ../$(BUILD_DIR)/$(BINARY_NAME) .
 
 .PHONY: install
 install: ## go install the CLI into $GOBIN/$GOPATH/bin
 	go install -C $(APP_DIR) .
+
+## Cross-compilation: pure Go, no cgo, so linux/darwin x amd64/arm64 all
+## build from any host with no extra toolchain. Docker stays Linux-only on
+## purpose (Docker Desktop on macOS runs Linux containers via a VM - there
+## is no such thing as a "macOS Docker image").
+.PHONY: build-linux-amd64
+build-linux-amd64: ## Cross-build for Linux amd64 into bin/
+	GOOS=linux GOARCH=amd64 go build -C $(APP_DIR) -ldflags "-X main.gitCommit=$(GIT_COMMIT)" -o ../$(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 .
+
+.PHONY: build-linux-arm64
+build-linux-arm64: ## Cross-build for Linux arm64 into bin/
+	GOOS=linux GOARCH=arm64 go build -C $(APP_DIR) -ldflags "-X main.gitCommit=$(GIT_COMMIT)" -o ../$(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
+
+.PHONY: build-darwin-amd64
+build-darwin-amd64: ## Cross-build for macOS amd64 (Intel) into bin/
+	GOOS=darwin GOARCH=amd64 go build -C $(APP_DIR) -ldflags "-X main.gitCommit=$(GIT_COMMIT)" -o ../$(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 .
+
+.PHONY: build-darwin-arm64
+build-darwin-arm64: ## Cross-build for macOS arm64 (Apple Silicon) into bin/
+	GOOS=darwin GOARCH=arm64 go build -C $(APP_DIR) -ldflags "-X main.gitCommit=$(GIT_COMMIT)" -o ../$(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 .
+
+.PHONY: build-all
+build-all: build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 ## Cross-build for all supported OS/arch combos into bin/
 
 .PHONY: run
 run: ## Run the CLI from source, e.g. `make run ARGS="analyze --from 1.10 --to 1.30"`
@@ -144,6 +167,10 @@ deploy-bookinfo-sidecar: ## Deploy the Bookinfo sample app for sidecar mode
 .PHONY: deploy-bookinfo-ambient
 deploy-bookinfo-ambient: ## Deploy the Bookinfo sample app for ambient mode
 	scripts/deploy-bookinfo.sh ambient
+
+.PHONY: install-addons
+install-addons: ## Install the Istio addons (Grafana, Prometheus, Kiali, Jaeger)
+	scripts/install-addons.sh
 
 .PHONY: validate
 validate: ## Validate the cluster/Istio/Bookinfo, e.g. `make validate MODE=sidecar`

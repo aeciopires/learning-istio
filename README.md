@@ -53,7 +53,7 @@ Veja mais detalhes sobre os requisitos da aplicação em:
 
 # Day 1
 
-Veja os comandos [aqui](day1.md)
+Veja os comandos [aqui](day1.md) (modo ambient) ou [aqui](day1-sidecar.md) (modo sidecar).
 
 # Day 2
 

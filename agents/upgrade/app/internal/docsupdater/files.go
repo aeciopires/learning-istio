@@ -68,7 +68,8 @@ func UpdateREADME(content string, rv ResolvedVersions) *FileUpdate {
 }
 
 // UpdateDayFile rewrites the ISTIO_RELEASE/VERSION_ISTIO/GATEWAY_API_VERSION
-// env var exports and istio.io/vX.Y/ links shared by day1.md and day2.md.
+// env var exports and istio.io/vX.Y/ links shared by day1.md,
+// day1-sidecar.md and day2.md.
 func UpdateDayFile(path, content string, rv ResolvedVersions) *FileUpdate {
 	u := newFileUpdate(path, content)
 	cur := content
@@ -201,5 +202,14 @@ HELM_VERSION=%s
 KUBECTL_VERSION=%s
 METALLB_VERSION=%s
 KIND_NODE_K8S_VERSION=%s
-`, rv.IstioMinor, rv.IstioPatch, rv.IstioPatch, rv.GatewayAPI, rv.Kind, rv.Helm, rv.Kubectl, rv.MetalLB, rv.KindNodeK8s)
+
+# Latest upstream addon versions (informational only - see
+# scripts/install-addons.sh; not what controls what actually gets
+# installed, which tracks ISTIO_VERSION's bundled sample manifests instead).
+GRAFANA_VERSION=%s
+PROMETHEUS_VERSION=%s
+KIALI_VERSION=%s
+JAEGER_VERSION=%s
+`, rv.IstioMinor, rv.IstioPatch, rv.IstioPatch, rv.GatewayAPI, rv.Kind, rv.Helm, rv.Kubectl, rv.MetalLB, rv.KindNodeK8s,
+		rv.Grafana, rv.Prometheus, rv.Kiali, rv.Jaeger)
 }

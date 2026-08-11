@@ -68,7 +68,7 @@ flowchart TB
 
     versionsEnv[("configs/versions.env\n(gerado por docs update --apply)")]
     docsupdater -- escreve --> versionsEnv
-    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day2.md\nINSTALL_REQUIREMENTS.md · .tool-versions"]
+    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nINSTALL_REQUIREMENTS.md · .tool-versions"]
 
     subgraph AUTOMATION["Makefile + scripts/*.sh (NÃO é o CLI)"]
         direction TB
@@ -94,6 +94,11 @@ ambos). `pilot.cni.enabled=true` faz o `istiod` não injetar mais o
 container de init privilegiado `istio-init`, delegando o redirecionamento
 de tráfego ao `istio-cni`, tanto no modo sidecar quanto no ambient.
 
+Os passos de Bookinfo e addons são controláveis por variável de ambiente
+(`INSTALL_BOOKINFO`/`INSTALL_ADDONS`, padrão `true` = instala tudo) - cada
+um também tem seu próprio alvo `make` para rodar isoladamente, fora do
+`bootstrap-*` (veja a tabela na seção seguinte).
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -104,13 +109,14 @@ sequenceDiagram
     participant LB as install-metallb.sh
     participant Ist as install-istio.sh MODE
     participant App as deploy-bookinfo.sh MODE
+    participant Addons as install-addons.sh
     participant Val as validate-cluster.sh MODE
     participant K8s as Cluster kind
 
     User->>Make: make bootstrap-sidecar | bootstrap-ambient
     Make->>Pre: preflight.sh
     Pre->>Pre: checa docker/kind/helm/kubectl/istioctl/jq
-    Pre->>Pre: checa e corrige fs.inotify (istio-cni)
+    Pre->>Pre: checa e corrige fs.inotify (Linux) / avisa (macOS)
     Make->>Kind: create-cluster.sh
     Kind->>K8s: cria cluster (1 control-plane + 2 workers)
     Make->>LB: install-metallb.sh
@@ -131,9 +137,17 @@ sequenceDiagram
     end
     Ist->>K8s: helm install istio-ingress (gateway)
 
-    Make->>App: deploy-bookinfo.sh MODE
-    App->>K8s: label namespace (dataplane-mode=ambient OU istio-injection=enabled)
-    App->>K8s: apply Bookinfo + Gateway/HTTPRoute
+    opt INSTALL_BOOKINFO=true (padrão)
+        Make->>App: deploy-bookinfo.sh MODE
+        App->>K8s: label namespace (dataplane-mode=ambient OU istio-injection=enabled)
+        App->>K8s: apply Bookinfo + Gateway/HTTPRoute
+    end
+
+    opt INSTALL_ADDONS=true (padrão)
+        Make->>Addons: install-addons.sh
+        Addons->>K8s: apply Grafana + Prometheus + Kiali + Jaeger
+        Addons->>K8s: aguarda rollout de cada addon
+    end
 
     Make->>Val: validate-cluster.sh MODE
     Val->>K8s: cluster/istiod/ingress/istio-cni prontos
@@ -207,6 +221,31 @@ todo em [app/](app/); o `Makefile` na raiz de `agents/upgrade/` continua
 sendo o ponto de entrada único para compilar/testar/rodar (usa
 `go build -C app`/`go test -C app`/etc. internamente).
 
+## Build multiplataforma (Linux/macOS, amd64/arm64)
+
+O CLI é Go puro (sem cgo, sem chamadas de sistema específicas de SO), então
+compila nativamente para qualquer combinação abaixo a partir de qualquer
+host, sem toolchain extra:
+
+```bash
+make build-linux-amd64     # bin/istio-upgrade-linux-amd64
+make build-linux-arm64     # bin/istio-upgrade-linux-arm64
+make build-darwin-amd64    # bin/istio-upgrade-darwin-amd64  (macOS Intel)
+make build-darwin-arm64    # bin/istio-upgrade-darwin-arm64  (macOS Apple Silicon)
+make build-all             # as 4 combinações de uma vez
+```
+
+> A imagem Docker (`make docker-build`) continua **só Linux** - o Docker
+> Desktop no macOS executa containers Linux via VM, então não existe (nem
+> faz sentido existir) uma "imagem Docker para macOS". Para usar o CLI no
+> macOS, use os binários `darwin-*` acima, não a imagem Docker.
+
+A automação de cluster (`scripts/*.sh`, próxima seção) também funciona em
+macOS - veja as nuances específicas de macOS em
+[INSTALL_REQUIREMENTS.md](../../INSTALL_REQUIREMENTS.md) (instalação do
+Docker Desktop, `docker-mac-net-connect` para o LoadBalancer do MetalLB, e
+por que o preflight não verifica `fs.inotify` no host no macOS).
+
 # Uso do CLI
 
 ```
@@ -266,12 +305,14 @@ istio-upgrade docs update --apply
 istio-upgrade docs update --apply --allow-major-bump
 ```
 
-Atualiza: `README.md`, `day1.md`, `day2.md`, `INSTALL_REQUIREMENTS.md`,
-`.tool-versions` (na raiz do repositório) e
+Atualiza: `README.md`, `day1.md`, `day1-sidecar.md`, `day2.md`,
+`INSTALL_REQUIREMENTS.md`, `.tool-versions` (na raiz do repositório) e
 [configs/versions.env](configs/versions.env) (consumido pelos scripts de
-cluster - veja a próxima seção). `--repo-root` permite apontar para outro
-checkout; por padrão o comando detecta a raiz do repositório subindo a
-partir do diretório atual (procura por `.git/` + `README.md`).
+cluster - veja a próxima seção, inclusive as versões *informativas* dos
+addons - `GRAFANA_VERSION`, `PROMETHEUS_VERSION`, `KIALI_VERSION`,
+`JAEGER_VERSION`). `--repo-root` permite apontar para outro checkout; por
+padrão o comando detecta a raiz do repositório subindo a partir do
+diretório atual (procura por `.git/` + `README.md`).
 
 ## `versions latest`
 
@@ -283,27 +324,32 @@ istio-upgrade versions latest --format json
 # Automação de cluster (Makefile + scripts, não é o CLI)
 
 A criação/instalação do ambiente de prática (kind + MetalLB + Istio +
-Bookinfo) é feita pelo **Makefile chamando scripts shell** em
+Bookinfo + addons) é feita pelo **Makefile chamando scripts shell** em
 [scripts/](scripts/), não pelo binário Go - são operações de
 infraestrutura local (Docker) que não fazem sentido dentro do CLI/imagem
 Docker do CLI. Os scripts leem os valores resolvidos em
 [configs/versions.env](configs/versions.env) (gerado pelo `docs update`),
-então rode `make docs-update-apply` pelo menos uma vez antes.
+então rode `make docs-update-apply` pelo menos uma vez antes. Funciona em
+Linux e macOS (Intel/amd64 e Apple Silicon/arm64) - veja
+[INSTALL_REQUIREMENTS.md](../../INSTALL_REQUIREMENTS.md) para os
+pré-requisitos de cada SO.
 
 ```bash
 make install-tools          # instala kind/helm/kubectl/istioctl via mise (INSTALL_REQUIREMENTS.md#mise)
 make preflight               # valida docker/kind/helm/kubectl/istioctl/jq instalados
-make bootstrap-sidecar       # cluster + MetalLB + Istio (sidecar) + Bookinfo + validação
+make bootstrap-sidecar       # cluster + MetalLB + Istio (sidecar) + Bookinfo + addons + validação
 make bootstrap-ambient       # idem, em modo ambient
 make validate MODE=sidecar   # roda só a validação (funciona para os dois modos)
 make destroy-cluster         # apaga o cluster kind
 ```
 
-> `make preflight` também verifica os limites de `fs.inotify` do host: em
-> uma instalação padrão do Linux eles costumam ser baixos demais para o
-> `istio-cni` - instalado em **ambos** os modos (no sidecar ele substitui o
-> container de init privilegiado `istio-init`; no ambient ele captura os
-> pods para o `ztunnel`) - que falha com
+> `make preflight` também verifica os limites de `fs.inotify` do host (só
+> no Linux - no macOS o kernel relevante é o da VM do Docker Desktop, não
+> o host, então o preflight só avisa): em uma instalação padrão do Linux
+> eles costumam ser baixos demais para o `istio-cni` - instalado em
+> **ambos** os modos (no sidecar ele substitui o container de init
+> privilegiado `istio-init`; no ambient ele captura os pods para o
+> `ztunnel`) - que falha com
 > `couldn't initialize inotify: too many open files` (problema real,
 > reproduzido durante o desenvolvimento deste CLI - também documentado em
 > [day1.md](../../day1.md)). Se houver sudo sem senha disponível, o
@@ -311,12 +357,30 @@ make destroy-cluster         # apaga o cluster kind
 > comandos `sudo sysctl -w ...` para rodar manualmente antes do
 > `make bootstrap-sidecar`/`make bootstrap-ambient`.
 
-Também é possível rodar cada etapa isoladamente (`make create-cluster`,
-`make install-metallb`, `make install-istio-sidecar` /
-`make install-istio-ambient`, `make deploy-bookinfo-sidecar` /
-`make deploy-bookinfo-ambient`) - útil para depurar uma etapa específica.
+Por padrão, `bootstrap-sidecar`/`bootstrap-ambient` instalam **tudo**
+(cluster, MetalLB, Istio, Bookinfo e addons). Cada etapa também tem seu
+próprio alvo `make`, para rodar isoladamente ou depurar um passo
+específico - e `INSTALL_BOOKINFO`/`INSTALL_ADDONS` deixam pular uma etapa
+mesmo dentro do `bootstrap-*`:
+
+| Etapa               | Alvo(s) isolado(s)                                      | Variável no `bootstrap-*`   |
+|---------------------|-----------------------------------------------------------|------------------------------|
+| Cluster kind         | `make create-cluster`                                     | (sempre roda)                 |
+| MetalLB               | `make install-metallb`                                     | (sempre roda)                 |
+| Istio                  | `make install-istio-sidecar` / `make install-istio-ambient` | (sempre roda, no `MODE` escolhido) |
+| Bookinfo                | `make deploy-bookinfo-sidecar` / `make deploy-bookinfo-ambient` | `INSTALL_BOOKINFO=false` para pular |
+| Addons (Grafana/Prometheus/Kiali/Jaeger) | `make install-addons` | `INSTALL_ADDONS=false` para pular |
+
+```bash
+# Exemplos
+make install-addons                          # só os addons, num cluster já existente
+INSTALL_ADDONS=false make bootstrap-sidecar   # tudo, menos os addons
+INSTALL_BOOKINFO=false INSTALL_ADDONS=false make bootstrap-ambient  # só cluster + MetalLB + Istio
+```
+
 Os scripts espelham os passos manuais documentados em
-[day1.md](../../day1.md) e
+[day1.md](../../day1.md) (modo ambient) e
+[day1-sidecar.md](../../day1-sidecar.md) (modo sidecar), além de
 [INSTALL_REQUIREMENTS.md](../../INSTALL_REQUIREMENTS.md), então servem
 tanto para uso manual quanto como base dos testes de validação do cluster
 (próxima seção). Para desinstalar manualmente, veja
@@ -324,7 +388,8 @@ tanto para uso manual quanto como base dos testes de validação do cluster
 
 Variáveis úteis (todas com defaults sensatos, sobrescrevíveis via
 ambiente): `CLUSTER_NAME` (padrão `istio-upgrade`), `MY_NAMESPACE` (padrão
-`myapp`), `ISTIO_MODE` (padrão `ambient`).
+`myapp`), `ISTIO_MODE` (padrão `ambient`), `INSTALL_BOOKINFO` e
+`INSTALL_ADDONS` (padrão `true` nos dois).
 
 # Docker
 
@@ -375,6 +440,10 @@ agents/upgrade/
 ├── Makefile                    # build/test/docker do CLI (delega para app/) + ciclo de vida do cluster
 ├── configs/versions.env        # gerado por `docs update`; consumido por scripts/*.sh
 ├── scripts/                    # automação de cluster (Makefile chama isto, não o CLI)
+│   ├── preflight.sh · create-cluster.sh · install-metallb.sh
+│   ├── install-istio.sh · deploy-bookinfo.sh · install-addons.sh
+│   ├── validate-cluster.sh · destroy-cluster.sh · bootstrap.sh
+│   └── lib/common.sh            # env vars (versions.env), logging, helpers
 ├── plans/                      # histórico dos planos de implantação executados
 ├── bin/                        # binário compilado (make build; não versionado)
 └── app/                        # TUDO que é específico do CLI em Go
@@ -410,3 +479,9 @@ agents/upgrade/
   etc.) - isso é esperado, é o histórico real de commits entre as duas tags.
 - `docs update` cobre apenas os arquivos listados acima; não reescreve
   prosa (ex.: `ISTIO_ENVOY_GUIA_DE_ESTUDOS.md`) nem arquivos em `OLD/`.
+- `GRAFANA_VERSION`/`PROMETHEUS_VERSION`/`KIALI_VERSION`/`JAEGER_VERSION`
+  em `configs/versions.env` são **informativos**: os addons são instalados
+  a partir dos manifests prontos do `istio/istio` (pinados por
+  `ISTIO_RELEASE`, veja `scripts/install-addons.sh`), não há um número de
+  versão independente para "escolher" nesse mecanismo - essas variáveis
+  só sinalizam a última versão upstream de cada addon, para referência.

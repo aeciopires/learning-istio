@@ -1,0 +1,286 @@
+# Descomplicando Istio
+
+<!-- TOC -->
+
+- [Descomplicando Istio](#descomplicando-istio)
+- [Day 1 (modo sidecar)](#day-1-modo-sidecar)
+
+<!-- TOC -->
+
+# Day 1 (modo sidecar)
+
+Comandos executados em sequência durante o treinamento, usando o Istio no
+**modo sidecar** (em vez do modo ambient usado em [day1.md](day1.md)).
+
+Instale o **Docker** com as instruções da página: [INSTALL_REQUIREMENTS.md#docker](INSTALL_REQUIREMENTS.md#docker).
+
+Crie um **cluster Kubernetes** usando o kind conforme as instruções da página: [INSTALL_REQUIREMENTS.md#kind](INSTALL_REQUIREMENTS.md#kind);
+
+Instale o **Helm** com as instruções da página: [INSTALL_REQUIREMENTS.md#helm](INSTALL_REQUIREMENTS.md#helm).
+
+Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#metallb](INSTALL_REQUIREMENTS.md#metallb).
+
+Crie variáveis de ambiente uteis para baixar os arquivos complementares
+
+```bash
+export ISTIO_RELEASE=1.30
+export VERSION_ISTIO="${ISTIO_RELEASE}.3"
+export GATEWAY_API_VERSION="v1.6.1"
+export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
+export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
+export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
+export MY_NAMESPACE='myapp'
+export ISTIO_HTTPBIN_URL="$ISTIO_BASE_URL/httpbin/"
+```
+
+Instale o **Istio** com os seguintes comandos:
+
+```bash
+#-------
+# Referencias:
+# https://istio.io/v1.30/docs/setup/getting-started/
+# https://istio.io/v1.30/docs/setup/install/helm/
+# Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
+
+# Configure o repositório Helm (usando o sidecar mode):
+# https://istio.io/v1.30/docs/setup/install/helm/
+helm repo add istio https://istio-release.storage.googleapis.com/charts
+helm repo update
+
+# Instale os componentes base do Istio
+helm -n istio-system upgrade --install istio-base istio/base --version $VERSION_ISTIO --set defaultRevision=default --create-namespace --wait --debug --timeout 900s
+
+# Instale ou atualize o Kubernetes Gateway API CRDs
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+  kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
+
+# Instale o CNI node agent. No modo sidecar ele substitui o container de
+# init privilegiado "istio-init" que faria o redirecionamento de tráfego
+# de cada pod (veja o --set pilot.cni.enabled=true no comando do Istiod
+# logo abaixo, que é o que ativa esse comportamento).
+helm -n istio-system upgrade --install istio-cni istio/cni --version $VERSION_ISTIO --wait --debug --timeout 900s
+
+# Instale o Istiod, o componente control plane que gerencia e configura os proxies para roteamento de tráfego na mesh
+helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO --set pilot.cni.enabled=true --wait --debug --timeout 900s
+```
+
+Comando para verificar os logs do istio-cni: ``kubectl logs -f daemonset/istio-cni-node -n istio-system``
+
+> ATENÇÃO!!! Se você ver o erro abaixo enquanto verifica o log dos pods do istio-cni: 
+``failed to create fsnotify watcher: too many open files``, corrija com o seguintes comandos:
+
+```bash
+helm uninstall istio-cni -n istio-system
+sudo sysctl -w fs.inotify.max_user_watches=2099999999
+sudo sysctl -w fs.inotify.max_user_instances=2099999999
+sudo sysctl -w fs.inotify.max_queued_events=2099999999
+```
+
+> No macOS este ajuste não se aplica ao host (o kernel Linux relevante é o
+> da VM do Docker Desktop) - veja [INSTALL_REQUIREMENTS.md](INSTALL_REQUIREMENTS.md)
+> e `agents/upgrade/scripts/preflight.sh` para a checagem automática (Linux) e a
+> observação sobre macOS.
+
+Tente reinstalar o istio-cni novamente.
+
+Referência: https://serverfault.com/questions/1137211/failed-to-create-fsnotify-watcher-too-many-open-files
+
+Continuação da instalação dos componentes do Istio com os seguintes comandos:
+
+```bash
+# Instale o Ingress gateway
+helm -n istio-system upgrade --install istio-ingress istio/gateway --version $VERSION_ISTIO --wait --debug --timeout 900s
+```
+
+> ATENÇÃO!!! Se durante a instalação do Istio Gateway você encontrar o seguinte erro:
+>
+> ``Error: INSTALLATION FAILED: values don't meet the specifications of the schema(s) in the following chart(s): gateway: - at '': additional properties '_internal_defaults_do_not_set' not allowed``
+>
+> Isso foi reportado neste Issue: https://github.com/istio/istio/issues/57354 e tem um fix neste pull request: https://github.com/istio/istio/pull/57426
+>
+> Outra opção é adicionar a flag ``--skip-schema-validation`` no comando helm acima.
+
+Valide a instalação dos componentes do Istio com os seguintes comandos:
+
+```bash
+helm -n istio-system ls
+helm -n istio-system status istio-base
+helm -n istio-system status istiod
+helm -n istio-system status istio-cni
+helm -n istio-system status istio-ingress
+kubectl -n istio-system get all --output wide
+```
+
+Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
+
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.30/docs/examples/bookinfo/
+
+Instale a aplicação de exemplo:
+
+```bash
+kubectl create namespace $MY_NAMESPACE
+
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo.yaml"
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo-versions.yaml"
+```
+
+Visualize os objetos/recursos da aplicação:
+
+```bash
+kubectl -n $MY_NAMESPACE get all 
+```
+
+Aguarde alguns minutos enquanto a aplicação inicia e teste o acesso a aplicação com o seguinte comando:
+
+```bash
+kubectl -n $MY_NAMESPACE exec "$(kubectl -n $MY_NAMESPACE get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
+```
+
+Crie um ingressGateway e um HTTPRoute para a aplicação ser exposta fora do cluster usando o Istio e o loadbalancer.
+
+```bash
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/gateway-api/bookinfo-gateway.yaml"
+```
+
+Por padrão, o Istio cria um serviço LoadBalancer para um gateway. Para verificar o status do gateway, execute o seguinte comando:
+
+```bash
+kubectl -n $MY_NAMESPACE get gateway
+```
+
+> ATENÇÃO!!! Se na coluna ADDRESS do gateway você ver <pending>, aguarde alguns instantes até que o MetalLB atribua um endereço IP ao serviço LoadBalancer.
+> Na coluna PROGRAMMED você deve ver o valor TRUE, indicando que o gateway está pronto para receber tráfego.
+
+Use o comando abaixo para obter o IP do gateway.
+
+```bash
+export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}')
+echo $GATEWAY_IP
+```
+
+Use o navegador, acesse a página http://GATEWAY_IP:80/productpage.
+
+> ATENÇÃO!!! Substitua GATEWAY_IP pelo valor obtido no comando anterior.
+> O gateway faz uso da porta 80/TCP para tráfego HTTP.
+> Você deve ver a página do produto Bookinfo.
+
+<p align="center">
+  <img src="images/bookinfo.png" alt="Bookinfo productpage">
+</p>
+
+> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop, será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
+> Comandos para reiniciar o serviço docker-mac-net-connect:
+
+```bash
+sudo brew services stop docker-mac-net-connect
+sudo brew services start docker-mac-net-connect
+sudo brew services info docker-mac-net-connect
+```
+
+Outra opção é criar um port-forward para acessar a página do produto Bookinfo.
+
+```bash
+kubectl -n $MY_NAMESPACE port-forward svc/bookinfo-gateway-istio 8080:80
+```
+
+Use o navegador, acesse a página http://localhost:8080/productpage.
+
+<p align="center">
+  <img src="images/bookinfo.png" alt="Bookinfo productpage">
+</p>
+
+Visualize os objetos da aplicação Bookinfo.
+
+```bash
+kubectl -n $MY_NAMESPACE get gateway,httproute,service,pods,deployments,replicaset
+```
+
+Instale os seguintes addons para o Istio:
+
+- [Grafana](https://grafana.com)
+- [Prometheus](https://prometheus.io)
+- [Kiali](https://kiali.io)
+- [Jaeger](https://www.jaegertracing.io)
+
+```bash
+# Instalando os addons
+kubectl apply -f "$ISTIO_ADDONS_URL/grafana.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/prometheus.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/kiali.yaml"
+kubectl apply -f "$ISTIO_ADDONS_URL/jaeger.yaml"
+
+# Verificando o status da instalação dos addons
+kubectl rollout status deployment/grafana -n istio-system
+kubectl rollout status deployment/prometheus -n istio-system
+kubectl rollout status deployment/kiali -n istio-system
+kubectl rollout status deployment/jaeger -n istio-system
+```
+
+Inicie um port-forward para cada addon.
+
+```bash
+kubectl -n istio-system port-forward service/grafana 3000:3000
+kubectl -n istio-system port-forward service/prometheus 9090:9090
+kubectl -n istio-system port-forward service/kiali 20001:20001
+kubectl -n istio-system port-forward service/tracing 8081:80
+```
+
+Acesse cada addon nos seguintes endereços:
+
+- Grafana: http://localhost:3000 (login: admin, senha: admin)
+- Prometheus: http://localhost:9090
+- Kiali: http://localhost:20001
+- Jaeger: http://localhost:8081
+
+Permita que o Istio gerencie as aplicações de determinado namespace (Sidecar
+mode https://istio.io/v1.30/docs/setup/getting-started/). O comando abaixo
+adiciona o label ``istio-injection=enabled`` em determinado namespace,
+permitindo que o Istio injete os sidecars automaticamente nos pods criados
+nesse namespace.
+
+```bash
+kubectl label namespace $MY_NAMESPACE istio-injection=enabled
+```
+
+Depois disso execute o comando abaixo para reiniciar os pods da aplicação
+Bookinfo, para que os sidecars sejam injetados (pods criados **antes** do
+label não ganham o sidecar automaticamente).
+
+```bash
+kubectl -n $MY_NAMESPACE rollout restart deployment
+kubectl -n $MY_NAMESPACE get pods
+```
+
+Envie tráfego para o aplicativo Bookinfo, para que o Kiali gere o gráfico de tráfego:
+
+```bash
+# Abordagem 1: Usando o IP do gateway
+for i in $(seq 1 10000); do curl -sSI -o /dev/null http://${GATEWAY_IP}/productpage; done
+
+# Abordagem 2: Usando o endereço da aplicação via port-forward
+for i in $(seq 1 10000); do curl -sSI -o /dev/null http://localhost:8080/productpage; done
+```
+
+Veja o resultado conforme mostrado na imagem a seguir:
+
+<p align="center">
+  <img src="images/bookinfo_kiali.png" alt="Bookinfo visualized on Kiali">
+</p>
+
+Liste os objetos do Istio e addons com os seguintes comandos:
+
+```bash
+kubectl api-resources | grep istio
+kubectl get crd | grep istio
+kubectl get all -n istio-system
+kubectl get all -n istio-ingress
+```
+
+Para desinstalar o Istio, execute os comandos da página: [UNINSTALL_ISTIO.md](UNINSTALL_ISTIO.md).
+
+# Referências
+
+- [day1.md](day1.md) - a mesma sequência de comandos, usando o modo ambient.
+- https://istio.io/v1.30/docs/overview/dataplane-modes/
+- https://istio.io/v1.30/docs/setup/additional-setup/cni/
+- https://istio.io/v1.30/docs/setup/install/helm/

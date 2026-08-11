@@ -22,8 +22,8 @@ reports breaking changes, deprecations, installation/config changes, metrics
 and component changes, and security fixes - to help plan an upgrade.
 
 It also keeps this repository's installation/configuration files (README.md,
-day1.md, day2.md, INSTALL_REQUIREMENTS.md, .tool-versions, and
-agents/upgrade/configs/versions.env) pinned to the latest stable tool
+day1.md, day1-sidecar.md, day2.md, INSTALL_REQUIREMENTS.md, .tool-versions,
+and agents/upgrade/configs/versions.env) pinned to the latest stable tool
 versions from their official sources.
 
 It does NOT create Kubernetes clusters or install Istio itself - that is

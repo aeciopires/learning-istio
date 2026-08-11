@@ -29,6 +29,15 @@ type Tool struct {
 }
 
 // Catalog is every tool `versions latest` / `docs update` knows about.
+//
+// Grafana/Prometheus/Kiali/Jaeger are installed as Istio addons (see
+// agents/upgrade/scripts/install-addons.sh) via static manifests fetched
+// straight from the istio/istio repo for the pinned Istio release - there
+// is no independent version number to select there, so these 4 entries
+// are informational only: they let `versions latest`/`configs/versions.env`
+// report the current upstream release of each addon (useful to notice
+// when the version bundled by Istio's sample manifests has fallen behind
+// upstream), without controlling what actually gets installed.
 var Catalog = []Tool{
 	{Key: "istio", Repo: "istio/istio", Label: "Istio"},
 	{Key: "envoy", Repo: "envoyproxy/envoy", Label: "Envoy"},
@@ -37,6 +46,10 @@ var Catalog = []Tool{
 	{Key: "kubectl", Repo: "kubernetes/kubernetes", Label: "kubectl / Kubernetes"},
 	{Key: "metallb", Repo: "metallb/metallb", Label: "MetalLB"},
 	{Key: "gateway-api", Repo: "kubernetes-sigs/gateway-api", Label: "Gateway API"},
+	{Key: "grafana", Repo: "grafana/grafana", Label: "Grafana (addon, informational)"},
+	{Key: "prometheus", Repo: "prometheus/prometheus", Label: "Prometheus (addon, informational)"},
+	{Key: "kiali", Repo: "kiali/kiali", Label: "Kiali (addon, informational)"},
+	{Key: "jaeger", Repo: "jaegertracing/jaeger", Label: "Jaeger (addon, informational)"},
 }
 
 // Result is the outcome of resolving one Tool's latest stable version.

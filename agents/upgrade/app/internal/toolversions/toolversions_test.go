@@ -9,6 +9,22 @@ import (
 	"github.com/aeciopires/learning-istio/agents/upgrade/internal/releasenotes"
 )
 
+func TestCatalog_IncludesAddons(t *testing.T) {
+	want := []string{"grafana", "prometheus", "kiali", "jaeger"}
+	got := make(map[string]bool, len(Catalog))
+	for _, tool := range Catalog {
+		got[tool.Key] = true
+		if tool.Repo == "" {
+			t.Errorf("tool %q has no Repo set", tool.Key)
+		}
+	}
+	for _, key := range want {
+		if !got[key] {
+			t.Errorf("expected Catalog to include the addon tool %q", key)
+		}
+	}
+}
+
 func TestClient_LatestRelease_FromReleasesAPI(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/istio/istio/releases/latest", func(w http.ResponseWriter, r *http.Request) {

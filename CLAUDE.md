@@ -17,11 +17,13 @@ community convention - don't "fix" that to Portuguese.
 
 - `README.md` - entry point; pins the versions used throughout (Docker,
   kind's Kubernetes version, kubectl, Helm, Istio, istioctl).
-- `day1.md` / `day2.md` - copy-pasteable walkthroughs: create the kind
-  cluster → Helm → MetalLB → Istio (ambient by default in the docs) →
-  Bookinfo → traffic management tasks. These are the canonical source for
-  "how do the manual commands go" - `agents/upgrade/scripts/*.sh` mirror
-  them for automation.
+- `day1.md` (ambient mode) / `day1-sidecar.md` (sidecar mode) / `day2.md`
+  - copy-pasteable walkthroughs: create the kind cluster → Helm → MetalLB
+  → Istio → Bookinfo → addons (Grafana/Prometheus/Kiali/Jaeger) → traffic
+  management tasks. These are the canonical source for "how do the manual
+  commands go" - `agents/upgrade/scripts/*.sh` mirror them for automation
+  (`docs update` keeps `ISTIO_RELEASE`/`VERSION_ISTIO`/`GATEWAY_API_VERSION`
+  in sync across all three files identically).
 - `INSTALL_REQUIREMENTS.md` - OS packages, [mise](https://mise.jdx.dev)
   (the asdf-compatible version manager used here - not asdf itself),
   Docker, Helm, kubectl, istioctl (required, mainly for troubleshooting -
@@ -40,9 +42,10 @@ community convention - don't "fix" that to Portuguese.
 - `files/`, `images/` - sample manifests (Bookinfo, mirroring) and
   screenshots referenced by the walkthroughs.
 - `OLD/` - **archived/deprecated** content (old auth-policy, egress,
-  retry-policy examples, an older `day1-sidecar.md`, etc.). Don't update
-  it as part of routine version-sync work; it's kept for historical
-  reference only.
+  retry-policy examples, an older/stale `day1-sidecar.md` - not the same
+  file as the root `day1-sidecar.md`, which is current and CLI-managed -
+  etc.). Don't update it as part of routine version-sync work; it's kept
+  for historical reference only.
 - `agents/upgrade/` - a self-contained Go CLI + shell automation. See its
   own [agents/upgrade/README.md](agents/upgrade/README.md) for full
   details; summary below.
@@ -62,11 +65,17 @@ correction made explicitly during this tool's development:
    Kubernetes, Docker, or Istio itself.**
 2. **The cluster automation** (`Makefile` targets + `scripts/*.sh`):
    creates the kind cluster, installs MetalLB, installs Istio (sidecar
-   *or* ambient), deploys Bookinfo, and validates the result. This is
-   plain bash, not the Go CLI, because it drives the host's Docker daemon
-   - something that doesn't containerize/CLI-ify cleanly. It reads
+   *or* ambient), deploys Bookinfo, installs the addons (Grafana,
+   Prometheus, Kiali, Jaeger), and validates the result. This is plain
+   bash, not the Go CLI, because it drives the host's Docker daemon -
+   something that doesn't containerize/CLI-ify cleanly. It reads
    `agents/upgrade/configs/versions.env`, which the CLI's `docs update
    --apply` generates - run that before running `make bootstrap-*`.
+   `bootstrap-sidecar`/`bootstrap-ambient` install everything by default;
+   `INSTALL_BOOKINFO=false`/`INSTALL_ADDONS=false` env vars skip a step,
+   and each step also has its own standalone `make` target
+   (`install-addons`, `deploy-bookinfo-{sidecar,ambient}`, etc.) - see
+   `scripts/bootstrap.sh`. Works on Linux and macOS (Intel/arm64).
 
 Key commands (run from `agents/upgrade/` - the `Makefile` there is the
 single entry point and internally does `go build -C app`/`go test -C
@@ -74,11 +83,13 @@ app`/etc., so you never need to `cd app` yourself):
 
 ```bash
 make build && ./bin/istio-upgrade --help   # binary lands in agents/upgrade/bin/
+make build-all                # cross-compile linux/darwin x amd64/arm64 into bin/
 make test                    # unit tests, offline
 make lint                    # gofmt -l + go vet + golangci-lint if present
 make docs-update-apply       # sync version pins repo-wide from GitHub
-make bootstrap-sidecar       # real kind cluster + Istio sidecar + Bookinfo + validation
+make bootstrap-sidecar       # real kind cluster + Istio sidecar + Bookinfo + addons + validation
 make bootstrap-ambient       # same, ambient mode
+make install-addons          # just Grafana/Prometheus/Kiali/Jaeger, standalone
 make validate MODE=sidecar   # re-run just the health checks
 make destroy-cluster
 ```
@@ -125,14 +136,31 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
   this CLI's development, in both modes. `scripts/preflight.sh` now checks this and
   raises the limits automatically via `sudo -n sysctl -w ...` when
   passwordless sudo is available, else prints the exact commands to run.
+  **`fs.inotify` is Linux-only** - on macOS `preflight.sh` detects
+  `uname -s == Darwin` and skips the host-level check (the relevant
+  kernel is Docker Desktop's Linux VM, not the host).
+- **macOS/BSD `mktemp` isn't a drop-in for GNU `mktemp`**: `mktemp -t
+  NAME-XXXXXX.yaml` (GNU) silently produces the wrong filename on BSD
+  mktemp (macOS), which treats the whole `-t` argument as a literal
+  prefix instead of a template. Use `mktemp "${TMPDIR:-/tmp}/NAME.XXXXXX"`
+  (no `-t`) instead - portable across both - see
+  `scripts/create-cluster.sh`.
+- **Addon versions in `configs/versions.env`** (`GRAFANA_VERSION`,
+  `PROMETHEUS_VERSION`, `KIALI_VERSION`, `JAEGER_VERSION`) are
+  **informational only** - `scripts/install-addons.sh` installs them from
+  Istio's own bundled sample manifests (tracks `ISTIO_RELEASE`, not an
+  independently selectable version), so these fields don't control what
+  gets installed; they just report the latest upstream release of each,
+  for reference (`internal/toolversions.Catalog`,
+  `internal/docsupdater.BuildResolvedVersions`).
 
 ## Working conventions
 
-- Version pins are duplicated across `README.md`, `day1.md`, `day2.md`,
-  `INSTALL_REQUIREMENTS.md` and `.tool-versions` by design (each file
-  is meant to be readable/runnable standalone). Keep them consistent -
-  prefer running `agents/upgrade`'s `docs update` over hand-editing when
-  bumping tool versions.
+- Version pins are duplicated across `README.md`, `day1.md`,
+  `day1-sidecar.md`, `day2.md`, `INSTALL_REQUIREMENTS.md` and
+  `.tool-versions` by design (each file is meant to be readable/runnable
+  standalone). Keep them consistent - prefer running `agents/upgrade`'s
+  `docs update` over hand-editing when bumping tool versions.
 - This repo has no CI configured; `agents/upgrade/Makefile`'s
   `test`/`lint` targets are the closest thing - run them after touching
   Go code there.

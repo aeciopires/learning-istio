@@ -85,6 +85,30 @@ func TestBuildResolvedVersions_ToolErrorLeavesFieldEmpty(t *testing.T) {
 	}
 }
 
+func TestBuildResolvedVersions_AddonsAreInformationalOnly(t *testing.T) {
+	results := []toolversions.Result{
+		result("grafana", "grafana/grafana", "v12.0.1", nil),
+		result("prometheus", "prometheus/prometheus", "v3.1.0", nil),
+		result("kiali", "kiali/kiali", "v2.1.0", nil),
+		result("jaeger", "jaegertracing/jaeger", "v2.1.0", nil),
+	}
+
+	// No "current" pin exists for addons (nothing rewrites a version
+	// token for them), so even a big jump must resolve normally - the
+	// MAJOR-bump guard only applies when there's an existing pin to
+	// compare against.
+	rv, warnings := BuildResolvedVersions(results, "", CurrentVersions{}, false)
+
+	if rv.Grafana != "12.0.1" || rv.Prometheus != "3.1.0" || rv.Kiali != "2.1.0" || rv.Jaeger != "2.1.0" {
+		t.Errorf("unexpected addon versions: %+v", rv)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "MAJOR version bump") {
+			t.Errorf("did not expect a MAJOR version bump warning for addons (no pin to compare against), got %v", warnings)
+		}
+	}
+}
+
 func TestExtractCurrentVersions(t *testing.T) {
 	readme := "- Istio: 1.30\n- Helm: 3.21.2\n"
 	toolVersions := "kind 0.32.0\nhelm 3.21.2\nkubectl 1.36.2\n"

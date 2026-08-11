@@ -1,7 +1,8 @@
 // Package docsupdater keeps this repository's installation/configuration
-// files (README.md, day1.md, day2.md, INSTALL_REQUIREMENTS.md,
-// .tool-versions, and agents/upgrade/configs/versions.env) in sync with
-// the latest stable tool versions resolved by internal/toolversions.
+// files (README.md, day1.md, day1-sidecar.md, day2.md,
+// INSTALL_REQUIREMENTS.md, .tool-versions, and
+// agents/upgrade/configs/versions.env) in sync with the latest stable
+// tool versions resolved by internal/toolversions.
 //
 // It is deliberately conservative: only version *tokens* it can match
 // unambiguously are rewritten (env var assignments, README bullet
@@ -37,6 +38,18 @@ type ResolvedVersions struct {
 	// It is extracted, not resolved from GitHub, and is empty if it
 	// couldn't be found - see ExtractKindNodeK8sVersion.
 	KindNodeK8s string
+
+	// Grafana/Prometheus/Kiali/Jaeger are the latest upstream versions of
+	// the Istio addons (see scripts/install-addons.sh) - informational
+	// only. Nothing in this repo's docs pins these as a literal token to
+	// rewrite (the addons are installed from Istio's own bundled sample
+	// manifests, tracking ISTIO_RELEASE), so they only flow into
+	// configs/versions.env and `versions latest`, never into a file-rewrite
+	// rule. No major-bump guard applies to them for the same reason.
+	Grafana    string
+	Prometheus string
+	Kiali      string
+	Jaeger     string
 }
 
 // CurrentVersions is what's presently pinned in the repo's docs, used
@@ -133,6 +146,13 @@ func BuildResolvedVersions(results []toolversions.Result, installRequirementsCon
 	rv.Helm = get("helm", current.Helm)
 	rv.Kubectl = get("kubectl", current.Kubectl)
 	rv.MetalLB = get("metallb", "")
+
+	// Informational only (see the ResolvedVersions doc comment) - no
+	// current-version guard, since there's no pin to compare against.
+	rv.Grafana = get("grafana", "")
+	rv.Prometheus = get("prometheus", "")
+	rv.Kiali = get("kiali", "")
+	rv.Jaeger = get("jaeger", "")
 
 	if k8s, ok := ExtractKindNodeK8sVersion(installRequirementsContent); ok {
 		rv.KindNodeK8s = k8s

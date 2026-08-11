@@ -24,29 +24,43 @@ if ! docker info >/dev/null 2>&1; then
 fi
 log_info "Docker daemon OK."
 
-# istio-cni (ambient mode) watches the node's CNI config directory via
-# inotify; on a default-tuned Linux host the fs.inotify limits are too low
-# and every istio-cni-node pod CrashLoopBackOffs with "couldn't initialize
-# inotify: too many open files" (documented in ../../day1.md). Fix it
-# proactively instead of letting `make bootstrap-ambient` hit it.
-log_step "Checking fs.inotify limits (needed for istio-cni in ambient mode)"
-MIN_INOTIFY_INSTANCES=8192
-CUR_INSTANCES="$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0)"
-if [[ "$CUR_INSTANCES" -lt "$MIN_INOTIFY_INSTANCES" ]]; then
-  log_warn "fs.inotify.max_user_instances=$CUR_INSTANCES is too low for istio-cni; raising it."
-  if sudo -n sysctl -w fs.inotify.max_user_watches=2099999999 >/dev/null 2>&1 &&
-    sudo -n sysctl -w fs.inotify.max_user_instances=2099999999 >/dev/null 2>&1 &&
-    sudo -n sysctl -w fs.inotify.max_queued_events=2099999999 >/dev/null 2>&1; then
-    log_info "Raised fs.inotify limits for this boot (non-persistent)."
+# istio-cni (ambient mode, and sidecar mode with pilot.cni.enabled=true)
+# watches the node's CNI config directory via inotify; on a default-tuned
+# Linux host the fs.inotify limits are too low and every istio-cni-node
+# pod CrashLoopBackOffs with "couldn't initialize inotify: too many open
+# files" (documented in ../../day1.md). Fix it proactively instead of
+# letting `make bootstrap-*` hit it. fs.inotify is a Linux kernel feature
+# with no macOS equivalent on the host - on macOS the relevant kernel is
+# inside Docker Desktop's Linux VM, not reachable via the host's sysctl,
+# so this check only applies on Linux.
+OS_NAME="$(uname -s)"
+if [[ "$OS_NAME" == "Linux" ]]; then
+  log_step "Checking fs.inotify limits (needed for istio-cni)"
+  MIN_INOTIFY_INSTANCES=8192
+  CUR_INSTANCES="$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0)"
+  if [[ "$CUR_INSTANCES" -lt "$MIN_INOTIFY_INSTANCES" ]]; then
+    log_warn "fs.inotify.max_user_instances=$CUR_INSTANCES is too low for istio-cni; raising it."
+    if sudo -n sysctl -w fs.inotify.max_user_watches=2099999999 >/dev/null 2>&1 &&
+      sudo -n sysctl -w fs.inotify.max_user_instances=2099999999 >/dev/null 2>&1 &&
+      sudo -n sysctl -w fs.inotify.max_queued_events=2099999999 >/dev/null 2>&1; then
+      log_info "Raised fs.inotify limits for this boot (non-persistent)."
+    else
+      log_warn "Could not raise fs.inotify limits automatically (no passwordless sudo)."
+      log_warn "If installing Istio, run this first:"
+      log_warn "  sudo sysctl -w fs.inotify.max_user_watches=2099999999"
+      log_warn "  sudo sysctl -w fs.inotify.max_user_instances=2099999999"
+      log_warn "  sudo sysctl -w fs.inotify.max_queued_events=2099999999"
+    fi
   else
-    log_warn "Could not raise fs.inotify limits automatically (no passwordless sudo)."
-    log_warn "If installing Istio in ambient mode, run this first:"
-    log_warn "  sudo sysctl -w fs.inotify.max_user_watches=2099999999"
-    log_warn "  sudo sysctl -w fs.inotify.max_user_instances=2099999999"
-    log_warn "  sudo sysctl -w fs.inotify.max_queued_events=2099999999"
+    log_info "fs.inotify.max_user_instances=$CUR_INSTANCES OK."
   fi
-else
-  log_info "fs.inotify.max_user_instances=$CUR_INSTANCES OK."
+elif [[ "$OS_NAME" == "Darwin" ]]; then
+  log_step "Checking fs.inotify limits (needed for istio-cni)"
+  log_info "macOS detected - this host-level check doesn't apply (the relevant kernel is"
+  log_info "Docker Desktop's Linux VM). If istio-cni-node CrashLoopBackOffs with"
+  log_info "'too many open files', increase Docker Desktop's resources (Settings > Resources)"
+  log_info "and, if needed, raise the limits inside the VM: docker run --rm --privileged --pid=host"
+  log_info "justincormack/nsenter1 sysctl -w fs.inotify.max_user_instances=2099999999"
 fi
 
 log_step "Configured versions (from configs/versions.env)"
