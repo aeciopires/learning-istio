@@ -73,6 +73,9 @@ Glossário, diagramas (mermaid), comandos e exercícios de troubleshooting sobre
 - https://support.sisense.com/kb/en/article/pod-in-crashloopbackoff-state-readinessliveness-probe-failed-get-httppod-ip8082actuatorhealth-dial-tcp-pod-ip8082-connect-connection-refused 
 - https://discuss.konghq.com/t/container-ingress-controller-failed-liveness-probe/6796
 - https://www.udemy.com/course/istio-hands-on-for-kubernetes/
+- https://blog.christianposta.com/tags/istio/
+- https://www.envoyproxy.io/docs/envoy/latest/intro/life_of_a_request
+- https://github.com/Apress/Practical-Istio
 
 ## Documentação do Istio
 

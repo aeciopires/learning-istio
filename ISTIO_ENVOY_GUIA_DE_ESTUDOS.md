@@ -15,6 +15,7 @@
   - [2.3. Sidecar vs Ambient (comparação)](#23-sidecar-vs-ambient-comparação)
   - [2.4. Portas usadas pelo Istio e pelo Envoy](#24-portas-usadas-pelo-istio-e-pelo-envoy)
   - [2.5. Componentes de software do Istio](#25-componentes-de-software-do-istio)
+  - [2.6. Topologias de implantação da mesh (multicluster, multi-network, multi-mesh)](#26-topologias-de-implantação-da-mesh-multicluster-multi-network-multi-mesh)
 - [3. Envoy Proxy](#3-envoy-proxy)
   - [3.1. Visão geral e histórico](#31-visão-geral-e-histórico)
   - [3.2. Arquitetura interna (listener subsystem x cluster subsystem)](#32-arquitetura-interna-listener-subsystem-x-cluster-subsystem)
@@ -22,6 +23,8 @@
   - [3.4. Life of a Request (o ciclo de vida de uma requisição no Envoy)](#34-life-of-a-request-o-ciclo-de-vida-de-uma-requisição-no-envoy)
   - [3.5. Vídeos recomendados de Matt Klein (criador do Envoy)](#35-vídeos-recomendados-de-matt-klein-criador-do-envoy)
   - [3.6. Componentes de software do Envoy: threading model e hot restart](#36-componentes-de-software-do-envoy-threading-model-e-hot-restart)
+  - [3.7. A cadeia de filtros HTTP em detalhe: tipos, ordem e controle de fluxo](#37-a-cadeia-de-filtros-http-em-detalhe-tipos-ordem-e-controle-de-fluxo)
+  - [3.8. Comandos de troubleshooting da cadeia de filtros](#38-comandos-de-troubleshooting-da-cadeia-de-filtros)
 - [4. Comandos práticos (kind + Istio deste repositório)](#4-comandos-práticos-kind--istio-deste-repositório)
   - [4.1. Pré-requisitos](#41-pré-requisitos)
   - [4.2. istioctl: comandos essenciais](#42-istioctl-comandos-essenciais)
@@ -357,6 +360,149 @@ flowchart TB
 
 Fonte: [Istio / Glossary — Istiod](https://istio.io/v1.30/docs/reference/glossary/), [Istio / Security Concepts](https://istio.io/v1.30/docs/concepts/security/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.30/docs/ambient/architecture/traffic-redirection/).
 
+## 2.6. Topologias de implantação da mesh (multicluster, multi-network, multi-mesh)
+
+Tudo visto até aqui (seções [2.1](#21-modo-sidecar)/[2.2](#22-modo-ambient)) assume implicitamente **um único cluster**. A documentação oficial do Istio ([Deployment Models](https://istio.io/v1.30/docs/ops/deployment/deployment-models/)) organiza as decisões de topologia de instalação em **dimensões independentes**, que podem ser combinadas: modelo de **cluster** (único ou múltiplos), modelo de **rede** (única ou múltiplas), modelo de **control plane** (único/compartilhado, múltiplos, ou externo), modelo de **mesh** (única ou múltiplas — federação) e modelo de **tenancy** (por namespace, por cluster ou por mesh).
+
+> Fonte complementar (com exemplos práticos passo a passo): **POSTA, Christian E.; MALOKU, Rinor. *Istio in Action*. Manning Publications, 2022, ISBN 9781617295829 — Capítulo 12, "Scaling Istio in your organization"** (o mesmo Christian Posta do blog [blog.christianposta.com](https://blog.christianposta.com/tags/istio/) citado nas referências deste guia).
+
+### 2.6.1. Modelos de cluster e de rede
+
+Um **cluster único** (o que este repositório usa, com o **kind**) é a implantação mais simples, mas sem isolamento de falha entre times/regiões. Um **multicluster** dentro da mesma mesh dá isolamento de falha, roteamento por localidade e permite espalhar workloads por regiões/nuvens diferentes — ao custo de exigir 3 pré-requisitos, segundo o livro *Istio in Action*: **cross-cluster workload discovery** (os control planes precisam enxergar o Kubernetes API server dos clusters pares), **cross-cluster workload connectivity** (os workloads precisam conseguir se conectar de fato) e **common trust** (identidades mTLS mutuamente confiáveis entre clusters).
+
+Dentro de um multicluster, o modelo de **rede** define como essa conectividade acontece:
+
+- **Rede única (single/flat network)**: todos os clusters compartilham uma rede totalmente roteável (ex.: mesma VPC, VPCs pareadas, ou interligadas por um hub como o AWS Transit Gateway — seção [2.6.5](#265-exemplo-prático-rede-única-multi-conta-na-aws-com-aws-transit-gateway)). Os Pods se enxergam diretamente por IP, sem exigir um gateway do Istio para o tráfego cross-cluster; a limitação é que os IPs/CIDRs de serviço e Pod **não podem se sobrepor** entre os clusters.
+- **Multi-network**: os clusters estão em redes isoladas (CIDRs podem até se sobrepor). Workloads de redes diferentes **só conseguem se comunicar através de um ou mais gateways do Istio** — chamados de **east-west gateway** — que fazem *SNI passthrough* (o gateway não decripta o mTLS; apenas repassa a conexão TLS até o proxy de destino, que é quem de fato termina o mTLS). O Istio usa *partitioned service discovery*: cada cliente recebe uma visão de endpoints adequada à sua rede (endpoint local direto, ou o IP do east-west gateway remoto).
+
+```mermaid
+flowchart TB
+    subgraph SN["Modelo de rede UNICA - flat network"]
+        direction LR
+        A1["Workload - cluster 1"] <-->|"IP roteavel diretamente, sem gateway Istio"| A2["Workload - cluster 2"]
+    end
+
+    subgraph MN["Modelo MULTI-NETWORK"]
+        direction LR
+        B1["Workload - west-cluster<br/>rede: west-network"] --> EWG1["East-West Gateway<br/>west-cluster"]
+        EWG1 -->|"mTLS - SNI passthrough"| EWG2["East-West Gateway<br/>east-cluster"]
+        EWG2 --> B2["Workload - east-cluster<br/>rede: east-network"]
+    end
+```
+
+### 2.6.2. Modelos de control plane
+
+Independentemente da rede, o Istio distingue **cluster primário** (onde o control plane roda) de **cluster remoto** (sem control plane próprio, gerenciado por um primário). A partir daí, há três modelos:
+
+| Modelo | Também chamado de | Descrição |
+|---|---|---|
+| **Primary-remote** | *single/shared control plane* | Um único control plane gerencia todos os clusters. Usa menos recursos, mas uma indisponibilidade do cluster primário afeta a mesh inteira (baixa disponibilidade). |
+| **Primary-primary** | *replicated control plane* | Cada cluster roda seu próprio control plane; eles se descobrem mutuamente. Maior disponibilidade (uma indisponibilidade fica restrita ao cluster afetado), ao custo de mais recursos. |
+| **External control plane** | — | Todos os clusters são "remotos"; o control plane roda fora deles (ex.: em um cluster dedicado, ou fornecido como serviço gerenciado por um cloud provider). |
+
+```mermaid
+flowchart TB
+    subgraph PR["Primary-Remote (control plane unico/compartilhado)"]
+        direction LR
+        P1["Cluster Primario<br/>Istio control plane"] -->|Discovery| R1["Cluster Remoto<br/>sem control plane proprio"]
+    end
+
+    subgraph PP["Primary-Primary (control plane replicado)"]
+        direction LR
+        CP1["Cluster A<br/>Istio control plane"] <-->|Discovery mutua| CP2["Cluster B<br/>Istio control plane"]
+    end
+
+    subgraph EX["External control plane"]
+        direction LR
+        EXT["Control plane externo<br/>ex: gerenciado pelo cloud provider"] -->|Discovery| REM1["Cluster remoto 1"]
+        EXT -->|Discovery| REM2["Cluster remoto 2"]
+    end
+```
+
+Para que o discovery cross-cluster funcione, cada control plane precisa se autenticar no API server dos clusters pares — o Istio faz isso com uma conta de serviço (`istio-reader-service-account`) e um **remote secret**, criado com `istioctl x create-remote-secret` e aplicado no(s) cluster(s) que devem enxergar aquele cluster remoto. A documentação oficial também destaca um requisito de infraestrutura: **"the control plane in a primary cluster must be accessible via a stable IP"** — em clusters de redes diferentes, isso é obtido expondo o control plane por um gateway do Istio.
+
+### 2.6.3. Modelos de mesh: mesh única vs. múltiplas meshes (federação)
+
+- **Single mesh**: nomes de serviço são únicos globalmente dentro da mesh, mesmo que ela se estenda por múltiplos clusters/redes; namespaces do Kubernetes com o mesmo nome em clusters diferentes são tratados, por padrão, como o **mesmo** namespace lógico (os endpoints são somados automaticamente).
+- **Multiple meshes (mesh federation / multi-mesh)**: duas ou mais meshes **independentes** (cada uma com seu próprio control plane e, tipicamente, sua própria CA) expõem um subconjunto de serviços/identidades uma para a outra através de gateways — sem compartilhar o mesmo control plane nem exigir que os clusters confiem plenamente uns nos outros. É a opção recomendada quando as meshes são operadas por **times diferentes** ou têm requisitos fortes de isolamento de segurança; a documentação registra explicitamente que **"Istio does not provide any tooling to exchange trust bundles across meshes"** — a troca de confiança entre meshes é manual (ou via SPIFFE Trust Domain Federation).
+
+```mermaid
+flowchart TB
+    subgraph SM["Single mesh (multicluster)"]
+        direction LR
+        M1["Cluster 1<br/>mesh: usmesh"] <-.->|"mesmo control plane / meshID"| M2["Cluster 2<br/>mesh: usmesh"]
+    end
+
+    subgraph MM["Multiple meshes (mesh federation)"]
+        direction LR
+        subgraph MA["Mesh do time A - CA propria"]
+            MA1["Cluster(s) do time A"]
+        end
+        subgraph MB["Mesh do time B - CA propria"]
+            MB1["Cluster(s) do time B"]
+        end
+        MA1 -->|"Gateway + troca manual de trust bundle"| MB1
+    end
+```
+
+### 2.6.4. Exemplo prático completo: multicluster + multi-network + multi-control-plane
+
+O capítulo 12 do livro *Istio in Action* constrói passo a passo um exemplo real combinando os três modelos acima: dois clusters (`west-cluster` e `east-cluster`), cada um em uma **rede diferente** (`west-network`/`east-network`, em regiões diferentes de um cloud provider), cada um com **seu próprio control plane** (modelo primary-primary, escolhido pela alta disponibilidade), conectados por **east-west gateways**, com **confiança comum via CA plugada** (intermediate CAs próprias em cada cluster, assinadas pela mesma root CA):
+
+```mermaid
+flowchart TB
+    ROOT["Root CA comum"] -->|assina| ICA1["Intermediate CA - west-cluster"]
+    ROOT -->|assina| ICA2["Intermediate CA - east-cluster"]
+
+    subgraph WC["Cluster west-cluster - rede west-network"]
+        IP1["Istio Pilot - west"]
+        EWG_W["East-West Gateway"]
+        WEBAPP["webapp"]
+        ICA1 -.->|"secret cacerts"| IP1
+    end
+
+    subgraph EC["Cluster east-cluster - rede east-network"]
+        IP2["Istio Pilot - east"]
+        EWG_E["East-West Gateway"]
+        CATALOG["catalog"]
+        ICA2 -.->|"secret cacerts"| IP2
+    end
+
+    IP1 <-->|"Discovery mutua via remote secret"| IP2
+    WEBAPP --> EWG_W -->|"mTLS - SNI passthrough"| EWG_E --> CATALOG
+```
+
+Resumo do fluxo (comandos completos e arquivos estão no capítulo 12 do livro): (1) provisionar 2 clusters em redes/regiões separadas; (2) gerar uma root CA e duas intermediate CAs, aplicando cada intermediate como o Secret `cacerts` no namespace `istio-system` do respectivo cluster (seção [8.3](#83-certificados-mtls-plugando-uma-ca-própria-e-rotação) deste guia); (3) rotular o namespace `istio-system` de cada cluster com `topology.istio.io/network=<nome-da-rede>`; (4) instalar o control plane em cada cluster via `IstioOperator`, com `spec.values.global.meshID` **igual** nos dois (para formarem a mesma mesh) e `spec.values.global.multiCluster.clusterName`/`spec.values.global.network` distintos por cluster; (5) gerar e aplicar o *remote secret* de cada cluster no outro com `istioctl x create-remote-secret --name=<cluster>`; (6) confirmar nos logs do `istiod` a linha `Adding cluster_id=<cluster> from secret=...`.
+
+### 2.6.5. Exemplo prático: rede única multi-conta na AWS com AWS Transit Gateway
+
+O modelo de **rede única** (seção [2.6.1](#261-modelos-de-cluster-e-de-rede)) não exige que todos os clusters estejam na mesma conta/VPC — só exige que a rede seja **totalmente roteável** e sem CIDRs sobrepostos. Uma forma comum de conseguir isso entre **múltiplas contas AWS** (um padrão organizacional frequente: uma conta por time/ambiente) é o **AWS Transit Gateway**, descrito oficialmente como um serviço que **"connects your Amazon Virtual Private Clouds (VPCs) and on-premises networks through a central hub"**, funcionando como **"a highly scalable cloud router"** em topologia hub-and-spoke — cada VPC (spoke) se conecta uma única vez ao hub, evitando o N×N de conexões de peering diretas entre VPCs.
+
+```mermaid
+flowchart TB
+    TGW["AWS Transit Gateway<br/>(hub)"]
+
+    subgraph ACC1["Conta AWS 1 - VPC A"]
+        EKS1["Cluster Kubernetes 1<br/>Istio control plane (primary-primary)"]
+    end
+    subgraph ACC2["Conta AWS 2 - VPC B"]
+        EKS2["Cluster Kubernetes 2<br/>Istio control plane (primary-primary)"]
+    end
+    subgraph ACC3["Conta AWS 3 - VPC C"]
+        EKS3["Cluster Kubernetes 3<br/>Istio control plane (primary-primary)"]
+    end
+
+    EKS1 <--> TGW
+    EKS2 <--> TGW
+    EKS3 <--> TGW
+```
+
+Nesse desenho, como as três VPCs formam uma **única rede roteável** (via Transit Gateway compartilhado entre as contas, usando AWS Resource Access Manager para o compartilhamento cross-account), a mesh usa o modelo de **rede única** da seção [2.6.1](#261-modelos-de-cluster-e-de-rede) — **não** é necessário um east-west gateway para a conectividade cross-cluster (diferente do exemplo da seção [2.6.4](#264-exemplo-prático-completo-multicluster--multi-network--multi-control-plane), que precisa dele por estar em redes isoladas). O modelo de control plane (primary-remote ou primary-primary) e o de confiança (CA própria ou externa) continuam sendo escolhas **independentes** da topologia de rede, exatamente como descrito na seção [2.6.2](#262-modelos-de-control-plane).
+
+> Este é um padrão de infraestrutura observado na prática (a documentação oficial do Istio não cita nomes de produtos de nuvem específicos); os CIDRs de Pod/Service de cada cluster ainda precisam ser planejados para não se sobrepor entre si, um requisito explícito do modelo de rede única do Istio.
+
+Fonte: [Istio / Deployment Models](https://istio.io/v1.30/docs/ops/deployment/deployment-models/), *Istio in Action* (Posta & Maloku, Manning 2022) — capítulo 12, [AWS / Transit Gateway](https://aws.amazon.com/transit-gateway/).
+
 ---
 
 # 3. Envoy Proxy
@@ -562,6 +708,129 @@ flowchart TB
 **Hot restart**: é o mecanismo (independente do Envoy usado como binário standalone) que permite trocar de binário/configuração **sem derrubar conexões existentes**: um novo processo Envoy é iniciado, herda os sockets de escuta do processo antigo via Unix domain sockets, e só então o processo antigo entra em modo de *draining* (encerrando gradualmente as conexões restantes, com agressividade configurável por `--drain-time-s`) até finalizar (`--parent-shutdown-time-s`). No Istio, a maior parte das mudanças de configuração **não** exige hot restart — elas chegam dinamicamente via xDS (seção [3.3](#33-xds-como-o-istio-configura-o-envoy)) sem reiniciar o processo Envoy; o hot restart importa principalmente quando o **binário** do Envoy muda de versão (ex.: upgrade da imagem do `istio-proxy`), o que no Istio tipicamente é feito recriando o Pod, não via hot restart em tempo de execução.
 
 Fonte: [Envoy / Threading Model](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/intro/threading_model), [Envoy / Hot Restart](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/hot_restart).
+
+## 3.7. A cadeia de filtros HTTP em detalhe: tipos, ordem e controle de fluxo
+
+Esta seção aprofunda o que a seção [3.4](#34-life-of-a-request-o-ciclo-de-vida-de-uma-requisição-no-envoy) já introduziu sobre a **HTTP filter chain**: os tipos exatos de filtro, a ordem de execução na ida e na volta, e como um filtro pode pausar ou encerrar a cadeia antes do `router`.
+
+### Os três tipos de filtro HTTP
+
+A documentação oficial do Envoy define três interfaces:
+
+| Interface | Callbacks | Atua em |
+|---|---|---|
+| `StreamDecoderFilter` | `decodeHeaders()`, `decodeData()`, `decodeTrailers()` | **Requisição** (caminho de entrada/downstream → upstream) |
+| `StreamEncoderFilter` | `encodeHeaders()`, `encodeData()`, `encodeTrailers()` | **Resposta** (caminho de saída/upstream → downstream) |
+| `StreamFilter` | Ambos os conjuntos acima | Requisição **e** resposta |
+
+### Ordem de execução: ida direta, volta invertida
+
+A regra oficial, citada literalmente: **"Decoder and encoder-decoder filters are executed on the request path. Encoder and encoder-decoder filters are executed on the response path, in reverse direction."** Ou seja: se a cadeia HTTP configurada for `A → B → C → router` (nessa ordem, do primeiro ao último filtro), a **requisição** passa por `A → B → C → router`, mas a **resposta** volta na ordem **inversa**: `router → C → B → A → cliente`. Isso é o que permite, por exemplo, um filtro de compressão (seção [7.6](#76-exemplo-prático-habilitando-compressão-gzip-via-envoyfilter)) processar a resposta depois que ela já foi gerada pelo `router`, mesmo tendo sido "inserido" antes dele na configuração.
+
+```mermaid
+flowchart LR
+    subgraph REQ["Requisicao - ordem direta (decode)"]
+        direction LR
+        D["Downstream<br/>cliente"] --> MX["istio.metadata_exchange<br/>(StreamFilter)"]
+        MX --> JWT["envoy.filters.http.jwt_authn<br/>(StreamDecoderFilter)"]
+        JWT --> RBAC["envoy.filters.http.rbac<br/>(StreamDecoderFilter)"]
+        RBAC --> STATS["istio.stats<br/>(StreamFilter)"]
+        STATS --> RT["envoy.filters.http.router<br/>(ultimo da cadeia)"]
+    end
+```
+
+```mermaid
+flowchart RL
+    subgraph RESP["Resposta - ordem INVERSA (encode)"]
+        direction RL
+        RT2["envoy.filters.http.router"] --> STATS2["istio.stats<br/>(StreamFilter)"]
+        STATS2 --> RBAC2["envoy.filters.http.rbac<br/>NAO participa - e so decoder"]
+        RBAC2 -.->|"pulado: nao tem encodeHeaders"| MX2["istio.metadata_exchange<br/>(StreamFilter)"]
+        MX2 --> D2["Downstream<br/>cliente"]
+    end
+```
+
+> A composição real da cadeia (quais filtros existem) **depende de quais recursos Istio estão configurados** para aquele workload: `envoy.filters.http.jwt_authn` só aparece se existir uma `RequestAuthentication` (seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy)); `envoy.filters.http.rbac` só aparece se existir uma `AuthorizationPolicy` (seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas)); `envoy.filters.http.fault`/`cors` só aparecem se configurados no `VirtualService`. Os filtros `istio.metadata_exchange` (troca metadados de identidade entre proxies) e `istio.stats` (telemetria — seção [5.1](#51-métricas-padrão-do-istio)) são inseridos pelo próprio Istio via `EnvoyFilter` internos. **Sempre confirme a ordem real** com os comandos da seção [3.8](#38-comandos-de-troubleshooting-da-cadeia-de-filtros) em vez de assumir esta lista — a ordem já teve variações entre versões do Istio.
+
+### Controle de fluxo: `StopIteration`/`Continue` e "local reply"
+
+Cada callback (`decodeHeaders`, etc.) retorna um `FilterStatus` que decide se a cadeia continua imediatamente (`Continue`) ou pausa (`StopIteration`) — citado oficialmente: **"the `FilterStatus` allows filters to pause execution of the filter chain."** Isso é o que permite um filtro fazer uma chamada **assíncrona** (ex.: um serviço externo de autorização) sem bloquear a *worker thread* (seção [3.6](#36-componentes-de-software-do-envoy-threading-model-e-hot-restart)): o filtro retorna `StopIteration`, e quando a resposta assíncrona chega, ele mesmo chama `continueDecoding()`/`continueEncoding()` para retomar a cadeia de onde parou.
+
+Um filtro também pode **encerrar a cadeia mais cedo**, sem nunca chegar ao `router` — chamado de **"local reply"**: por exemplo, um filtro de rate limiting retornando `429` diretamente. Comportamento oficial: se os headers de resposta do upstream **ainda não** foram enviados, o Envoy gera uma resposta internamente; se já tiverem sido enviados, o Envoy reseta o stream.
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant F1 as Filtro A (ex.: jwt_authn)
+    participant EXT as Servico externo (ex.: ext_authz)
+    participant F2 as Filtro B (ex.: rbac)
+    participant R as Router
+
+    C->>F1: decodeHeaders()
+    F1->>EXT: chamada assincrona
+    F1-->>F1: retorna StopIteration (pausa a cadeia)
+    Note over F1,EXT: worker thread NAO fica bloqueada esperando
+    EXT-->>F1: resposta assincrona recebida
+    F1->>F1: continueDecoding() - retoma a cadeia
+    F1->>F2: decodeHeaders()
+    alt F2 nega a requisicao
+        F2-->>C: local reply 403 (RBAC: access denied) - router NUNCA e chamado
+    else F2 permite
+        F2->>R: decodeHeaders()
+        R->>R: seleciona rota e cluster, consulta o ClusterManager
+    end
+```
+
+Fonte: [Envoy / Life of a Request](https://www.envoyproxy.io/docs/envoy/latest/intro/life_of_a_request), [Christian Posta — Understanding Istio Telemetry v2](https://blog.christianposta.com/understanding-istio-telemetry-v2/) (exemplo real do filtro `istio.stats` inserido com `INSERT_BEFORE` o `router`, com a observação literal do autor: *"the router should be the last filter in this chain"*), [Envoy / RBAC filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rbac_filter).
+
+## 3.8. Comandos de troubleshooting da cadeia de filtros
+
+```bash
+export PP_POD=$(kubectl -n $MY_NAMESPACE get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}')
+
+# Lista, NA ORDEM REAL configurada, os filtros de rede do listener inbound (porta 9080)
+istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 9080 -o json \
+  | jq '.[0].filterChains[0].filters[].name'
+
+# Lista, NA ORDEM REAL, os filtros HTTP dentro do HTTP Connection Manager
+# (esta é a forma mais confiável de responder "qual filtro roda antes de qual" - seção 3.7)
+istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 9080 -o json \
+  | jq -r '.[0].filterChains[0].filters[]
+      | select(.name=="envoy.filters.network.http_connection_manager")
+      | .typedConfig.httpFilters[].name'
+
+# Confirme que o router (envoy.filters.http.router) é sempre o ÚLTIMO da lista acima
+# Compare a cadeia INBOUND (porta da app) com a OUTBOUND (chamadas que o Pod faz) - costumam ser diferentes
+istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 15001 -o json \
+  | jq -r '.[0].filterChains[0].filters[]
+      | select(.name=="envoy.filters.network.http_connection_manager")
+      | .typedConfig.httpFilters[].name'
+
+# Mesma informação via Admin API / config_dump (seção 4.3), sem depender do istioctl
+kubectl -n $MY_NAMESPACE port-forward $PP_POD 15000:15000 &
+curl -s http://localhost:15000/config_dump | jq -r '.. | .httpFilters? // empty | .[].name'
+kill %1
+```
+
+**Descobrir qual filtro gerou uma resposta 4xx/5xx sem passar pelo `router`** (uma "local reply" — seção [3.7](#37-a-cadeia-de-filtros-http-em-detalhe-tipos-ordem-e-controle-de-fluxo)): o Envoy registra a causa exata no campo `%RESPONSE_CODE_DETAILS%` do access log (já presente no formato padrão do Istio — seção [6.3](#63-access-log-habilitar-e-customizar-campos), logo após os `RESPONSE_FLAGS`). Valores típicos e o que cada um indica:
+
+| `RESPONSE_CODE_DETAILS` | Indica |
+|---|---|
+| `rbac_access_denied_matched_policy[<nome>]` | O filtro `envoy.filters.http.rbac` negou a requisição — a `AuthorizationPolicy` (seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas)) funcionou como configurado (`<nome>` vem vazio/`none` se nenhuma policy `ALLOW` casou) |
+| `route_not_found` | O HTTP Connection Manager não achou nenhuma rota (RDS) para o `Host`/path da requisição — response flag `NR` (seção [5.4](#54-response-flags-do-envoy)) |
+| `filter_chain_not_found` | Nenhuma filter chain do listener casou com a conexão (ex.: SNI inesperado) |
+| `no_healthy_upstream` | O cluster existe, mas nenhum endpoint está saudável — response flag `UH` |
+| `direct_response` | Uma resposta direta configurada (ex.: em uma rota de redirect) foi usada, sem chegar ao upstream |
+| `via_upstream` | Fluxo normal — a resposta veio mesmo do serviço upstream, passando pelo `router` |
+
+```bash
+# Ver o RESPONSE_CODE_DETAILS de requisições recentes (já presente no access log padrão do Istio)
+kubectl -n $MY_NAMESPACE logs deploy/reviews-v1 -c istio-proxy | grep -oE '"[a-z_]+(\[[^]]*\])?" "[^"]*"' | head
+```
+
+**Causas mais comuns de "a ordem dos filtros não é a que eu esperava":** um `EnvoyFilter` (seção [7](#7-envoyfilter)) com `patch.operation: INSERT_FIRST` competindo com outro `EnvoyFilter` também com `INSERT_FIRST` (o resultado depende da ordem de aplicação entre `EnvoyFilter`s — seção [7.2](#72-estrutura-do-objeto-workloadselector-configpatches-e-match)); confundir a cadeia `SIDECAR_INBOUND` com a `SIDECAR_OUTBOUND` (Lab 12); ou assumir que `jwt_authn`/`rbac` sempre existem quando, na verdade, só existem se houver `RequestAuthentication`/`AuthorizationPolicy` aplicável àquele workload.
+
+Fonte: [Envoy / Response Code Details](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details), [Envoy / RBAC filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rbac_filter), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.30/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ---
 
@@ -794,7 +1063,35 @@ histogram_quantile(0.99, sum by (le) (rate(pilot_proxy_convergence_time_bucket[5
 
 Segundo a documentação oficial, o consumo de CPU/memória do istiod escala com três fatores: **"the rate of deployment changes"**, **"the rate of configuration changes"** e **"the number of proxies connecting to Istiod"** — ou seja, picos de convergência lenta tendem a coincidir com deploys em massa, mudanças grandes de configuração (ex.: um `VirtualService` aplicado em um namespace com muitos serviços) ou crescimento no número de proxies conectados.
 
-Fonte: [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/).
+O livro *Istio in Action* (capítulo 11, "Performance-tuning the control plane") detalha esse modelo com o **método dos "quatro sinais dourados" do control plane** (latência, saturação, tráfego e erros) e métricas adicionais úteis para diagnosticar **qual** dos três fatores acima está causando o gargalo:
+
+| Métrica/variável | Categoria | Significado |
+|---|---|---|
+| `pilot_proxy_queue_time` | Latência | Tempo que um push fica **na fila** antes de começar a ser processado (parte do tempo total de convergência que `pilot_proxy_convergence_time` não separa) |
+| `container_cpu_usage_seconds_total` / `process_cpu_seconds_total` | Saturação | CPU consumida pelo `istiod` — quando ultrapassa ~90%, as atualizações começam a enfileirar e atrasar |
+| `pilot_inbound_updates` | Tráfego (entrada) | Contagem de atualizações de configuração recebidas pelo istiod |
+| `pilot_push_triggers` | Tráfego (entrada) | Total de eventos que dispararam um push, por tipo (`service`, `endpoint`, `config`) |
+| `pilot_services` | Tráfego (entrada) | Número de serviços conhecidos pelo pilot — quanto maior, mais processamento por evento |
+| `pilot_total_xds_rejects` (+ `pilot_xds_eds_reject`/`_lds_reject`/`_rds_reject`/`_cds_reject`) | Erros | Total de pushes de configuração **rejeitados** pelos proxies (e o subconjunto por tipo de API xDS) |
+| `pilot_xds_write_timeout` | Erros | Timeouts ao tentar enviar um push |
+| `pilot_xds_push_context_errors` | Erros | Erros do istiod ao **gerar** a configuração do Envoy (geralmente bugs no Pilot) |
+
+Para **reduzir** o tempo de convergência quando o gargalo é confirmado, o livro recomenda, em ordem de custo/benefício: (1) definir recursos `Sidecar` (seção [8.4](#84-sidecar-restringindo-com-quais-endereços-um-workload-se-relaciona)) para reduzir o tamanho da configuração gerada por workload; (2) usar `discoverySelectors` no `meshConfig` para o istiod **ignorar** eventos de namespaces irrelevantes (por padrão, o control plane observa recursos em **todos** os namespaces do cluster); (3) ajustar o *debounce*/*throttle* de push via variáveis de ambiente do `istiod` — `PILOT_DEBOUNCE_AFTER` (padrão 100 ms — tempo para agrupar eventos que chegam em sequência antes de gerar um push), `PILOT_DEBOUNCE_MAX` (padrão 10 s — teto para esse agrupamento), `PILOT_ENABLE_EDS_DEBOUNCE` (padrão `true`) e `PILOT_PUSH_THROTTLE` (padrão 100 pushes concorrentes); (4) escalar o `istiod` **out** (mais réplicas, quando o gargalo é volume de proxies) ou **up** (mais CPU/memória por réplica, quando o gargalo é volume de configuração a processar).
+
+```yaml
+# Exemplo (IstioOperator) citado no livro para reduzir o escopo de descoberta do control plane
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+spec:
+  meshConfig:
+    discoverySelectors:
+      - matchLabels:
+          istio-discovery: enabled
+```
+
+Fonte: [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
 
 ## 5.4. Response Flags do Envoy
 
@@ -1358,9 +1655,11 @@ spec:
     mode: REGISTRY_ONLY
 ```
 
-Campos principais: `workloadSelector` (a quais Pods esse `Sidecar` se aplica — sem ele, aplica a todo o namespace), `ingress[].port`/`defaultEndpoint` (para onde o tráfego de entrada é encaminhado dentro do Pod, ex.: `127.0.0.1:8080`), `egress[].hosts` (lista no formato **`<namespace>/<dnsName>`**, aceitando `*` em ambas as partes), `egress[].captureMode` (`DEFAULT`, `IPTABLES` ou `NONE`) e `outboundTrafficPolicy.mode`. Um `Sidecar` sem `workloadSelector` colocado no **namespace raiz** funciona como o padrão de **toda a malha**.
+Campos principais: `workloadSelector` (a quais Pods esse `Sidecar` se aplica — sem ele, aplica a todo o namespace), `ingress[].port`/`defaultEndpoint` (para onde o tráfego de entrada é encaminhado dentro do Pod, ex.: `127.0.0.1:8080`), `egress[].hosts` (lista no formato **`<namespace>/<dnsName>`**, aceitando `*` em ambas as partes), `egress[].captureMode` (`DEFAULT`, `IPTABLES` ou `NONE`) e `outboundTrafficPolicy.mode`. Um `Sidecar` sem `workloadSelector` colocado no **namespace raiz** funciona como o padrão de **toda a malha** — e existem três escopos possíveis (*mesh-wide*, *namespace-wide* e *workload-specific*, do mais genérico ao mais específico, análogos aos escopos de `PeerAuthentication`).
 
-Fonte: [Istio / Sidecar reference](https://istio.io/v1.30/docs/reference/config/networking/sidecar/).
+> O impacto prático de restringir o `egress` é grande: o livro *Istio in Action* mede, em um exemplo real, a configuração do Envoy de um workload caindo de **2 MB para 644 KB** (uma redução de ~70%) só por aplicar um `Sidecar` restringindo o egress ao essencial — o que também reduz o número de pushes que o istiod precisa fazer a cada mudança (seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência)).
+
+Fonte: [Istio / Sidecar reference](https://istio.io/v1.30/docs/reference/config/networking/sidecar/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
 
 ## 8.5. AuthorizationPolicy: autorizando apenas aplicações específicas
 
@@ -2123,6 +2422,7 @@ kubectl -n $MY_NAMESPACE delete requestauthentication jwt-example
 - [Istio / AuthorizationPolicy reference](https://istio.io/v1.30/docs/reference/config/security/authorization-policy/)
 - [Istio / Authentication Policy (JWT)](https://istio.io/v1.30/docs/tasks/security/authentication/authn-policy/)
 - [Istio / RequestAuthentication reference](https://istio.io/v1.30/docs/reference/config/security/request_authentication/)
+- [Istio / Deployment Models](https://istio.io/v1.30/docs/ops/deployment/deployment-models/)
 - [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/)
 - [github.com/istio/istio — Releases](https://github.com/istio/istio/releases/)
 
@@ -2141,12 +2441,22 @@ kubectl -n $MY_NAMESPACE delete requestauthentication jwt-example
 - [Envoy / Stats proto (prefixo `envoy_` e tags no formato Prometheus)](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto)
 - [Envoy / Access logging](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage)
 - [Envoy / Compressor filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter)
+- [Envoy / RBAC filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rbac_filter)
+- [Envoy / Response Code Details](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details)
 
 **Prometheus, Grafana e Datadog:**
 
 - [Datadog / Istio Integration](https://docs.datadoghq.com/integrations/istio/)
 - [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/)
 - [Datadog / Envoy Integration](https://github.com/DataDog/integrations-core/tree/master/envoy#istio)
+
+**Livros e outras referências complementares:**
+
+- POSTA, Christian E.; MALOKU, Rinor. *Istio in Action*. Manning Publications, 2022, ISBN 9781617295829 (capítulos 3 — "Istio's data plane: The Envoy proxy", 11 — "Performance-tuning the control plane", e 12 — "Scaling Istio in your organization", usados nas seções [2.6](#26-topologias-de-implantação-da-mesh-multicluster-multi-network-multi-mesh), [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência) e [8.4](#84-sidecar-restringindo-com-quais-endereços-um-workload-se-relaciona) deste guia)
+- [Christian Posta's blog — posts sobre Istio](https://blog.christianposta.com/tags/istio/)
+- [Christian Posta — Understanding Istio Telemetry v2](https://blog.christianposta.com/understanding-istio-telemetry-v2/)
+- [github.com/Apress/Practical-Istio](https://github.com/Apress/Practical-Istio) — código-fonte do livro *Practical Istio* (Josyula, Singh e Mehta; Apress, 2025)
+- [AWS / Transit Gateway](https://aws.amazon.com/transit-gateway/)
 
 **Matt Klein (criador do Envoy):**
 
