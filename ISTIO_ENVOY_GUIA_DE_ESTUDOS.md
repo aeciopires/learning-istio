@@ -14,19 +14,30 @@
   - [2.2. Modo Ambient](#22-modo-ambient)
   - [2.3. Sidecar vs Ambient (comparação)](#23-sidecar-vs-ambient-comparação)
   - [2.4. Portas usadas pelo Istio e pelo Envoy](#24-portas-usadas-pelo-istio-e-pelo-envoy)
+  - [2.5. Componentes de software do Istio](#25-componentes-de-software-do-istio)
 - [3. Envoy Proxy](#3-envoy-proxy)
   - [3.1. Visão geral e histórico](#31-visão-geral-e-histórico)
   - [3.2. Arquitetura interna (listener subsystem x cluster subsystem)](#32-arquitetura-interna-listener-subsystem-x-cluster-subsystem)
   - [3.3. xDS: como o Istio configura o Envoy](#33-xds-como-o-istio-configura-o-envoy)
   - [3.4. Life of a Request (o ciclo de vida de uma requisição no Envoy)](#34-life-of-a-request-o-ciclo-de-vida-de-uma-requisição-no-envoy)
   - [3.5. Vídeos recomendados de Matt Klein (criador do Envoy)](#35-vídeos-recomendados-de-matt-klein-criador-do-envoy)
+  - [3.6. Componentes de software do Envoy: threading model e hot restart](#36-componentes-de-software-do-envoy-threading-model-e-hot-restart)
 - [4. Comandos práticos (kind + Istio deste repositório)](#4-comandos-práticos-kind--istio-deste-repositório)
   - [4.1. Pré-requisitos](#41-pré-requisitos)
   - [4.2. istioctl: comandos essenciais](#42-istioctl-comandos-essenciais)
   - [4.3. Admin API do Envoy (porta 15000)](#43-admin-api-do-envoy-porta-15000)
   - [4.4. Comandos específicos do modo Ambient (ztunnel e waypoint)](#44-comandos-específicos-do-modo-ambient-ztunnel-e-waypoint)
-- [5. Exercícios de troubleshooting](#5-exercícios-de-troubleshooting)
-  - [5.0. Preparando o ambiente dos laboratórios](#50-preparando-o-ambiente-dos-laboratórios)
+  - [4.5. Comandos avançados de troubleshooting do Envoy](#45-comandos-avançados-de-troubleshooting-do-envoy)
+- [5. Observabilidade: métricas com Prometheus, Grafana e Datadog](#5-observabilidade-métricas-com-prometheus-grafana-e-datadog)
+  - [5.1. Métricas padrão do Istio](#51-métricas-padrão-do-istio)
+  - [5.2. Estatísticas internas do Envoy](#52-estatísticas-internas-do-envoy)
+  - [5.3. Métricas do control plane (istiod) e tempo de convergência](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência)
+  - [5.4. Response Flags do Envoy](#54-response-flags-do-envoy)
+  - [5.5. Prometheus + Grafana](#55-prometheus--grafana)
+  - [5.6. Datadog](#56-datadog)
+  - [5.7. Como detectar erros comuns através das métricas](#57-como-detectar-erros-comuns-através-das-métricas)
+- [6. Exercícios de troubleshooting](#6-exercícios-de-troubleshooting)
+  - [6.0. Preparando o ambiente dos laboratórios](#60-preparando-o-ambiente-dos-laboratórios)
   - [Lab 1 - Pod fora da mesh (ambient)](#lab-1---pod-fora-da-mesh-ambient)
   - [Lab 2 - mTLS STRICT quebrando tráfego (sidecar)](#lab-2---mtls-strict-quebrando-tráfego-sidecar)
   - [Lab 3 - VirtualService/DestinationRule com host errado (503 / no healthy upstream)](#lab-3---virtualservicedestinationrule-com-host-errado-503--no-healthy-upstream)
@@ -36,7 +47,9 @@
   - [Lab 7 - Diagnosticando o ztunnel (ambient)](#lab-7---diagnosticando-o-ztunnel-ambient)
   - [Lab 8 - `istioctl analyze` encontrando erros de configuração](#lab-8---istioctl-analyze-encontrando-erros-de-configuração)
   - [Lab 9 - Fault injection e timeout (retomando o Day 2)](#lab-9---fault-injection-e-timeout-retomando-o-day-2)
-- [6. Referências](#6-referências)
+  - [Lab 10 - Circuit breaking e overflow detectados via métricas](#lab-10---circuit-breaking-e-overflow-detectados-via-métricas)
+  - [Lab 11 - Medindo o tempo de convergência do istiod](#lab-11---medindo-o-tempo-de-convergência-do-istiod)
+- [7. Referências](#7-referências)
 
 <!-- TOC -->
 
@@ -44,7 +57,7 @@
 
 Este documento é um **material de estudo** (glossário + diagramas + comandos + exercícios de troubleshooting) sobre **Istio** e **Envoy**, complementar aos arquivos [day1.md](day1.md) e [day2.md](day2.md) deste repositório.
 
-Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes oficiais listadas na seção [6. Referências](#6-referências) (documentação oficial do Istio, documentação oficial do Envoy e conteúdos publicados por Matt Klein, criador do Envoy). Nenhum comportamento interno foi inventado: onde a documentação oficial não detalha algo (ex.: código-fonte específico), isso é indicado explicitamente.
+Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes oficiais listadas na seção [7. Referências](#7-referências) (documentação oficial do Istio, documentação oficial do Envoy e conteúdos publicados por Matt Klein, criador do Envoy). Nenhum comportamento interno foi inventado: onde a documentação oficial não detalha algo (ex.: código-fonte específico), isso é indicado explicitamente.
 
 **Versão de referência:** Istio **1.30** (LTS, versão estável mais recente em 2026-08-10) e Envoy na versão empacotada por ela. A versão 1.31 do Istio está em status `alpha` (`1.31.0-alpha.0`) na data deste material, portanto **não é recomendada** como base de estudo/produção — por isso este guia segue o padrão já usado no restante do repositório (`ISTIO_RELEASE=1.30`), conforme confirmado em [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/) e nas releases do [github.com/istio/istio](https://github.com/istio/istio/releases/).
 
@@ -273,6 +286,53 @@ Fonte: [Istio / Dataplane modes](https://istio.io/v1.30/docs/overview/dataplane-
 
 Fonte: [Istio / Application Requirements — Ports Used by Istio](https://istio.io/v1.30/docs/ops/deployment/application-requirements/), [Istio / Debug Endpoints](https://istio.io/latest/docs/ops/integrations/integration-guide/debug-endpoints/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.30/docs/ambient/architecture/traffic-redirection/).
 
+## 2.5. Componentes de software do Istio
+
+Esta seção detalha o **software** por trás de cada caixa dos diagramas das seções [2.1](#21-modo-sidecar) e [2.2](#22-modo-ambient).
+
+| Componente | Onde roda | Função |
+|---|---|---|
+| **istiod** | 1+ Pods no namespace `istio-system` | Binário único de control plane. Fornece descoberta de serviço, gerenciamento/validação de configuração e gerenciamento de certificados (CA); converte os CRDs (VirtualService, DestinationRule, etc.) em configuração xDS e a distribui a todos os proxies (sidecars, gateways, ztunnel, waypoints). |
+| **istio-agent** (binário `pilot-agent`) | Container `istio-proxy`, junto com **cada** Envoy sidecar/gateway | Processo auxiliar que roda ao lado do Envoy: gera a configuração de **bootstrap** do Envoy, atua como cliente/servidor **SDS** local (recebe certificados do istiod e os repassa ao Envoy) e monitora a expiração do certificado para solicitar sua renovação. |
+| **Envoy sidecar / gateway** | Container `istio-proxy` (sidecar) ou Pod dedicado (gateway) | O proxy de dados propriamente dito — ver seção [3](#3-envoy-proxy). |
+| **istio-cni** | DaemonSet `istio-cni-node`, `kube-system`/`istio-system` | Agente CNI que configura o redirecionamento de tráfego (`iptables`/`eBPF`) dos Pods para o Envoy sidecar (modo sidecar) ou para o `ztunnel` (modo ambient), evitando o uso de um `initContainer` privilegiado por Pod. |
+| **ztunnel** | DaemonSet, um por nó (apenas ambient) | Ver seção [2.2](#22-modo-ambient). |
+| **waypoint** | Deployment, opcional, por namespace/service account (apenas ambient) | Ver seção [2.2](#22-modo-ambient). |
+
+O fluxo de emissão/rotação de certificados entre `istio-agent` e `istiod` — a base do mTLS automático do Istio — é descrito literalmente assim pela documentação oficial:
+
+> "When started, the Istio agent creates the private key and CSR, and then sends the CSR with its credentials to `istiod` for signing." (...) "When a workload is started, Envoy requests the certificate and key from the Istio agent in the same container via the Envoy secret discovery service (SDS) API." (...) "The Istio agent monitors the expiration of the workload certificate. The above process repeats periodically for certificate and key rotation."
+
+```mermaid
+flowchart TB
+    subgraph CP["istiod"]
+        direction TB
+        DISC["Discovery / xDS server<br/>(função Pilot)"]
+        CFG["Ingestão e validação de config<br/>(função Galley)"]
+        CA["Autoridade Certificadora<br/>(função Citadel)"]
+        WH["Webhook de injeção e<br/>validação (Kubernetes)"]
+    end
+
+    K8S["Kubernetes API Server<br/>(Service, Endpoints, CRDs Istio)"] --> CFG
+    CFG --> DISC
+
+    subgraph PodApp["Pod da aplicacao"]
+        direction TB
+        APP["Container da aplicacao"]
+        AGENT["istio-agent (pilot-agent)"]
+        ENVOY["Envoy (istio-proxy)"]
+    end
+
+    DISC -->|"xDS gRPC :15012 (CDS/EDS/LDS/RDS)"| ENVOY
+    AGENT -->|"1. Gera CSR e chave privada"| CA
+    CA -->|"2. Assina e devolve o certificado"| AGENT
+    AGENT -->|"3. Entrega certificado via SDS (Unix socket local)"| ENVOY
+    APP <-->|"localhost"| ENVOY
+    WH -.->|"injeta o container istio-proxy no Pod"| PodApp
+```
+
+Fonte: [Istio / Glossary — Istiod](https://istio.io/v1.30/docs/reference/glossary/), [Istio / Security Concepts](https://istio.io/v1.30/docs/concepts/security/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.30/docs/ambient/architecture/traffic-redirection/).
+
 ---
 
 # 3. Envoy Proxy
@@ -431,6 +491,54 @@ Lista curada a partir da página oficial de palestras de Matt Klein ([mattklein1
 
 Artigo escrito (não vídeo) complementar, também de Matt Klein, muito citado como introdução ao tema: [Service mesh data plane vs. control plane](https://blog.envoyproxy.io/service-mesh-data-plane-vs-control-plane-2774e720f7fc) e [Introduction to modern network load balancing and proxying](https://blog.envoyproxy.io/introduction-to-modern-network-load-balancing-and-proxying-a57f6ff80236).
 
+## 3.6. Componentes de software do Envoy: threading model e hot restart
+
+O Envoy é um único processo ("single process, multiple threads") com três tipos de thread, segundo a documentação oficial:
+
+- **Main thread**: não trata tráfego de alto volume diretamente. Processa as atualizações de configuração (xDS), o flush periódico de estatísticas (para StatsD/Prometheus), hospeda o **admin listener** (seção [4.3](#43-admin-api-do-envoy-porta-15000)) e trata sinais do sistema operacional (`SIGTERM`, `SIGHUP`).
+- **Worker threads**: número configurável (flag `--concurrency`) que fazem o trabalho pesado — escuta, filtragem e encaminhamento do tráfego. Quando uma conexão é aceita por um listener, ela fica vinculada a **uma única** worker thread durante toda a sua vida útil, o que mantém o caminho de dados ("hot path") altamente paralelizado e evita locks complexos.
+- **File flusher thread**: dedicada a gravar os access logs em disco, evitando bloquear o caminho principal de processamento.
+
+Cada thread (main e worker) executa um laço de eventos não-bloqueante em torno de um **`Event::Dispatcher`** (wrapper sobre a biblioteca `libevent`), que trata file descriptors, timers e sinais via callbacks em vez de I/O bloqueante.
+
+Para evitar contenção de locks, o Envoy usa **Thread Local Storage (TLS)**: o código aloca um "slot" na main thread, que funciona como índice em um vetor mantido em cada thread; ao atualizar configuração, a main thread posta um closure para cada worker thread, que cria/atualiza sua própria cópia local dos dados — resultando em leitura O(1) sem lock no caminho de dados.
+
+```mermaid
+flowchart TB
+    subgraph Main["Main thread"]
+        XDS["Processamento xDS<br/>(recebe config do istiod)"]
+        STATS["Flush periodico de stats"]
+        ADMIN["Admin listener :15000"]
+        SIG["Tratamento de sinais do SO"]
+    end
+
+    subgraph W1["Worker thread 1"]
+        D1["Event::Dispatcher"]
+        C1["Conexoes atribuidas a este worker"]
+    end
+    subgraph W2["Worker thread 2"]
+        D2["Event::Dispatcher"]
+        C2["Conexoes atribuidas a este worker"]
+    end
+    subgraph WN["Worker thread N (--concurrency)"]
+        DN["Event::Dispatcher"]
+        CN["Conexoes atribuidas a este worker"]
+    end
+
+    FF["File flusher thread<br/>(grava access logs em disco)"]
+
+    XDS -->|"posta closure via TLS: atualiza config"| D1
+    XDS -->|"posta closure via TLS: atualiza config"| D2
+    XDS -->|"posta closure via TLS: atualiza config"| DN
+    C1 -.-> FF
+    C2 -.-> FF
+    CN -.-> FF
+```
+
+**Hot restart**: é o mecanismo (independente do Envoy usado como binário standalone) que permite trocar de binário/configuração **sem derrubar conexões existentes**: um novo processo Envoy é iniciado, herda os sockets de escuta do processo antigo via Unix domain sockets, e só então o processo antigo entra em modo de *draining* (encerrando gradualmente as conexões restantes, com agressividade configurável por `--drain-time-s`) até finalizar (`--parent-shutdown-time-s`). No Istio, a maior parte das mudanças de configuração **não** exige hot restart — elas chegam dinamicamente via xDS (seção [3.3](#33-xds-como-o-istio-configura-o-envoy)) sem reiniciar o processo Envoy; o hot restart importa principalmente quando o **binário** do Envoy muda de versão (ex.: upgrade da imagem do `istio-proxy`), o que no Istio tipicamente é feito recriando o Pod, não via hot restart em tempo de execução.
+
+Fonte: [Envoy / Threading Model](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/intro/threading_model), [Envoy / Hot Restart](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/hot_restart).
+
 ---
 
 # 4. Comandos práticos (kind + Istio deste repositório)
@@ -554,15 +662,256 @@ istioctl waypoint list -n $MY_NAMESPACE
 istioctl proxy-config all deploy/waypoint -n $MY_NAMESPACE
 ```
 
+## 4.5. Comandos avançados de troubleshooting do Envoy
+
+Fonte: [Envoy / Administration interface](https://www.envoyproxy.io/docs/envoy/latest/operations/admin), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.30/docs/ops/diagnostic-tools/proxy-cmd/), [Discuss Istio — How do I take an Istio mTLS tcpdump?](https://discuss.istio.io/t/how-do-i-take-istio-mtls-tcpdump/9795).
+
+```bash
+export PP_POD=$(kubectl -n $MY_NAMESPACE get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}')
+kubectl -n $MY_NAMESPACE port-forward pod/$PP_POD 15000:15000 &
+
+# Filtra estatísticas por regex (ex.: só as métricas do circuit breaker/retry do cluster reviews)
+curl -s "http://localhost:15000/stats?filter=reviews.*(circuit_breakers|upstream_rq_retry)" 
+
+# Mesmo filtro, em JSON (útil para script/jq)
+curl -s "http://localhost:15000/stats?filter=upstream_rq_pending_overflow&format=json" | jq .
+
+# Estado completo dos clusters em JSON (endpoints, health, circuit breaker, outlier detection)
+curl -s "http://localhost:15000/clusters?format=json" | jq .
+
+# Ajusta o nível de log de componentes específicos do Envoy em tempo real (ex.: "router" e "http")
+curl -s -X POST "http://localhost:15000/logging?router=debug&http=debug"
+
+# Mesmo resultado, via istioctl (sem precisar do port-forward manual)
+istioctl proxy-config log $PP_POD.$MY_NAMESPACE --level router:debug,http:debug
+
+kill %1   # encerra o port-forward em background
+```
+
+Captura de pacotes (`tcpdump`) dentro do container `istio-proxy`, útil para confirmar se o handshake TLS/mTLS está de fato ocorrendo entre dois workloads:
+
+```bash
+# Tráfego de saída da aplicação sendo interceptado pelo Envoy (outbound, porta 15001)
+kubectl -n $MY_NAMESPACE exec $PP_POD -c istio-proxy -- tcpdump -i any -n port 15001
+
+# Tráfego de entrada já decriptado, indo do Envoy para a aplicação (porta da app, ex.: 9080)
+kubectl -n $MY_NAMESPACE exec $PP_POD -c istio-proxy -- tcpdump -i any -n port 9080
+```
+
+> ATENÇÃO!!! Em muitos ambientes o container `istio-proxy` **não tem** a capability `NET_ADMIN`/`NET_RAW` nem o binário `tcpdump` por padrão, o que faz o comando falhar com erro de permissão. Nesses casos, use um container de debug efêmero compartilhando o namespace de rede do Pod (`kubectl debug -it $PP_POD --image=nicolaka/netshoot --target=istio-proxy`) ou uma ferramenta como o `ksniff` (plugin do `kubectl`).
+
 ---
 
-# 5. Exercícios de troubleshooting
+# 5. Observabilidade: métricas com Prometheus, Grafana e Datadog
+
+Esta seção documenta as métricas que o Istio e o Envoy expõem nativamente, como consultá-las via **Prometheus**/**Grafana** (ferramentas já instaladas nos addons do [day1.md](day1.md)) e via **Datadog**, e como usar essas métricas para **detectar** os mesmos tipos de erro reproduzidos nos laboratórios da seção [6](#6-exercícios-de-troubleshooting).
+
+## 5.1. Métricas padrão do Istio
+
+O Istio expõe, por padrão, um conjunto de métricas Prometheus **padronizadas** (chamadas de *standard metrics*), geradas pelo proxy Envoy (sidecar, gateway, ztunnel ou waypoint) para todo tráfego HTTP/HTTP2/gRPC e TCP que passa por ele:
+
+| Métrica | Tipo | Descrição (oficial) |
+|---|---|---|
+| `istio_requests_total` | COUNTER | "incremented for every request handled by an Istio proxy" — total de requisições HTTP/gRPC |
+| `istio_request_duration_milliseconds` | DISTRIBUTION | "measures the duration of requests" — latência das requisições |
+| `istio_request_bytes` | DISTRIBUTION | Tamanho do corpo das requisições HTTP |
+| `istio_response_bytes` | DISTRIBUTION | Tamanho do corpo das respostas HTTP |
+| `istio_tcp_connections_opened_total` | COUNTER | "incremented for every opened connection" — conexões TCP abertas |
+| `istio_tcp_connections_closed_total` | COUNTER | "incremented for every closed connection" — conexões TCP fechadas |
+| `istio_tcp_sent_bytes_total` | COUNTER | Total de bytes enviados em conexões TCP |
+| `istio_tcp_received_bytes_total` | COUNTER | Total de bytes recebidos em conexões TCP |
+
+Labels (tags) documentadas para essas métricas incluem: `response_code`, `grpc_response_status`, `source_workload`, `source_version`, `destination_workload`, `destination_version`, `destination_service`, `connection_security_policy` (indica se o tráfego usou mTLS), `response_flags` (ver [5.4](#54-response-flags-do-envoy)) e `reporter` (indica se quem reportou a métrica foi o proxy de origem — `source` — ou o de destino — `destination`).
+
+> As métricas expostas (e suas tags) podem ser customizadas/reduzidas pelo recurso `Telemetry` (campo `metricsOverrides`/`tagOverride`).
+
+Fonte: [Istio / Standard Metrics Reference](https://istio.io/v1.30/docs/reference/config/metrics/).
+
+## 5.2. Estatísticas internas do Envoy
+
+Além das métricas "padrão" do Istio, o **Envoy** expõe centenas de estatísticas internas de baixo nível (via `/stats` na Admin API, seção [4.3](#43-admin-api-do-envoy-porta-15000)), organizadas por cluster, listener e servidor. As mais úteis para troubleshooting:
+
+| Métrica (por cluster, prefixo `cluster.<nome>.`) | Significado |
+|---|---|
+| `upstream_cx_total` | Total de conexões abertas para o cluster |
+| `upstream_cx_active` | Conexões atualmente ativas |
+| `upstream_cx_connect_fail` | Total de falhas ao conectar no upstream |
+| `upstream_cx_connect_timeout` | Total de timeouts ao tentar conectar |
+| `upstream_cx_overflow` | Incrementado quando o **circuit breaker de conexões** é excedido |
+| `upstream_rq_total` | Total de requisições enviadas ao cluster |
+| `upstream_rq_pending_overflow` | Incrementado quando o **circuit breaker de requisições pendentes** é excedido (fila cheia) |
+| `upstream_rq_timeout` | Total de requisições que sofreram timeout aguardando resposta |
+| `upstream_rq_retry` | Total de tentativas de retry |
+| `upstream_rq_<2xx\|3xx\|4xx\|5xx>` | Respostas agregadas por família de código HTTP |
+| `circuit_breakers.<priority>.cx_open` / `.rq_open` | `1` quando o circuit breaker de conexões/requisições está **aberto** para essa prioridade |
+| `circuit_breakers.<priority>.remaining_cx` / `.remaining_pending` / `.remaining_rq` / `.remaining_retries` | Quantos recursos ainda restam antes do circuit breaker abrir (requer `track_remaining: true`) |
+| `outlier_detection.ejections_active` | Número de endpoints atualmente **ejetados** do load balancing por outlier detection |
+| `outlier_detection.ejections_enforced_total` | Total de ejeções aplicadas (por tipo de anomalia) |
+
+Fonte: [Envoy / Cluster statistics](https://github.com/envoyproxy/envoy/blob/main/docs/root/configuration/upstream/cluster_manager/cluster_stats.rst), [Envoy / Circuit breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking), [Istio / Envoy Statistics](https://istio.io/latest/docs/ops/configuration/telemetry/envoy-stats/).
+
+> Por padrão, o Istio configura o Envoy para registrar **apenas um subconjunto mínimo** de estatísticas (`cluster_manager`, `listener_manager`, `server`, `cluster.xds-grpc`), para reduzir o overhead de CPU/memória dos proxies. Para habilitar métricas adicionais (ex.: todas as de `outlier_detection` e `upstream_cx_`/`upstream_rq_retry`), use `proxyStatsMatcher.inclusionRegexps`/`inclusionSuffixes` no `IstioOperator`, ou a anotação `proxy.istio.io/config` por Pod.
+
+## 5.3. Métricas do control plane (istiod) e tempo de convergência
+
+O **istiod** expõe suas próprias métricas Prometheus na porta **15014** (`/metrics`). As mais relevantes para saúde do control plane:
+
+| Métrica | Significado |
+|---|---|
+| `pilot_proxy_convergence_time` (histograma) | Tempo (em segundos) que o istiod leva para propagar uma nova configuração para os proxies — o **tempo de convergência** da malha. Valores altos no p99 indicam gargalo no control plane. |
+| `pilot_xds_pushes` | Contador de mensagens xDS enviadas (com label de tipo/erro) — mostra a frequência de atualizações de configuração e falhas de push. |
+| `pilot_xds` | Gauge com o número de conexões (proxies) atualmente conectadas ao servidor xDS do istiod. |
+
+Uma consulta PromQL comum para acompanhar a "cauda" do tempo de convergência (p99, em milissegundos) é:
+
+```promql
+histogram_quantile(0.99, sum by (le) (rate(pilot_proxy_convergence_time_bucket[5m]))) * 1000
+```
+
+Segundo a documentação oficial, o consumo de CPU/memória do istiod escala com três fatores: **"the rate of deployment changes"**, **"the rate of configuration changes"** e **"the number of proxies connecting to Istiod"** — ou seja, picos de convergência lenta tendem a coincidir com deploys em massa, mudanças grandes de configuração (ex.: um `VirtualService` aplicado em um namespace com muitos serviços) ou crescimento no número de proxies conectados.
+
+Fonte: [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/).
+
+## 5.4. Response Flags do Envoy
+
+O Envoy anota cada entrada do **access log** com "response flags" (`%RESPONSE_FLAGS%`), curtas siglas que explicam a causa de uma resposta de erro. O Istio também expõe essa informação como a tag `response_flags` da métrica `istio_requests_total` (seção [5.1](#51-métricas-padrão-do-istio)), o que permite filtrar erros por causa diretamente no Prometheus/Grafana. As mais comuns:
+
+| Flag | Nome | Significado |
+|---|---|---|
+| `UH` | NoHealthyUpstream | Nenhum host saudável no cluster upstream (além do código 503) |
+| `UF` | UpstreamConnectionFailure | Falha ao conectar no upstream (além do 503) |
+| `UO` | UpstreamOverflow | **Circuit breaker** do cluster foi excedido (além do 503) |
+| `NR` | NoRouteFound | Nenhuma rota configurada, ou nenhuma filter chain correspondente |
+| `URX` | UpstreamRetryLimitExceeded | Limite de retries/tentativas de conexão upstream esgotado |
+| `UC` | UpstreamConnectionTermination | Conexão upstream terminada (além do 503) |
+| `UT` | UpstreamRequestTimeout | Requisição upstream sofreu timeout (além do 504) |
+| `LR` | LocalReset | Reset local da conexão (além do 503) |
+| `DC` | DownstreamConnectionTermination | Conexão downstream terminada |
+| `DI` | DelayInjected | Requisição atrasada por *fault injection* |
+| `FI` | FaultInjected | Requisição abortada por *fault injection* |
+| `RL` | RateLimited | Requisição limitada por rate limiting local (além do 429) |
+
+Múltiplas flags podem aparecer juntas separadas por vírgula (ex.: `UC,URX` = a conexão upstream foi terminada **e** os retries se esgotaram).
+
+Fonte: [Envoy / Substitution Formatter — Response Flags](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Standard Metrics Reference](https://istio.io/v1.30/docs/reference/config/metrics/).
+
+## 5.5. Prometheus + Grafana
+
+O [day1.md](day1.md) já instala o Prometheus e o Grafana via `samples/addons` do próprio Istio. O Istio disponibiliza dashboards Grafana **oficiais e pré-configurados**, identificados pelo ID no grafana.com:
+
+| Dashboard | ID | Função (oficial) |
+|---|---|---|
+| Mesh Dashboard | 7639 | "Provides an overview of all services in the mesh" |
+| Service Dashboard | 7636 | "Provides a detailed breakdown of metrics for a service" |
+| Workload Dashboard | 7630 | "Provides a detailed breakdown of metrics for a workload" |
+| Performance Dashboard | 11829 | "Monitors the resource usage of the mesh" |
+| Control Plane Dashboard | 7645 | "Monitors the health and performance of the control plane" |
+| WASM Extension Dashboard | 13277 | Visão geral de extensões WebAssembly carregadas na malha |
+| Ztunnel Dashboard | 21306 | Monitora o componente `ztunnel` do modo ambient |
+
+```bash
+# Alternativa de instalação via kubectl (equivalente ao que já é feito em day1.md)
+kubectl apply -f "https://raw.githubusercontent.com/istio/istio/release-1.30/samples/addons/grafana.yaml"
+
+# Acesso local (já documentado em day1.md)
+kubectl -n istio-system port-forward service/grafana 3000:3000
+kubectl -n istio-system port-forward service/prometheus 9090:9090
+```
+
+Exemplos de consultas **PromQL** úteis (usar em Grafana ou diretamente em `http://localhost:9090`):
+
+```promql
+# Taxa de erros (5xx) do serviço "reviews", por segundo, nos últimos 5 minutos
+sum(rate(istio_requests_total{destination_service_name="reviews", response_code=~"5.*"}[5m]))
+
+# Latência p99 (em ms) das requisições para "reviews", vindas do productpage
+histogram_quantile(0.99,
+  sum(rate(istio_request_duration_milliseconds_bucket{destination_service_name="reviews"}[5m])) by (le)
+)
+
+# Requisições rejeitadas por falta de upstream saudável (UH) ou circuit breaker (UO)
+sum(rate(istio_requests_total{response_flags=~"UH|UO"}[5m])) by (destination_service_name, response_flags)
+
+# Conexões atualmente ejetadas por outlier detection, por cluster do Envoy
+envoy_cluster_outlier_detection_ejections_active
+```
+
+Fonte: [Istio / Grafana](https://istio.io/v1.30/docs/ops/integrations/grafana/), [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/).
+
+## 5.6. Datadog
+
+O **Datadog Agent** tem uma integração oficial com Istio que coleta métricas de dois pontos diferentes, via *OpenMetrics* (Prometheus):
+
+- **Data plane (Envoy)**: coleta do endpoint `http://<pod-ip>:15020/stats/prometheus` de cada sidecar `istio-proxy`, gerando métricas com prefixo **`istio.mesh.*`** (latência, tamanho de request/response, conexões TCP — os equivalentes às métricas padrão da seção [5.1](#51-métricas-padrão-do-istio)).
+- **Control plane (istiod)**: coleta do endpoint `http://<istiod-pod-ip>:15014/metrics`, gerando métricas com prefixo **`istio.pilot.*`** (convergência de proxies, conflitos de listener, eventos xDS — equivalentes à seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência)) e, em instalações legadas, `istio.mixer.*`/`istio.galley.*`/`istio.citadel.*`.
+
+Exemplo mínimo de configuração do check `istio` do Datadog Agent (`istio.d/conf.yaml`) para coletar as métricas de data plane:
+
+```yaml
+ad_identifiers:
+  - proxyv2
+instances:
+  - use_openmetrics: true
+    istio_mesh_endpoint: http://%%host%%:15020/stats/prometheus
+```
+
+Para o control plane, o Datadog Agent descobre o `istiod` via *autodiscovery annotation* no próprio Deployment, apontando para `http://%%host%%:15014/metrics`. Em instalações no modo **ambient** (Istio 1.24+), a integração também aceita endpoints específicos para `ztunnel_endpoint` e `waypoint_endpoint`.
+
+Também é possível monitorar cada proxy **individualmente** (não apenas as métricas agregadas do mesh) habilitando a [integração Envoy do Datadog](https://github.com/DataDog/integrations-core/tree/master/envoy#istio) no mesmo Agent.
+
+Fonte: [Datadog / Istio Integration](https://docs.datadoghq.com/integrations/istio/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/).
+
+```mermaid
+flowchart LR
+    subgraph PodApp["Pod da aplicacao"]
+        ENVOY["Envoy sidecar<br/>:15090/stats/prometheus (Envoy)<br/>:15020/stats/prometheus (merged)"]
+    end
+
+    subgraph CP["istio-system"]
+        ISTIOD["istiod<br/>:15014/metrics"]
+    end
+
+    PROM["Prometheus<br/>(scrape :15020 e :15014)"]
+    GRAFANA["Grafana<br/>(dashboards oficiais do Istio)"]
+    DDAGENT["Datadog Agent<br/>(openmetrics check istio)"]
+    DD["Datadog<br/>(istio.mesh.* / istio.pilot.*)"]
+
+    ENVOY --> PROM
+    ISTIOD --> PROM
+    PROM --> GRAFANA
+
+    ENVOY --> DDAGENT
+    ISTIOD --> DDAGENT
+    DDAGENT --> DD
+```
+
+## 5.7. Como detectar erros comuns através das métricas
+
+Tabela de correlação entre **sintoma observável** e **métrica/consulta** a inspecionar, cruzando com os laboratórios da seção [6](#6-exercícios-de-troubleshooting):
+
+| Sintoma | Métrica/consulta a checar | Causa provável |
+|---|---|---|
+| Latência alta (cauda/p99) em um serviço | `histogram_quantile(0.99, ...istio_request_duration_milliseconds_bucket...)` (seção [5.5](#55-prometheus--grafana)) | Fault injection/delay (Lab 9), upstream lento, ou sobrecarga do worker thread do Envoy |
+| Picos de erro 503 | `sum(rate(istio_requests_total{response_code="503"}[5m])) by (response_flags)` | Combinar com `response_flags` (seção [5.4](#54-response-flags-do-envoy)) para achar a causa exata: `UH`, `UF`, `UO`, `UC`, `NR` |
+| `response_flags="UH"` (No Healthy Upstream) | `istio_requests_total{response_flags="UH"}` | Host/serviço de destino incorreto ou sem endpoints saudáveis (Lab 3) |
+| `response_flags="UO"` ou `cluster.<x>.upstream_cx_overflow` crescendo | `envoy_cluster_upstream_cx_overflow` / `envoy_cluster_upstream_rq_pending_overflow` (seção [5.2](#52-estatísticas-internas-do-envoy)) | **Circuit breaker** atingido — limite de conexões/requisições pendentes configurado baixo demais para o tráfego real (Lab 10) |
+| Requisições saindo com `URX` | `istio_requests_total{response_flags="URX"}` | Retries configurados esgotados, ou `outlier_detection` ejetando o(s) único(s) endpoint(s) saudável(is) |
+| `outlier_detection.ejections_active` > 0 | `envoy_cluster_outlier_detection_ejections_active` | Um ou mais endpoints do cluster estão respondendo com erro e foram ejetados temporariamente do load balancing |
+| Configuração aplicada mas Envoy não reflete a mudança | `pilot_proxy_convergence_time` (p99) + `istioctl proxy-status` (seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência), Lab 4, Lab 11) | Tempo de convergência do control plane alto (deploy em massa, istiod sobrecarregado ou `NetworkPolicy` bloqueando a porta 15012) |
+| Tráfego chegando sem mTLS quando deveria ser `STRICT` | `istio_requests_total{connection_security_policy!="mutual_tls", reporter="destination"}` (valores possíveis: `mutual_tls`, `none`, `unknown`) | Cliente fora da mesh, ou `PeerAuthentication` mal configurada (Lab 2) |
+| Conexões TCP abrindo e fechando rapidamente sem dados | `istio_tcp_connections_opened_total` vs `istio_tcp_connections_closed_total` (razão próxima de 1 com pouca duração) | Falha de handshake mTLS ou health check derrubando a conexão |
+
+Fonte: seções [5.1](#51-métricas-padrão-do-istio) a [5.6](#56-datadog) deste guia (todas com suas próprias referências oficiais).
+
+---
+
+# 6. Exercícios de troubleshooting
 
 Os laboratórios a seguir usam o cluster **kind** e o **Istio** já instalados conforme [day1.md](day1.md) (modo `ambient`) — o Lab 2 usa o modo `sidecar` (ver [OLD/day1-sidecar.md](OLD/day1-sidecar.md)) porque a falha que ele demonstra (mTLS `STRICT` x `PERMISSIVE`) é conceito de `PeerAuthentication`, válido nos dois modos, mas mais didático de observar com o Envoy sidecar.
 
 Cada laboratório segue o formato: **Objetivo → Provocar a falha → Diagnosticar → Corrigir → Referência**.
 
-## 5.0. Preparando o ambiente dos laboratórios
+## 6.0. Preparando o ambiente dos laboratórios
 
 ```bash
 export MY_NAMESPACE='myapp'
@@ -882,9 +1231,98 @@ Os exercícios de **fault injection** (delay de 7s entre `reviews:v2` e `ratings
 
 **Referência:** [Istio / Fault Injection](https://istio.io/v1.30/docs/tasks/traffic-management/fault-injection/), [day2.md](day2.md).
 
+## Lab 10 - Circuit breaking e overflow detectados via métricas
+
+**Objetivo:** provocar um `circuit breaker` de conexões no `DestinationRule` e observar o efeito diretamente nas métricas do Envoy (seção [5.2](#52-estatísticas-internas-do-envoy)), sem depender apenas do código de resposta HTTP.
+
+**Provocar a falha** (limite de 1 conexão/1 requisição pendente para `reviews`, seguido de carga concorrente):
+
+```bash
+cat <<EOF | kubectl apply -n $MY_NAMESPACE -f -
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: reviews-circuit-breaker
+spec:
+  host: reviews
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1
+      http:
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
+    outlierDetection:
+      consecutive5xxErrors: 1
+      interval: 5s
+      baseEjectionTime: 30s
+EOF
+
+# Gera carga concorrente (20 requisições simultâneas) para estourar o circuit breaker
+kubectl -n $MY_NAMESPACE exec deploy/productpage-v1 -- sh -c \
+  'for i in $(seq 1 20); do curl -sS -o /dev/null -w "%{http_code}\n" http://reviews:9080/reviews/0 & done; wait'
+```
+
+**Diagnosticar (via Admin API do Envoy, seção [4.3](#43-admin-api-do-envoy-porta-15000)/[4.5](#45-comandos-avançados-de-troubleshooting-do-envoy)):**
+
+```bash
+kubectl -n $MY_NAMESPACE port-forward deploy/productpage-v1 15000:15000 &
+
+# upstream_rq_pending_overflow > 0 confirma requisições rejeitadas pelo circuit breaker
+curl -s "http://localhost:15000/stats?filter=reviews.*(overflow|pending)"
+
+# Estado do circuit breaker (cx_open / rq_open = 1 quando aberto)
+curl -s "http://localhost:15000/stats?filter=reviews.*circuit_breakers"
+
+kill %1
+```
+
+Se o Prometheus dos addons estiver de pé (ver [day1.md](day1.md)), a mesma condição aparece na consulta:
+
+```promql
+sum(rate(istio_requests_total{destination_service_name="reviews", response_flags=~"UO"}[1m]))
+```
+
+**Causa raiz:** `maxConnections: 1` e `http1MaxPendingRequests: 1` são limites artificialmente baixos; qualquer concorrência acima disso é imediatamente rejeitada pelo circuit breaker do Envoy (flag `UO`, métrica `upstream_rq_pending_overflow`/`upstream_cx_overflow`).
+
+**Corrigir:**
+
+```bash
+kubectl -n $MY_NAMESPACE delete destinationrule reviews-circuit-breaker
+```
+
+**Referência:** [Envoy / Circuit breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking), [Istio / DestinationRule reference](https://istio.io/v1.30/docs/reference/config/networking/destination-rule/).
+
+## Lab 11 - Medindo o tempo de convergência do istiod
+
+**Objetivo:** observar a métrica `pilot_proxy_convergence_time` (seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência)) refletindo, na prática, o tempo entre aplicar uma configuração e ela chegar a todos os proxies.
+
+```bash
+# Consulta direta às métricas cruas do istiod (sem precisar do Prometheus dos addons)
+export ISTIOD=$(kubectl get pods -n istio-system -l app=istiod -o jsonpath='{.items[0].metadata.name}')
+kubectl -n istio-system port-forward "$ISTIOD" 15014:15014 &
+
+curl -s http://localhost:15014/metrics | grep -A3 '^pilot_proxy_convergence_time'
+
+kill %1
+```
+
+```bash
+# Aplique uma mudança de configuração (ex.: o VirtualService do Lab 3, já removido) e,
+# em paralelo, observe istioctl proxy-status até TODOS os proxies voltarem a SYNCED
+kubectl -n $MY_NAMESPACE apply -f "${ISTIO_BOOKINFO_URL}networking/virtual-service-all-v1.yaml"
+watch -n1 istioctl proxy-status
+
+kubectl -n $MY_NAMESPACE delete -f "${ISTIO_BOOKINFO_URL}networking/virtual-service-all-v1.yaml"
+```
+
+Se estiver usando o Prometheus dos addons, a consulta PromQL da seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência) mostra a mesma informação de forma agregada e histórica, o que é mais útil do que ler o texto bruto da métrica em produção.
+
+**Referência:** [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.30/docs/ops/diagnostic-tools/proxy-cmd/).
+
 ---
 
-# 6. Referências
+# 7. Referências
 
 **Istio (documentação oficial, versão 1.30):**
 
@@ -906,6 +1344,13 @@ Os exercícios de **fault injection** (delay de 7s entre `reviews:v2` e `ratings
 - [Istio / Troubleshoot connectivity issues with ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/)
 - [Istio / Troubleshoot issues with waypoints](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/)
 - [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/)
+- [Istio / Security Concepts](https://istio.io/v1.30/docs/concepts/security/)
+- [Istio / Standard Metrics Reference](https://istio.io/v1.30/docs/reference/config/metrics/)
+- [Istio / Envoy Statistics](https://istio.io/latest/docs/ops/configuration/telemetry/envoy-stats/)
+- [Istio / Performance and Scalability](https://istio.io/v1.30/docs/ops/deployment/performance-and-scalability/)
+- [Istio / Grafana](https://istio.io/v1.30/docs/ops/integrations/grafana/)
+- [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/)
+- [Istio / DestinationRule reference](https://istio.io/v1.30/docs/reference/config/networking/destination-rule/)
 - [github.com/istio/istio — Releases](https://github.com/istio/istio/releases/)
 
 **Envoy (documentação oficial):**
@@ -915,6 +1360,18 @@ Os exercícios de **fault injection** (delay de 7s entre `reviews:v2` e `ratings
 - [Envoy / Life of a Request](https://www.envoyproxy.io/docs/envoy/latest/intro/life_of_a_request)
 - [Envoy / xDS REST and gRPC protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol)
 - [Envoy / Administration interface](https://www.envoyproxy.io/docs/envoy/latest/operations/admin)
+- [Envoy / Threading Model](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/intro/threading_model)
+- [Envoy / Hot Restart](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/hot_restart)
+- [Envoy / Circuit breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking)
+- [Envoy / Cluster statistics (GitHub)](https://github.com/envoyproxy/envoy/blob/main/docs/root/configuration/upstream/cluster_manager/cluster_stats.rst)
+- [Envoy / Substitution Formatter — Response Flags](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter)
+- [Envoy / Stats proto (prefixo `envoy_` e tags no formato Prometheus)](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto)
+
+**Prometheus, Grafana e Datadog:**
+
+- [Datadog / Istio Integration](https://docs.datadoghq.com/integrations/istio/)
+- [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/)
+- [Datadog / Envoy Integration](https://github.com/DataDog/integrations-core/tree/master/envoy#istio)
 
 **Matt Klein (criador do Envoy):**
 
