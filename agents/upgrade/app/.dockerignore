@@ -1,0 +1,6 @@
+bin/
+coverage.out
+examples/
+.cache/
+*.md
+!README.md

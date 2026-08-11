@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Shared helpers + config loading for agents/upgrade/scripts/*.sh.
+# This file is meant to be SOURCED by every other script in this
+# directory, not executed directly - it owns cluster/Istio automation,
+# deliberately kept separate from the Go CLI (which only analyzes
+# release notes and updates version pins - see ../README.md).
+
+set -euo pipefail
+
+SCRIPT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AGENT_DIR="$(cd "$SCRIPT_LIB_DIR/../.." && pwd)"
+# shellcheck disable=SC2034 # available to every script that sources this file
+REPO_ROOT="$(cd "$AGENT_DIR/.." && pwd)"
+
+VERSIONS_ENV="$AGENT_DIR/configs/versions.env"
+if [[ -f "$VERSIONS_ENV" ]]; then
+  # shellcheck disable=SC1090
+  source "$VERSIONS_ENV"
+else
+  echo "ERROR: $VERSIONS_ENV not found." >&2
+  echo "Run 'make docs-update-apply' (or 'go run . docs update --apply') from $AGENT_DIR first." >&2
+  exit 1
+fi
+
+: "${ISTIO_VERSION:?ISTIO_VERSION not set in $VERSIONS_ENV}"
+: "${ISTIO_MINOR:?ISTIO_MINOR not set in $VERSIONS_ENV}"
+: "${GATEWAY_API_VERSION:?GATEWAY_API_VERSION not set in $VERSIONS_ENV}"
+: "${METALLB_VERSION:?METALLB_VERSION not set in $VERSIONS_ENV}"
+
+# Overridable via environment; sensible defaults matching day1.md/day2.md
+# and INSTALL_REQUIREMENTS.md.
+CLUSTER_NAME="${CLUSTER_NAME:-istio-upgrade}"
+MY_NAMESPACE="${MY_NAMESPACE:-myapp}"
+ISTIO_MODE="${ISTIO_MODE:-ambient}" # ambient | sidecar
+
+# Must match the kindest/node image pinned in ../../INSTALL_REQUIREMENTS.md
+# ("#kind" section). docsupdater deliberately never rewrites this (the
+# tag and sha256 digest must be bumped together, verified against
+# https://github.com/kubernetes-sigs/kind/releases) - so keep these two
+# in sync by hand when you do bump it.
+KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-kindest/node:v${KIND_NODE_K8S_VERSION:-1.35.5}@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95}"
+POD_SUBNET="${POD_SUBNET:-10.244.0.0/16}"
+SERVICE_SUBNET="${SERVICE_SUBNET:-10.96.0.0/12}"
+METALLB_ADDRESS_END="${METALLB_ADDRESS_END:-100}"
+METALLB_NETMASK="${METALLB_NETMASK:-27}"
+
+ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-${ISTIO_MINOR}/samples"
+ISTIO_BOOKINFO_URL="${ISTIO_BASE_URL}/bookinfo"
+# Not consumed by any script yet - available for an optional future
+# "install observability addons" script (Grafana/Prometheus/Kiali/Jaeger),
+# same URLs day1.md uses manually.
+# shellcheck disable=SC2034
+ISTIO_ADDONS_URL="${ISTIO_BASE_URL}/addons"
+
+log_info()  { echo -e "\033[1;34m[INFO]\033[0m  $*"; }
+log_warn()  { echo -e "\033[1;33m[WARN]\033[0m  $*" >&2; }
+log_error() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; }
+log_step()  { echo -e "\n\033[1;36m==> $*\033[0m"; }
+
+require_bin() {
+  local missing=0
+  for bin in "$@"; do
+    if ! command -v "$bin" >/dev/null 2>&1; then
+      log_error "required binary not found in PATH: $bin"
+      missing=1
+    fi
+  done
+  [[ $missing -eq 0 ]] || exit 1
+}
+
+require_mode_arg() {
+  local mode="${1:-}"
+  if [[ "$mode" != "ambient" && "$mode" != "sidecar" ]]; then
+    log_error "usage: $(basename "$0") [ambient|sidecar]"
+    exit 1
+  fi
+}

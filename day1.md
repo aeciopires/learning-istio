@@ -23,8 +23,8 @@ Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
 export ISTIO_RELEASE=1.30
-export VERSION_ISTIO="${ISTIO_RELEASE}.2"
-export GATEWAY_API_VERSION="v1.6.0"
+export VERSION_ISTIO="${ISTIO_RELEASE}.3"
+export GATEWAY_API_VERSION="v1.6.1"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"

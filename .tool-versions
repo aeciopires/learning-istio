@@ -1,3 +1,4 @@
 kind 0.32.0
 helm 3.21.2
-kubectl 1.36.2
+kubectl 1.36.3
+istioctl 1.30.3

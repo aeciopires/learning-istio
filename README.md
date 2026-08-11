@@ -33,9 +33,10 @@ As versões dos softwares utilizados foram:
 
 - Docker: 29.2.1
 - Kubernetes (kind): 1.35.5
-- kubectl: 1.36.2
+- kubectl: 1.36.3
 - Helm: 3.21.2
 - Istio: 1.30
+- istioctl: 1.30.3
 
 # Requisitos para executar o Istio
 
