@@ -19,10 +19,11 @@ version below must always match [VERSION](VERSION).
   as markdown or JSON.
 - `docs update` command: resolves the latest stable version of Istio,
   Envoy, kind, Helm, kubectl, MetalLB and Gateway API (GitHub Releases
-  API) and syncs README.md, day1.md, day2.md, INSTALL_REQUIREMENTS.md,
-  `.tool-versions` and `configs/versions.env` - dry-run by default,
-  `--apply` to write. Never applies a MAJOR version bump automatically
-  (guards against e.g. Helm 3 -> 4) unless `--allow-major-bump` is passed.
+  API) and syncs README.md, day1.md, day1-sidecar.md, day2.md,
+  INSTALL_REQUIREMENTS.md, `.tool-versions` and `configs/versions.env` -
+  dry-run by default, `--apply` to write. Never applies a MAJOR version
+  bump automatically (guards against e.g. Helm 3 -> 4) unless
+  `--allow-major-bump` is passed.
 - `versions latest` command: prints the latest stable version of every
   tracked tool.
 - `version` command and `--version`/`--help` flags.
