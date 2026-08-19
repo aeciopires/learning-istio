@@ -371,6 +371,11 @@ mesmo dentro do `bootstrap-*`:
 | Bookinfo                | `make deploy-bookinfo-sidecar` / `make deploy-bookinfo-ambient` | `INSTALL_BOOKINFO=false` para pular |
 | Addons (Grafana/Prometheus/Kiali/Jaeger) | `make install-addons` | `INSTALL_ADDONS=false` para pular |
 
+"(sempre roda)" não significa "sempre falha se já existir": todo passo é
+idempotente - ele checa se o cluster/release/recurso já existe, registra
+um `[INFO]` e reconcilia/pula em vez de falhar (ex.: `make create-cluster`
+duas vezes seguidas é seguro; veja `scripts/lib/common.sh`).
+
 ```bash
 # Exemplos
 make install-addons                          # só os addons, num cluster já existente

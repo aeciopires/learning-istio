@@ -11,9 +11,13 @@ kubectl get configmap kube-proxy -n kube-system -o yaml |
   kubectl apply -f - -n kube-system
 
 log_step "Installing MetalLB $METALLB_VERSION"
-helm repo add metallb https://metallb.github.io/metallb >/dev/null
+# helm repo add is itself idempotent (a repo already registered with the
+# same URL is a no-op, exit 0) - --force-update makes that explicit
+# instead of relying on the default behavior.
+helm repo add metallb https://metallb.github.io/metallb --force-update >/dev/null
 helm repo update metallb >/dev/null
 
+helm_release_note metallb metallb-system
 helm upgrade --install metallb metallb/metallb \
   --create-namespace \
   --namespace metallb-system \
@@ -32,6 +36,7 @@ fi
 KIND_LB_RANGE="${KIND_ADDRESS}.${METALLB_ADDRESS_END}/${METALLB_NETMASK}"
 log_info "Using load balancer address range: $KIND_LB_RANGE"
 
+kube_resource_note "IPAddressPool 'first-pool'" ipaddresspool first-pool metallb-system
 cat <<EOF | kubectl apply --namespace metallb-system -f -
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool

@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
+## [0.2.0] - 2026-08-19
+
+### Added
+
+- `scripts/lib/common.sh`: two shared logging helpers, `helm_release_note`
+  and `kube_resource_note`, used by every install script to print an
+  `[INFO]` line stating whether the Helm release / Kubernetes resource
+  about to be installed already exists, before reconciling it in place.
+  Purely informational - the actual install command (`helm upgrade
+  --install`, `kubectl apply`) was already idempotent and unchanged.
+- `scripts/create-cluster.sh`: detects and removes leftover Docker
+  containers from a previous, incomplete kind cluster creation attempt
+  (interrupted by Ctrl-C, a host reboot, a port conflict, ...) before
+  retrying, instead of colliding with them. Also warns (does not fail)
+  if host ports 80/443 are already held by an unrelated container,
+  naming that container instead of letting `kind create cluster` fail
+  with Docker's cryptic "port is already allocated" error.
+- `scripts/install-metallb.sh` / `scripts/install-istio.sh`: `helm repo
+  add` now passes `--force-update`, and every `helm upgrade --install`
+  (MetalLB, istio-base, istiod, istio-cni, ztunnel, istio-ingress) is now
+  preceded by a `helm_release_note` call.
+- `scripts/deploy-bookinfo.sh`: logs `[INFO] Namespace '...' already
+  exists, skipping creation.` instead of silently no-op'ing.
+- `scripts/install-addons.sh`: logs whether each addon's Deployment
+  (Grafana/Prometheus/Kiali/Jaeger) already exists before applying its
+  manifest.
+
+### Changed
+
+- `INSTALL_REQUIREMENTS.md`, `day1.md`, `day1-sidecar.md`: aligned the
+  manual copy-pasteable commands with the same "check first, never fail
+  on an already-existing resource" rule now enforced in
+  `scripts/*.sh` - `kubectl create namespace` guarded the same way the
+  Gateway API CRD step already was, `kind create cluster
+  --name kind-multinodes` guarded with a `kind get clusters` check,
+  `helm repo add` gained `--force-update`, and the `sudo rm
+  /usr/local/bin/helm|kind` / apt sources cleanup commands switched to
+  `rm -f` so they don't error when there's nothing to remove.
+- `agents/upgrade/README.md` and the `Makefile`: added short notes
+  clarifying that every cluster-lifecycle target (`create-cluster`,
+  `install-metallb`, `install-istio-*`, `install-addons`, ...) and
+  `make install-tools` (mise) are safe to re-run.
+
 ## [0.1.0] - 2026-08-11
 
 ### Added

@@ -1,16 +1,48 @@
 #!/usr/bin/env bash
 # Creates the local kind cluster used for Istio practice/testing, mirroring
 # INSTALL_REQUIREMENTS.md#kind (1 control-plane + 2 workers, MetalLB-ready
-# port mappings). Idempotent: does nothing if the cluster already exists.
+# port mappings). Idempotent: does nothing if the cluster already exists,
+# and cleans up leftover containers from a previous incomplete attempt
+# instead of failing on them.
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-require_bin kind kubectl
+require_bin kind kubectl docker
 
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
   log_info "kind cluster '$CLUSTER_NAME' already exists, skipping creation."
   exit 0
 fi
+
+# kind derives its cluster list (checked above) from docker containers
+# labeled io.x-k8s.kind.cluster=<name>; a creation attempt interrupted
+# partway (Ctrl-C, host reboot, a prior port conflict...) can leave those
+# node containers behind without kind ever registering a full cluster -
+# `kind get clusters` then reports nothing, but a fresh `kind create
+# cluster` collides with them (ambiguous state, and they can still be
+# holding the host ports this script needs), failing with a cryptic
+# Docker daemon error instead of a clear one. Clear them first.
+STALE_CONTAINERS="$(docker ps -aq --filter "label=io.x-k8s.kind.cluster=$CLUSTER_NAME" 2>/dev/null || true)"
+if [[ -n "$STALE_CONTAINERS" ]]; then
+  log_info "Found leftover container(s) from a previous, incomplete '$CLUSTER_NAME' cluster creation - removing them before retrying."
+  # shellcheck disable=SC2086 # intentionally unquoted: one container ID per word
+  docker rm -f $STALE_CONTAINERS >/dev/null
+fi
+
+# Not "already exists" for this cluster, but the same "check first, warn,
+# don't fail blindly" spirit: kind needs host ports 80/443 free for the
+# ingress port mappings (see the kind config below) - if another,
+# unrelated container already holds one, `kind create cluster` fails with
+# "port is already allocated" and no indication of who's holding it. We
+# don't kill unrelated containers automatically, just make the conflict
+# visible before it turns into a confusing Docker error.
+for PORT in 80 443; do
+  PORT_HOLDER="$(docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null | awk -F'\t' -v p=":${PORT}->" '$2 ~ p {print $1}')"
+  if [[ -n "$PORT_HOLDER" ]]; then
+    log_warn "Host port $PORT is already in use by another running container: $PORT_HOLDER"
+    log_warn "kind create cluster needs it free for the ingress; stop that container first if creation fails."
+  fi
+done
 
 log_step "Creating kind cluster '$CLUSTER_NAME' (node image: $KIND_NODE_IMAGE)"
 

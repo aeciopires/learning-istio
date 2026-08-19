@@ -73,3 +73,35 @@ require_mode_arg() {
     exit 1
   fi
 }
+
+# --- Existence checks shared by the install-*.sh / deploy-*.sh scripts -----
+# Every install step in this repo follows the same rule: check first, never
+# fail just because the thing already exists, log an INFO line either way,
+# then keep going (reconciling in place via `helm upgrade --install` /
+# `kubectl apply`, which are themselves idempotent). These helpers only
+# control the log message - the caller is responsible for still running the
+# idempotent install command afterwards.
+
+# helm_release_note <release> <namespace>
+# Logs whether a Helm release already exists, without side effects.
+helm_release_note() {
+  local release="$1" ns="$2"
+  if helm -n "$ns" status "$release" >/dev/null 2>&1; then
+    log_info "Helm release '$release' already exists in namespace '$ns' - reconciling/upgrading it in place."
+  else
+    log_info "Helm release '$release' does not exist yet in namespace '$ns' - installing it."
+  fi
+}
+
+# kube_resource_note <description> <kind> <name> [namespace]
+# Logs whether a Kubernetes resource already exists, without side effects.
+kube_resource_note() {
+  local desc="$1" kind="$2" name="$3" ns="${4:-}"
+  local ns_args=()
+  [[ -n "$ns" ]] && ns_args=(-n "$ns")
+  if kubectl get "$kind" "$name" "${ns_args[@]}" >/dev/null 2>&1; then
+    log_info "$desc already exists - reconciling/updating it."
+  else
+    log_info "$desc does not exist yet - creating it."
+  fi
+}

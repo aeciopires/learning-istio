@@ -134,11 +134,16 @@ install-tools: ## Install kind/helm/kubectl/istioctl pinned in $(REPO_ROOT)/.too
 	@command -v mise >/dev/null 2>&1 || { echo "mise not found on PATH - see INSTALL_REQUIREMENTS.md#mise"; exit 1; }
 	# Scoped to these 4 tools on purpose: a bare "mise install" also installs
 	# whatever is pinned in the user's *global* mise config, not just this repo.
+	# mise itself is idempotent here: a tool version already installed is
+	# reported (not re-downloaded) and this never fails because of it.
 	cd $(REPO_ROOT) && mise install helm kubectl kind istioctl
 
 ## --- Cluster lifecycle (kind + MetalLB + Istio + Bookinfo) -----------------
 ## NOTE: these targets shell out to scripts/*.sh, NOT the Go CLI - they
 ## create real Docker containers and a real Kubernetes cluster.
+## All of them are safe to re-run: each checks whether what it's about to
+## create/install already exists, logs an INFO line either way, and
+## reconciles in place instead of failing - see scripts/lib/common.sh.
 
 .PHONY: preflight
 preflight: ## Check docker/kind/helm/kubectl/istioctl are installed and reachable

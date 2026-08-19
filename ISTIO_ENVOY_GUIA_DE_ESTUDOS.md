@@ -16,6 +16,11 @@
   - [2.4. Portas usadas pelo Istio e pelo Envoy](#24-portas-usadas-pelo-istio-e-pelo-envoy)
   - [2.5. Componentes de software do Istio](#25-componentes-de-software-do-istio)
   - [2.6. Topologias de implantação da mesh (multicluster, multi-network, multi-mesh)](#26-topologias-de-implantação-da-mesh-multicluster-multi-network-multi-mesh)
+    - [2.6.1. Modelos de cluster e de rede](#261-modelos-de-cluster-e-de-rede)
+    - [2.6.2. Modelos de control plane](#262-modelos-de-control-plane)
+    - [2.6.3. Modelos de mesh: mesh única vs. múltiplas meshes (federação)](#263-modelos-de-mesh-mesh-única-vs-múltiplas-meshes-federação)
+    - [2.6.4. Exemplo prático completo: multicluster + multi-network + multi-control-plane](#264-exemplo-prático-completo-multicluster--multi-network--multi-control-plane)
+    - [2.6.5. Exemplo prático: rede única multi-conta na AWS com AWS Transit Gateway](#265-exemplo-prático-rede-única-multi-conta-na-aws-com-aws-transit-gateway)
 - [3. Envoy Proxy](#3-envoy-proxy)
   - [3.1. Visão geral e histórico](#31-visão-geral-e-histórico)
   - [3.2. Arquitetura interna (listener subsystem x cluster subsystem)](#32-arquitetura-interna-listener-subsystem-x-cluster-subsystem)
@@ -24,6 +29,9 @@
   - [3.5. Vídeos recomendados de Matt Klein (criador do Envoy)](#35-vídeos-recomendados-de-matt-klein-criador-do-envoy)
   - [3.6. Componentes de software do Envoy: threading model e hot restart](#36-componentes-de-software-do-envoy-threading-model-e-hot-restart)
   - [3.7. A cadeia de filtros HTTP em detalhe: tipos, ordem e controle de fluxo](#37-a-cadeia-de-filtros-http-em-detalhe-tipos-ordem-e-controle-de-fluxo)
+    - [Os três tipos de filtro HTTP](#os-três-tipos-de-filtro-http)
+    - [Ordem de execução: ida direta, volta invertida](#ordem-de-execução-ida-direta-volta-invertida)
+    - [Controle de fluxo: `StopIteration`/`Continue` e "local reply"](#controle-de-fluxo-stopiterationcontinue-e-local-reply)
   - [3.8. Comandos de troubleshooting da cadeia de filtros](#38-comandos-de-troubleshooting-da-cadeia-de-filtros)
 - [4. Comandos práticos (kind + Istio deste repositório)](#4-comandos-práticos-kind--istio-deste-repositório)
   - [4.1. Pré-requisitos](#41-pré-requisitos)
@@ -88,7 +96,7 @@ Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes of
 
 **Versão de referência:** Istio **1.30** (LTS, versão estável mais recente em 2026-08-10) e Envoy na versão empacotada por ela. A versão 1.31 do Istio está em status `alpha` (`1.31.0-alpha.0`) na data deste material, portanto **não é recomendada** como base de estudo/produção — por isso este guia segue o padrão já usado no restante do repositório (`ISTIO_RELEASE=1.30`), conforme confirmado em [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/) e nas releases do [github.com/istio/istio](https://github.com/istio/istio/releases/).
 
-O ambiente prático usado neste guia é o mesmo do restante do repositório: cluster **kind** + **MetalLB** + **Istio** (modo `ambient` por padrão, com o modo `sidecar` como alternativa documentada em [OLD/day1-sidecar.md](OLD/day1-sidecar.md)). Veja os pré-requisitos completos em [INSTALL_REQUIREMENTS.md](INSTALL_REQUIREMENTS.md).
+O ambiente prático usado neste guia é o mesmo do restante do repositório: cluster **kind** + **MetalLB** + **Istio** (modo `ambient` por padrão, com o modo `sidecar` como alternativa documentada em [day1-sidecar.md](day1-sidecar.md)). Veja os pré-requisitos completos em [INSTALL_REQUIREMENTS.md](INSTALL_REQUIREMENTS.md).
 
 ---
 
@@ -786,6 +794,8 @@ Fonte: [Envoy / Life of a Request](https://www.envoyproxy.io/docs/envoy/latest/i
 ## 3.8. Comandos de troubleshooting da cadeia de filtros
 
 ```bash
+export MY_NAMESPACE='myapp'
+
 export PP_POD=$(kubectl -n $MY_NAMESPACE get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}')
 
 # Lista, NA ORDEM REAL configurada, os filtros de rede do listener inbound (porta 9080)
@@ -800,6 +810,7 @@ istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 9080 -o json \
       | .typedConfig.httpFilters[].name'
 
 # Confirme que o router (envoy.filters.http.router) é sempre o ÚLTIMO da lista acima
+
 # Compare a cadeia INBOUND (porta da app) com a OUTBOUND (chamadas que o Pod faz) - costumam ser diferentes
 istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 15001 -o json \
   | jq -r '.[0].filterChains[0].filters[]
@@ -808,7 +819,9 @@ istioctl proxy-config listener $PP_POD.$MY_NAMESPACE --port 15001 -o json \
 
 # Mesma informação via Admin API / config_dump (seção 4.3), sem depender do istioctl
 kubectl -n $MY_NAMESPACE port-forward $PP_POD 15000:15000 &
+
 curl -s http://localhost:15000/config_dump | jq -r '.. | .httpFilters? // empty | .[].name'
+
 kill %1
 ```
 

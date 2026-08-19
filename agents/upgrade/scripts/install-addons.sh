@@ -9,9 +9,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 require_bin kubectl
 
 log_step "Installing Istio addons (Grafana, Prometheus, Kiali, Jaeger)"
+# kubectl apply is idempotent by itself (create-or-update); the notes below
+# just make the already-exists/first-install distinction visible in the
+# logs before each apply reconciles it.
+kube_resource_note "Grafana deployment" deployment grafana istio-system
 kubectl apply -f "$ISTIO_ADDONS_URL/grafana.yaml"
+kube_resource_note "Prometheus deployment" deployment prometheus istio-system
 kubectl apply -f "$ISTIO_ADDONS_URL/prometheus.yaml"
+kube_resource_note "Kiali deployment" deployment kiali istio-system
 kubectl apply -f "$ISTIO_ADDONS_URL/kiali.yaml"
+kube_resource_note "Jaeger deployment" deployment jaeger istio-system
 kubectl apply -f "$ISTIO_ADDONS_URL/jaeger.yaml"
 
 log_step "Waiting for addon rollouts"

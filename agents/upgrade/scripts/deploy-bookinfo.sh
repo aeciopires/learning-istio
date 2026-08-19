@@ -12,7 +12,11 @@ require_mode_arg "$MODE"
 require_bin kubectl
 
 log_step "Preparing namespace '$MY_NAMESPACE' (mode=$MODE)"
-kubectl get namespace "$MY_NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$MY_NAMESPACE"
+if kubectl get namespace "$MY_NAMESPACE" >/dev/null 2>&1; then
+  log_info "Namespace '$MY_NAMESPACE' already exists, skipping creation."
+else
+  kubectl create namespace "$MY_NAMESPACE"
+fi
 
 if [[ "$MODE" == "ambient" ]]; then
   kubectl label namespace "$MY_NAMESPACE" istio.io/dataplane-mode=ambient --overwrite

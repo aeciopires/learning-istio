@@ -148,6 +148,10 @@ Fonte: https://mise.jdx.dev/installing-mise.html
 > .tool-versions <ferramenta>@<versão>` mostrados abaixo são úteis para
 > instalar uma ferramenta isolada ou trocar a versão pinada.
 >
+> `mise install <ferramenta>@<versão>` é idempotente: se a versão já
+> estiver instalada, o mise apenas informa isso e segue em frente, sem
+> falhar - seguro de rodar de novo a qualquer momento.
+>
 > Atenção: `mise install` **sem** argumentos também instala qualquer
 > ferramenta pinada na sua configuração *global* do mise
 > (`~/.config/mise/config.toml`), não só as deste repositório - se isso
@@ -228,12 +232,13 @@ usado neste repositório para instalar o Istio e o MetalLB.
 Execute os seguintes comandos para instalar o helm:
 
 > Antes de continuar, se tiver o helm instalado via apt, remova-o com os seguintes comandos:
+> (uso de `rm -f`/`apt remove` para não falhar caso já não estejam instalados)
 
 ```bash
-sudo apt remove helm
+sudo apt remove -y helm || true
 # ou
-sudo rm /usr/local/bin/helm
-sudo rm /etc/apt/sources.list.d/helm-stable-debian.list
+sudo rm -f /usr/local/bin/helm
+sudo rm -f /etc/apt/sources.list.d/helm-stable-debian.list
 ```
 
 > Antes de prosseguir, certifique-se de ter instalado o comando [mise](#mise).
@@ -321,9 +326,10 @@ O kind (Kubernetes in Docker) é outra alternativa para executar o Kubernetes nu
 Para instalar o kind execute os seguintes comandos.
 
 > Antes de continuar, se tiver o kind instalado, remova-o com o seguinte comando:
+> (`-f` para não falhar caso o arquivo já não exista)
 
 ```bash
-sudo rm /usr/local/bin/kind
+sudo rm -f /usr/local/bin/kind
 ```
 
 > Antes de prosseguir, certifique-se de ter instalado o comando [mise](#mise).
@@ -386,7 +392,14 @@ EOF
 Crie um cluster chamado ``kind-multinodes`` utilizando as especificações definidas no arquivo ``$HOME/kind-3nodes.yaml``.
 
 ```bash
-kind create cluster --name kind-multinodes --config $HOME/kind-3nodes.yaml
+# Idempotente: não falha se o cluster "kind-multinodes" já existir, só
+# informa e segue (veja também agents/upgrade/scripts/create-cluster.sh,
+# que automatiza essa mesma checagem).
+if kind get clusters 2>/dev/null | grep -qx "kind-multinodes"; then
+  echo "[INFO] cluster kind 'kind-multinodes' já existe, pulando criação."
+else
+  kind create cluster --name kind-multinodes --config $HOME/kind-3nodes.yaml
+fi
 ```
 
 Para visualizar os seus clusters utilizando o kind, execute o comando a seguir.
@@ -439,7 +452,8 @@ sed -e "s/strictARP: false/strictARP: true/" | \
 kubectl apply -f - -n kube-system
 
 # Install and upgrade Helm repositories
-helm repo add metallb https://metallb.github.io/metallb
+# (--force-update: não falha se o repositório "metallb" já existir)
+helm repo add metallb https://metallb.github.io/metallb --force-update
 helm repo update
 
 # Install MetalLB and check if it is installed

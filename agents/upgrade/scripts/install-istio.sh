@@ -14,10 +14,14 @@ require_bin helm kubectl
 
 log_step "Installing Istio $ISTIO_VERSION (profile=$MODE)"
 
-helm repo add istio https://istio-release.storage.googleapis.com/charts >/dev/null
+# helm repo add is itself idempotent (a repo already registered with the
+# same URL is a no-op, exit 0) - --force-update makes that explicit
+# instead of relying on the default behavior.
+helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update >/dev/null
 helm repo update istio >/dev/null
 
 log_step "Installing base CRDs (istio-base)"
+helm_release_note istio-base istio-system
 helm -n istio-system upgrade --install istio-base istio/base \
   --version "$ISTIO_VERSION" --create-namespace --wait --timeout 900s
 
@@ -42,6 +46,7 @@ if [[ "$MODE" == "ambient" ]]; then
 else
   ISTIOD_ARGS=(--set pilot.cni.enabled=true)
 fi
+helm_release_note istiod istio-system
 helm -n istio-system upgrade --install istiod istio/istiod \
   --version "$ISTIO_VERSION" "${ISTIOD_ARGS[@]}" --wait --timeout 900s
 
@@ -53,16 +58,19 @@ CNI_ARGS=()
 if [[ "$MODE" == "ambient" ]]; then
   CNI_ARGS=(--set profile=ambient)
 fi
+helm_release_note istio-cni istio-system
 helm -n istio-system upgrade --install istio-cni istio/cni \
   --version "$ISTIO_VERSION" "${CNI_ARGS[@]}" --wait --timeout 900s
 
 if [[ "$MODE" == "ambient" ]]; then
   log_step "Installing ztunnel (ambient node proxy)"
+  helm_release_note ztunnel istio-system
   helm -n istio-system upgrade --install ztunnel istio/ztunnel \
     --version "$ISTIO_VERSION" --wait --timeout 900s
 fi
 
 log_step "Installing the ingress gateway"
+helm_release_note istio-ingress istio-system
 helm -n istio-system upgrade --install istio-ingress istio/gateway \
   --version "$ISTIO_VERSION" --wait --timeout 900s
 

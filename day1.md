@@ -41,9 +41,14 @@ Instale o **Istio** com os seguintes comandos:
 # https://istio.io/v1.30/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
+# Todos os comandos "helm upgrade --install" abaixo são idempotentes: se
+# o release já existir, o Helm apenas reconcilia/atualiza em vez de
+# falhar. "helm repo add" também não falha se o repositório já existir
+# com a mesma URL - --force-update deixa isso explícito.
+
 # Configure o repositório Helm (usando o ambient mode):
 # https://istio.io/v1.30/docs/ambient/install/helm/
-helm repo add istio https://istio-release.storage.googleapis.com/charts
+helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm repo update
 
 # Instale os componentes base do Istio
@@ -113,7 +118,9 @@ Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 Instale a aplicação de exemplo:
 
 ```bash
-kubectl create namespace $MY_NAMESPACE
+# Idempotente: só cria o namespace se ele ainda não existir (mesma
+# lógica usada acima para o Gateway API CRDs).
+kubectl get namespace $MY_NAMESPACE &> /dev/null || kubectl create namespace $MY_NAMESPACE
 
 kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo.yaml"
 kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/platform/kube/bookinfo-versions.yaml"
