@@ -268,7 +268,7 @@ Execute os seguintes comandos.
 Documentação: https://kubernetes.io/docs/reference/kubectl/overview/
 
 ```bash
-VERSION_OPTION_1="1.36.3"
+VERSION_OPTION_1="1.37.0"
 
 mise latest kubectl
 mise install kubectl@$VERSION_OPTION_1
@@ -300,7 +300,7 @@ inspecionar a configuração efetiva de um proxy Envoy
 Documentação: https://istio.io/latest/docs/reference/commands/istioctl/
 
 ```bash
-VERSION="1.30.3"
+VERSION="1.31.0"
 
 mise latest istioctl
 mise install istioctl@$VERSION
@@ -356,7 +356,7 @@ cat << EOF > $HOME/kind-3nodes.yaml
 # Metal LB in Kind: https://kind.sigs.k8s.io/docs/user/loadbalancer
 # Ingress in Kind: https://kind.sigs.k8s.io/docs/user/ingress
 
-# Config compatible with kind v0.32.0
+# Config compatible with kind v0.33.0
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -364,15 +364,15 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 nodes:
   - role: control-plane
-    image: kindest/node:v1.35.5@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
     kubeadmConfigPatches:
     - |
       kind: InitConfiguration
       apiVersion: kubeadm.k8s.io/v1beta4
       nodeRegistration:
         kubeletExtraArgs:
-          - name: nodeapp
-            value: "loadbalancer"
+          - name: node-labels
+            value: "nodeapp=loadbalancer"
     extraPortMappings:
     - containerPort: 80
       hostPort: 80
@@ -383,9 +383,9 @@ nodes:
       listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: TCP
   - role: worker
-    image: kindest/node:v1.35.5@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
   - role: worker
-    image: kindest/node:v1.35.5@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
 EOF
 ```
 

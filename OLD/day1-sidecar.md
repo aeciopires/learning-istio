@@ -24,9 +24,9 @@ Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#m
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.30
-export VERSION_ISTIO="${ISTIO_RELEASE}.2"
-export GATEWAY_API_VERSION="v1.6.0"
+export ISTIO_RELEASE=1.31
+export VERSION_ISTIO="${ISTIO_RELEASE}.0"
+export GATEWAY_API_VERSION="v1.6.1"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -39,13 +39,13 @@ Instale o **Istio** com os seguintes comandos:
 ```bash
 #-------
 # Referencias:
-# https://istio.io/v1.30/docs/setup/getting-started/
-# https://istio.io/v1.30/docs/setup/install/helm/
+# https://istio.io/v1.31/docs/setup/getting-started/
+# https://istio.io/v1.31/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Configure o repositório Helm (usando o sidecar mode):
-# https://istio.io/v1.30/docs/setup/install/helm/
-helm repo add istio https://istio-release.storage.googleapis.com/charts
+# https://istio.io/v1.31/docs/setup/install/helm/
+helm repo add istio https://blob.istio.io/istio-release/charts
 helm repo update
 
 # Instale os componentes base do Istio
@@ -106,7 +106,7 @@ kubectl -n istio-system get all --output wide
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.30/docs/examples/bookinfo/
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.31/docs/examples/bookinfo/
 
 Instale a aplicação de exemplo:
 
@@ -225,7 +225,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Sidecar mode https://istio.io/v1.30/docs/setup/getting-started/). O comando abaixo adiciona o label ``istio-injection=enabled`` em determinado namespace, permitindo que o Istio injete os sidecars automaticamente nos pods criados nesse namespace.
+Permita que o Istio gerencie as aplicações de determinado namespace (Sidecar mode https://istio.io/v1.31/docs/setup/getting-started/). O comando abaixo adiciona o label ``istio-injection=enabled`` em determinado namespace, permitindo que o Istio injete os sidecars automaticamente nos pods criados nesse namespace.
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio-injection=enabled

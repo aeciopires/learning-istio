@@ -34,6 +34,7 @@ As versões dos softwares utilizados foram:
 - kubectl: 1.36.2
 - Helm: 3.21.2
 - Istio: 1.30
+- istioctl: 1.30.3
 
 # Requisitos
 
@@ -53,6 +54,7 @@ func TestUpdateREADME(t *testing.T) {
 		"- kubectl: 1.37.0",
 		"- Helm: 3.22.0",
 		"- Istio: 1.31",
+		"- istioctl: 1.31.1",
 		"https://istio.io/v1.31/docs/setup/platform-setup/docker/",
 		"https://istio.io/v1.31/docs/releases/supported-releases/",
 	}
@@ -68,7 +70,7 @@ func TestUpdateREADME(t *testing.T) {
 }
 
 func TestUpdateREADME_NoOpWhenAlreadyCurrent(t *testing.T) {
-	rv := ResolvedVersions{IstioMinor: "1.30", Kubectl: "1.36.2", Helm: "3.21.2", KindNodeK8s: "1.35.5"}
+	rv := ResolvedVersions{IstioMinor: "1.30", IstioPatch: "1.30.3", Kubectl: "1.36.2", Helm: "3.21.2", KindNodeK8s: "1.35.5"}
 	u := UpdateREADME(readmeFixture, rv)
 	if u.Changed {
 		t.Errorf("expected no change when resolved versions match the doc already, got notes: %v", u.Notes)

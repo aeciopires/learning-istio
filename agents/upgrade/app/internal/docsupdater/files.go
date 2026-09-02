@@ -63,6 +63,15 @@ func UpdateREADME(content string, rv ResolvedVersions) *FileUpdate {
 
 		next, c = rewriteIstioLinks(cur, rv.IstioMinor)
 		u.apply(next, c)
+		cur = next
+	}
+	if rv.IstioPatch != "" {
+		// istioctl's version always mirrors the resolved Istio version - see
+		// the note on UpdateInstallRequirements below.
+		next, c := applyRule(cur, "istioctl version bullet",
+			regexp.MustCompile(`(?m)^- istioctl: [\d.]+$`),
+			"- istioctl: "+rv.IstioPatch)
+		u.apply(next, c)
 	}
 	return u
 }

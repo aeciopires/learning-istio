@@ -17,7 +17,7 @@ log_step "Installing Istio $ISTIO_VERSION (profile=$MODE)"
 # helm repo add is itself idempotent (a repo already registered with the
 # same URL is a no-op, exit 0) - --force-update makes that explicit
 # instead of relying on the default behavior.
-helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update >/dev/null
+helm repo add istio https://blob.istio.io/istio-release/charts --force-update >/dev/null
 helm repo update istio >/dev/null
 
 log_step "Installing base CRDs (istio-base)"

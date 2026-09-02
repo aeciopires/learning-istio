@@ -6,6 +6,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
+## [0.2.1] - 2026-09-01
+
+### Fixed
+
+- `docs update`: `UpdateREADME` had no rule for the `- istioctl: X.Y.Z`
+  bullet in README.md's "Configurações do Ambiente" section, so it was
+  silently left stale (still pinned to the old Istio patch) while every
+  other istioctl pin (`.tool-versions`, `INSTALL_REQUIREMENTS.md`) was
+  correctly kept in sync with the resolved Istio version. Found while
+  bumping this repo to Istio 1.31.0.
+- `scripts/create-cluster.sh` (and its mirrored example in
+  `INSTALL_REQUIREMENTS.md`): the control-plane node's
+  `kubeadmConfigPatches` set `kubeletExtraArgs: [{name: nodeapp, value:
+  loadbalancer}]`, which kubelet rejects outright (`unknown flag:
+  --nodeapp`) - `node-labels` is the actual kubelet flag that accepts a
+  `key=value` label pair, so the node never finished starting and `kind
+  create cluster` hung indefinitely at "Starting control-plane". Now
+  `{name: node-labels, value: "nodeapp=loadbalancer"}`. Found by actually
+  running `make bootstrap-ambient` end to end against the Istio 1.31.0 /
+  kind 0.33.0 pins - this bug predates that bump and would have hit
+  every prior pin too, it just hadn't been exercised.
+
+### Changed
+
+- `Dockerfile`: bumped the builder base image from `golang:1.26-alpine`
+  to `golang:1.27-alpine` and the runtime base from `alpine:3.22` to
+  `alpine:3.24.1`. `go.mod`'s `go` directive now pins `1.27.1` exactly
+  (was `1.26.5`); since Docker Hub's `golang` image hasn't published a
+  matching `1.27.1-alpine` tag yet (only `1.27.0` at the time of this
+  change), the Dockerfile now sets `ENV GOTOOLCHAIN=auto` so the build
+  fetches the pinned 1.27.1 toolchain itself instead of failing with
+  "go.mod requires go >= 1.27.1 (running go 1.27.0; GOTOOLCHAIN=local)" -
+  the default `GOTOOLCHAIN=local` in Docker's official Go images exists
+  precisely to avoid a surprise network fetch mid-build, so this is an
+  explicit, deliberate opt-in. No CLI code changes were needed for the
+  Go 1.27.1 bump - `go build`/`go vet`/`go test` all pass unchanged.
+- `scripts/install-istio.sh`, `day1.md`, `day1-sidecar.md`,
+  `OLD/day1-sidecar.md`: Istio's official Helm chart repository moved
+  from `https://istio-release.storage.googleapis.com/charts` to
+  `https://blob.istio.io/istio-release/charts` - the old URL's index
+  still exists but stops at chart version 1.30.4, so `helm upgrade
+  --install ... --version 1.31.0` failed with `no chart version found
+  for base-1.31.0` even though the 1.31.0 GitHub release itself is out
+  (a similar publish lag to the `golang`/Docker Hub one above, just on
+  Istio's chart host instead). Confirmed against the live repo before
+  switching: the new URL serves 1.31.0 (and every version back through
+  1.29.x), the old one doesn't.
+
 ## [0.2.0] - 2026-08-19
 
 ### Added

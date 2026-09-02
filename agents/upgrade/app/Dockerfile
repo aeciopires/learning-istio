@@ -10,7 +10,15 @@
 # Docker daemon - something that doesn't containerize cleanly. Run
 # `make bootstrap-sidecar` / `make bootstrap-ambient` on the host instead.
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
+
+# go.mod pins the exact toolchain patch (go 1.27.1); the golang:1.27-alpine
+# base image ships whatever the latest published 1.27.x point release is
+# (currently 1.27.0, since Docker Hub's official images lag a Go patch
+# release by a bit) and defaults GOTOOLCHAIN=local, which would otherwise
+# hard-fail on that mismatch instead of fetching 1.27.1 - see
+# https://go.dev/doc/toolchain.
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /src
 
@@ -25,7 +33,7 @@ RUN GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown) && \
       -ldflags "-s -w -X main.gitCommit=${GIT_COMMIT}" \
       -o /out/istio-upgrade .
 
-FROM alpine:3.22
+FROM alpine:3.24.1
 
 RUN apk add --no-cache ca-certificates && \
     addgroup -S istio-upgrade && adduser -S istio-upgrade -G istio-upgrade

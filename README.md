@@ -32,24 +32,24 @@ Para fins de aprendizado, o Kubernetes foi provisionado utilizando o [kind](http
 As versões dos softwares utilizados foram:
 
 - Docker: 29.2.1
-- Kubernetes (kind): 1.35.5
-- kubectl: 1.36.3
+- Kubernetes (kind): 1.37.0
+- kubectl: 1.37.0
 - Helm: 3.21.2
-- Istio: 1.30
-- istioctl: 1.30.3
+- Istio: 1.31
+- istioctl: 1.31.0
 
 # Requisitos para executar o Istio
 
-Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.30/docs/setup/platform-setup/docker/
+Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.31/docs/setup/platform-setup/docker/
 
-Veja as provedores de Kubernetes suportados: https://istio.io/v1.30/docs/ambient/install/platform-prerequisites/
+Veja as provedores de Kubernetes suportados: https://istio.io/v1.31/docs/ambient/install/platform-prerequisites/
 
-Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.30/docs/releases/supported-releases/#support-status-of-istio-releases
+Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.31/docs/releases/supported-releases/#support-status-of-istio-releases
 
 Veja mais detalhes sobre os requisitos da aplicação em:
 
-- https://istio.io/v1.30/docs/ops/deployment/application-requirements/
-- https://istio.io/v1.30/docs/ops/deployment/platform-requirements/
+- https://istio.io/v1.31/docs/ops/deployment/application-requirements/
+- https://istio.io/v1.31/docs/ops/deployment/platform-requirements/
 
 # Day 1
 
@@ -80,15 +80,15 @@ Glossário, diagramas (mermaid), comandos e exercícios de troubleshooting sobre
 
 ## Documentação do Istio
 
-- https://istio.io/v1.30/docs/overview/what-is-istio/
-- https://istio.io/v1.30/docs/overview/why-choose-istio/
-- https://istio.io/v1.30/docs/overview/dataplane-modes/
-- https://istio.io/v1.30/docs/concepts/
-- https://istio.io/v1.30/docs/setup/
-- https://istio.io/v1.30/docs/ambient/
-- https://istio.io/v1.30/docs/tasks/
-- https://istio.io/v1.30/docs/examples/
-- https://istio.io/v1.30/docs/ops/
+- https://istio.io/v1.31/docs/overview/what-is-istio/
+- https://istio.io/v1.31/docs/overview/why-choose-istio/
+- https://istio.io/v1.31/docs/overview/dataplane-modes/
+- https://istio.io/v1.31/docs/concepts/
+- https://istio.io/v1.31/docs/setup/
+- https://istio.io/v1.31/docs/ambient/
+- https://istio.io/v1.31/docs/tasks/
+- https://istio.io/v1.31/docs/examples/
+- https://istio.io/v1.31/docs/ops/
 
 # Mantenedores
 

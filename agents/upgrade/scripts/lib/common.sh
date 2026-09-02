@@ -38,7 +38,7 @@ ISTIO_MODE="${ISTIO_MODE:-ambient}" # ambient | sidecar
 # tag and sha256 digest must be bumped together, verified against
 # https://github.com/kubernetes-sigs/kind/releases) - so keep these two
 # in sync by hand when you do bump it.
-KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-kindest/node:v${KIND_NODE_K8S_VERSION:-1.35.5}@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95}"
+KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-kindest/node:v${KIND_NODE_K8S_VERSION:-1.37.0}@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5}"
 POD_SUBNET="${POD_SUBNET:-10.244.0.0/16}"
 SERVICE_SUBNET="${SERVICE_SUBNET:-10.96.0.0/12}"
 METALLB_ADDRESS_END="${METALLB_ADDRESS_END:-100}"

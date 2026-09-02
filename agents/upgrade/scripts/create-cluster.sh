@@ -70,8 +70,8 @@ nodes:
       apiVersion: kubeadm.k8s.io/v1beta4
       nodeRegistration:
         kubeletExtraArgs:
-          - name: nodeapp
-            value: "loadbalancer"
+          - name: node-labels
+            value: "nodeapp=loadbalancer"
     extraPortMappings:
     - containerPort: 80
       hostPort: 80
