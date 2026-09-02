@@ -1,0 +1,10 @@
+# mise's native config format, mirroring .tool-versions (the asdf-compatible
+# format) - both files pin the exact same four tools to the exact same
+# versions, and "istio-upgrade docs update --apply" keeps them in sync
+# automatically. Pick whichever file you prefer to look at; mise reads both.
+
+[tools]
+kind = "0.33.0"
+helm = "3.21.2"
+kubectl = "1.37.0"
+istioctl = "1.31.0"

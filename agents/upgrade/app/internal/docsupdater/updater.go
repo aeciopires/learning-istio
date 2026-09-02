@@ -46,13 +46,13 @@ func (u *Updater) Plan(results []toolversions.Result) (*PlanResult, error) {
 		return nil, fmt.Errorf("reading %s: %w", readmePath, err)
 	}
 
-	toolVersionsPath := filepath.Join(u.RepoRoot, ".tool-versions")
-	toolVersionsContent, err := os.ReadFile(toolVersionsPath)
+	miseTomlPath := filepath.Join(u.RepoRoot, "mise.toml")
+	miseTomlContent, err := os.ReadFile(miseTomlPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", toolVersionsPath, err)
+		return nil, fmt.Errorf("reading %s: %w", miseTomlPath, err)
 	}
 
-	current := ExtractCurrentVersions(string(readme), string(toolVersionsContent))
+	current := ExtractCurrentVersions(string(readme), string(miseTomlContent))
 	rv, warnings := BuildResolvedVersions(results, string(installReqContent), current, u.AllowMajorBump)
 
 	plan := &PlanResult{Versions: rv, Warnings: warnings}
@@ -69,7 +69,7 @@ func (u *Updater) Plan(results []toolversions.Result) (*PlanResult, error) {
 	}
 
 	plan.Files = append(plan.Files, UpdateInstallRequirements(string(installReqContent), rv))
-	plan.Files = append(plan.Files, UpdateToolVersions(string(toolVersionsContent), rv))
+	plan.Files = append(plan.Files, UpdateMiseToml(string(miseTomlContent), rv))
 
 	versionsEnvPath := filepath.Join(u.RepoRoot, "agents", "upgrade", "configs", "versions.env")
 	existingEnv := ""

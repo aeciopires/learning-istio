@@ -22,7 +22,7 @@ func writeFixtureRepo(t *testing.T) string {
 		"day1-sidecar.md":         dayFileFixture,
 		"day2.md":                 dayFileFixture,
 		"INSTALL_REQUIREMENTS.md": installRequirementsFixture,
-		".tool-versions":          toolVersionsFixture,
+		"mise.toml":               miseTomlFixture,
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0o644); err != nil {
@@ -84,5 +84,13 @@ func TestUpdater_PlanAndApply_WritesDay1Sidecar(t *testing.T) {
 	}
 	if !strings.Contains(string(got), "export ISTIO_RELEASE=1.31") {
 		t.Errorf("expected day1-sidecar.md to be rewritten with the new Istio release, got:\n%s", got)
+	}
+
+	gotMiseToml, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	if err != nil {
+		t.Fatalf("unexpected error reading mise.toml: %v", err)
+	}
+	if !strings.Contains(string(gotMiseToml), `kind = "0.33.0"`) {
+		t.Errorf("expected mise.toml to be rewritten with the new kind pin, got:\n%s", gotMiseToml)
 	}
 }

@@ -1,6 +1,6 @@
 // Package docsupdater keeps this repository's installation/configuration
 // files (README.md, day1.md, day1-sidecar.md, day2.md,
-// INSTALL_REQUIREMENTS.md, .tool-versions, and
+// INSTALL_REQUIREMENTS.md, mise.toml, and
 // agents/upgrade/configs/versions.env) in sync with the latest stable
 // tool versions resolved by internal/toolversions.
 //
@@ -180,27 +180,27 @@ func ExtractKindNodeK8sVersion(installRequirementsContent string) (string, bool)
 }
 
 var (
-	readmeIstioLineRe    = regexp.MustCompile(`(?m)^- Istio: ([\d.]+)$`)
-	toolVersionsKindLine = regexp.MustCompile(`(?m)^kind ([\d.]+)$`)
-	toolVersionsHelmLine = regexp.MustCompile(`(?m)^helm ([\d.]+)$`)
-	toolVersionsKubeLine = regexp.MustCompile(`(?m)^kubectl ([\d.]+)$`)
+	readmeIstioLineRe = regexp.MustCompile(`(?m)^- Istio: ([\d.]+)$`)
+	miseTomlKindLine  = regexp.MustCompile(`(?m)^kind\s*=\s*"([\d.]+)"$`)
+	miseTomlHelmLine  = regexp.MustCompile(`(?m)^helm\s*=\s*"([\d.]+)"$`)
+	miseTomlKubeLine  = regexp.MustCompile(`(?m)^kubectl\s*=\s*"([\d.]+)"$`)
 )
 
 // ExtractCurrentVersions reads the versions presently pinned in
-// README.md and .tool-versions, used only for the major-version-bump
-// guard in BuildResolvedVersions.
-func ExtractCurrentVersions(readmeContent, toolVersionsContent string) CurrentVersions {
+// README.md and mise.toml, used only for the major-version-bump guard in
+// BuildResolvedVersions.
+func ExtractCurrentVersions(readmeContent, miseTomlContent string) CurrentVersions {
 	var cv CurrentVersions
 	if m := readmeIstioLineRe.FindStringSubmatch(readmeContent); m != nil {
 		cv.IstioMinor = m[1]
 	}
-	if m := toolVersionsKindLine.FindStringSubmatch(toolVersionsContent); m != nil {
+	if m := miseTomlKindLine.FindStringSubmatch(miseTomlContent); m != nil {
 		cv.Kind = m[1]
 	}
-	if m := toolVersionsHelmLine.FindStringSubmatch(toolVersionsContent); m != nil {
+	if m := miseTomlHelmLine.FindStringSubmatch(miseTomlContent); m != nil {
 		cv.Helm = m[1]
 	}
-	if m := toolVersionsKubeLine.FindStringSubmatch(toolVersionsContent); m != nil {
+	if m := miseTomlKubeLine.FindStringSubmatch(miseTomlContent); m != nil {
 		cv.Kubectl = m[1]
 	}
 	return cv

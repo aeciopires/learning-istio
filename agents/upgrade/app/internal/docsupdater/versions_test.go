@@ -111,9 +111,9 @@ func TestBuildResolvedVersions_AddonsAreInformationalOnly(t *testing.T) {
 
 func TestExtractCurrentVersions(t *testing.T) {
 	readme := "- Istio: 1.30\n- Helm: 3.21.2\n"
-	toolVersions := "kind 0.32.0\nhelm 3.21.2\nkubectl 1.36.2\n"
+	miseToml := "[tools]\nkind = \"0.32.0\"\nhelm = \"3.21.2\"\nkubectl = \"1.36.2\"\n"
 
-	cv := ExtractCurrentVersions(readme, toolVersions)
+	cv := ExtractCurrentVersions(readme, miseToml)
 	if cv.IstioMinor != "1.30" || cv.Kind != "0.32.0" || cv.Helm != "3.21.2" || cv.Kubectl != "1.36.2" {
 		t.Errorf("unexpected CurrentVersions: %+v", cv)
 	}

@@ -36,9 +36,10 @@ community convention - don't "fix" that to Portuguese.
   mermaid diagrams, Envoy xDS/request-lifecycle deep dive, troubleshooting
   exercises). Treat this as curated prose - don't run automated rewrites
   against it.
-- `.tool-versions` - version pins for `kind`/`helm`/`kubectl`/`istioctl`,
-  in the asdf `.tool-versions` format (mise reads/writes this format
-  natively - see `INSTALL_REQUIREMENTS.md#mise`).
+- `mise.toml` - version pins for `kind`/`helm`/`kubectl`/`istioctl`, in
+  [mise](https://mise.jdx.dev)'s native TOML format (see
+  `INSTALL_REQUIREMENTS.md#mise`). This repo does not use the asdf
+  `.tool-versions` format.
 - `files/`, `images/` - sample manifests (Bookinfo, mirroring) and
   screenshots referenced by the walkthroughs.
 - `OLD/` - **archived/deprecated** content (old auth-policy, egress,
@@ -158,7 +159,7 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
 
 - Version pins are duplicated across `README.md`, `day1.md`,
   `day1-sidecar.md`, `day2.md`, `INSTALL_REQUIREMENTS.md` and
-  `.tool-versions` by design (each file is meant to be readable/runnable
+  `mise.toml` by design (each file is meant to be readable/runnable
   standalone). Keep them consistent - prefer running `agents/upgrade`'s
   `docs update` over hand-editing when bumping tool versions.
 - This repo has no CI configured; `agents/upgrade/Makefile`'s

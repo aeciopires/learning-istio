@@ -160,37 +160,38 @@ func UpdateInstallRequirements(content string, rv ResolvedVersions) *FileUpdate 
 }
 
 var (
-	toolVersionsKindRe     = regexp.MustCompile(`(?m)^kind [\d.]+$`)
-	toolVersionsHelmRe     = regexp.MustCompile(`(?m)^helm [\d.]+$`)
-	toolVersionsKubectlRe  = regexp.MustCompile(`(?m)^kubectl [\d.]+$`)
-	toolVersionsIstioctlRe = regexp.MustCompile(`(?m)^istioctl [\d.]+$`)
+	miseTomlKindRe     = regexp.MustCompile(`(?m)^kind\s*=\s*"[\d.]+"$`)
+	miseTomlHelmRe     = regexp.MustCompile(`(?m)^helm\s*=\s*"[\d.]+"$`)
+	miseTomlKubectlRe  = regexp.MustCompile(`(?m)^kubectl\s*=\s*"[\d.]+"$`)
+	miseTomlIstioctlRe = regexp.MustCompile(`(?m)^istioctl\s*=\s*"[\d.]+"$`)
 )
 
-// UpdateToolVersions rewrites .tool-versions (asdf-compatible format,
-// read/written natively by mise too: "<tool> <version>").
-func UpdateToolVersions(content string, rv ResolvedVersions) *FileUpdate {
-	u := newFileUpdate(".tool-versions", content)
+// UpdateMiseToml rewrites the "[tools]" table in mise.toml (mise's native
+// config format): the single source of truth for the kind/helm/kubectl/
+// istioctl pins this repo tracks.
+func UpdateMiseToml(content string, rv ResolvedVersions) *FileUpdate {
+	u := newFileUpdate("mise.toml", content)
 	cur := content
 
 	if rv.Kind != "" {
-		next, c := applyRule(cur, "kind pin", toolVersionsKindRe, "kind "+rv.Kind)
+		next, c := applyRule(cur, "kind pin", miseTomlKindRe, `kind = "`+rv.Kind+`"`)
 		u.apply(next, c)
 		cur = next
 	}
 	if rv.Helm != "" {
-		next, c := applyRule(cur, "helm pin", toolVersionsHelmRe, "helm "+rv.Helm)
+		next, c := applyRule(cur, "helm pin", miseTomlHelmRe, `helm = "`+rv.Helm+`"`)
 		u.apply(next, c)
 		cur = next
 	}
 	if rv.Kubectl != "" {
-		next, c := applyRule(cur, "kubectl pin", toolVersionsKubectlRe, "kubectl "+rv.Kubectl)
+		next, c := applyRule(cur, "kubectl pin", miseTomlKubectlRe, `kubectl = "`+rv.Kubectl+`"`)
 		u.apply(next, c)
 		cur = next
 	}
 	// istioctl's version always mirrors the resolved Istio version - see
 	// the comment in UpdateInstallRequirements.
 	if rv.IstioPatch != "" {
-		next, c := applyRule(cur, "istioctl pin", toolVersionsIstioctlRe, "istioctl "+rv.IstioPatch)
+		next, c := applyRule(cur, "istioctl pin", miseTomlIstioctlRe, `istioctl = "`+rv.IstioPatch+`"`)
 		u.apply(next, c)
 	}
 	return u

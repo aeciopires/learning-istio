@@ -48,11 +48,12 @@ brew install telnet netcat git elinks curl wget openssl jq
 # mise
 
 O [mise](https://mise.jdx.dev) (antigo `rtx`) é o gerenciador de versões de
-ferramentas usado neste repositório. Ele é compatível com o formato de
-arquivo `.tool-versions` do [asdf](https://asdf-vm.com) (o mesmo arquivo
-`.tool-versions` já usado por este repositório continua funcionando sem
-mudanças), mas não depende de plugins externos para ferramentas comuns
-como Helm, kubectl e kind - elas já vêm no registro embutido do mise.
+ferramentas usado neste repositório. Ele também é compatível com o formato
+de arquivo `.tool-versions` do [asdf](https://asdf-vm.com), mas este
+repositório usa o formato nativo do mise ([`mise.toml`](mise.toml), TOML)
+para fixar as versões de `kind`, `helm`, `kubectl` e `istioctl` - o mise
+não depende de plugins externos para ferramentas comuns como Helm,
+kubectl e kind, elas já vêm no registro embutido do mise.
 
 > Atenção!!! Para atualizar o mise utilize o seguinte comando:
 
@@ -139,13 +140,13 @@ Fonte: https://mise.jdx.dev/installing-mise.html
 > deste ponto.
 
 > Atalho: como este repositório já traz um arquivo
-> [`.tool-versions`](.tool-versions) com as versões de `kind`, `helm` e
-> `kubectl` já definidas, depois de instalar o mise basta rodar
-> `mise install helm kubectl kind` na raiz do repositório para instalar as
-> três de uma vez, na versão exata que está pinada (também disponível via
-> `make install-tools` em [agents/upgrade](agents/upgrade)). Os comandos
-> `mise install <ferramenta>@<versão>` e `mise use --pin --path
-> .tool-versions <ferramenta>@<versão>` mostrados abaixo são úteis para
+> [`mise.toml`](mise.toml) com as versões de `kind`, `helm`, `kubectl` e
+> `istioctl` já definidas, depois de instalar o mise basta rodar `mise
+> install helm kubectl kind istioctl` na raiz do repositório para
+> instalar as quatro de uma vez, na versão exata que está pinada (também
+> disponível via `make install-tools` em [agents/upgrade](agents/upgrade)).
+> Os comandos `mise install <ferramenta>@<versão>` e `mise use --pin
+> --path mise.toml <ferramenta>@<versão>` mostrados abaixo são úteis para
 > instalar uma ferramenta isolada ou trocar a versão pinada.
 >
 > `mise install <ferramenta>@<versão>` é idempotente: se a versão já
@@ -252,8 +253,8 @@ mise latest helm
 mise install helm@$VERSION
 mise ls helm
 
-# Definindo a versão padrão deste repositório (grava em .tool-versions)
-mise use --pin --path .tool-versions helm@$VERSION
+# Definindo a versão padrão deste repositório (grava em mise.toml)
+mise use --pin --path mise.toml helm@$VERSION
 mise ls helm
 ```
 
@@ -274,8 +275,8 @@ mise latest kubectl
 mise install kubectl@$VERSION_OPTION_1
 mise ls kubectl
 
-# Definindo a versão padrão deste repositório (grava em .tool-versions)
-mise use --pin --path .tool-versions kubectl@$VERSION_OPTION_1
+# Definindo a versão padrão deste repositório (grava em mise.toml)
+mise use --pin --path mise.toml kubectl@$VERSION_OPTION_1
 mise ls kubectl
 ```
 
@@ -306,8 +307,8 @@ mise latest istioctl
 mise install istioctl@$VERSION
 mise ls istioctl
 
-# Definindo a versão padrão deste repositório (grava em .tool-versions)
-mise use --pin --path .tool-versions istioctl@$VERSION
+# Definindo a versão padrão deste repositório (grava em mise.toml)
+mise use --pin --path mise.toml istioctl@$VERSION
 mise ls istioctl
 ```
 
@@ -340,8 +341,8 @@ VERSION="0.32.0"
 mise latest kind
 mise install kind@$VERSION
 mise ls kind
-# Definindo a versão padrão deste repositório (grava em .tool-versions)
-mise use --pin --path .tool-versions kind@$VERSION
+# Definindo a versão padrão deste repositório (grava em mise.toml)
+mise use --pin --path mise.toml kind@$VERSION
 ```
 
 Para criar um cluster com múltiplos nós locais com o Kind, crie um arquivo do tipo YAML para definir a quantidade e o tipo de nós no cluster que você deseja.

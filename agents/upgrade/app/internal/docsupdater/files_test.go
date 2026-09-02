@@ -193,22 +193,44 @@ func TestExtractKindNodeK8sVersion(t *testing.T) {
 	}
 }
 
-const toolVersionsFixture = `kind 0.32.0
-helm 3.21.2
-kubectl 1.36.2
-istioctl 1.30.3
+const miseTomlFixture = `# mise's native config format.
+
+[tools]
+kind = "0.32.0"
+helm = "3.21.2"
+kubectl = "1.36.2"
+istioctl = "1.30.3"
 `
 
-func TestUpdateToolVersions(t *testing.T) {
+func TestUpdateMiseToml(t *testing.T) {
 	rv := testResolvedVersions()
-	u := UpdateToolVersions(toolVersionsFixture, rv)
+	u := UpdateMiseToml(miseTomlFixture, rv)
 
 	if !u.Changed {
-		t.Fatal("expected .tool-versions to be marked as changed")
+		t.Fatal("expected mise.toml to be marked as changed")
 	}
-	want := "kind 0.33.0\nhelm 3.22.0\nkubectl 1.37.0\nistioctl 1.31.1\n"
-	if u.After != want {
-		t.Errorf("got:\n%s\nwant:\n%s", u.After, want)
+	wantLines := []string{
+		`kind = "0.33.0"`,
+		`helm = "3.22.0"`,
+		`kubectl = "1.37.0"`,
+		`istioctl = "1.31.1"`,
+	}
+	for _, want := range wantLines {
+		if !strings.Contains(u.After, want) {
+			t.Errorf("expected updated mise.toml to contain %q, got:\n%s", want, u.After)
+		}
+	}
+	// The [tools] header and leading comment aren't touched.
+	if !strings.Contains(u.After, "[tools]") {
+		t.Errorf("expected [tools] header to be preserved, got:\n%s", u.After)
+	}
+}
+
+func TestUpdateMiseToml_NoOpWhenAlreadyCurrent(t *testing.T) {
+	rv := ResolvedVersions{Kind: "0.32.0", Helm: "3.21.2", Kubectl: "1.36.2", IstioPatch: "1.30.3"}
+	u := UpdateMiseToml(miseTomlFixture, rv)
+	if u.Changed {
+		t.Errorf("expected no change when resolved versions match the file already, got notes: %v", u.Notes)
 	}
 }
 

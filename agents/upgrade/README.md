@@ -68,7 +68,7 @@ flowchart TB
 
     versionsEnv[("configs/versions.env\n(gerado por docs update --apply)")]
     docsupdater -- escreve --> versionsEnv
-    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nINSTALL_REQUIREMENTS.md · .tool-versions"]
+    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nINSTALL_REQUIREMENTS.md · mise.toml"]
 
     subgraph AUTOMATION["Makefile + scripts/*.sh (NÃO é o CLI)"]
         direction TB
@@ -197,7 +197,7 @@ da malha) e `jq` (veja
 Depois de instalar o [mise](https://mise.jdx.dev)
 (veja [INSTALL_REQUIREMENTS.md#mise](../../INSTALL_REQUIREMENTS.md#mise)),
 `make install-tools` instala o `kind`/`helm`/`kubectl`/`istioctl` já
-pinados em [.tool-versions](../../.tool-versions).
+pinados em [mise.toml](../../mise.toml), na raiz do repositório.
 
 ```bash
 cd agents/upgrade
@@ -306,7 +306,7 @@ istio-upgrade docs update --apply --allow-major-bump
 ```
 
 Atualiza: `README.md`, `day1.md`, `day1-sidecar.md`, `day2.md`,
-`INSTALL_REQUIREMENTS.md`, `.tool-versions` (na raiz do repositório) e
+`INSTALL_REQUIREMENTS.md`, `mise.toml` (na raiz do repositório) e
 [configs/versions.env](configs/versions.env) (consumido pelos scripts de
 cluster - veja a próxima seção, inclusive as versões *informativas* dos
 addons - `GRAFANA_VERSION`, `PROMETHEUS_VERSION`, `KIALI_VERSION`,

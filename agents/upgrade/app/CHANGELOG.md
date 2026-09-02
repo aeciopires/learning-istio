@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
-## [0.2.1] - 2026-09-01
+## [0.3.0] - 2026-09-01
 
 ### Fixed
 
@@ -53,6 +53,22 @@ version below must always match [VERSION](VERSION).
   Istio's chart host instead). Confirmed against the live repo before
   switching: the new URL serves 1.31.0 (and every version back through
   1.29.x), the old one doesn't.
+- **Replaced `.tool-versions` (asdf format) with `mise.toml` (mise's
+  native TOML format) as the single source of truth for the
+  `kind`/`helm`/`kubectl`/`istioctl` pins.** `docs update` now reads and
+  writes `mise.toml` exclusively - `.tool-versions` has been removed from
+  the repo and is no longer read, written, or referenced anywhere (docs,
+  scripts, `Makefile`, CLI help text). `ExtractCurrentVersions` and
+  `UpdateMiseToml` (renamed from `UpdateToolVersions`) now parse/emit
+  TOML (`kind = "X.Y.Z"`) instead of asdf's `kind X.Y.Z`. Confirmed
+  locally that `mise` resolves every pin correctly from `mise.toml` alone
+  (`mise current`, `mise which <tool>`, `mise install helm kubectl kind
+  istioctl`, `make install-tools`) with no `.tool-versions` present. See
+  `UpdateMiseToml` in `internal/docsupdater/files.go`.
+  - This briefly went through an intermediate state (keeping both files
+    in sync) before this same session's follow-up request to drop
+    `.tool-versions` entirely - no intermediate release ever shipped, so
+    there's a single 0.3.0 entry rather than two.
 
 ## [0.2.0] - 2026-08-19
 

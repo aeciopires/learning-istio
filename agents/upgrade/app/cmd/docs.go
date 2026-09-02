@@ -27,13 +27,14 @@ var docsCmd = &cobra.Command{
 
 var docsUpdateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Sync README.md, day1.md, day1-sidecar.md, day2.md, INSTALL_REQUIREMENTS.md, .tool-versions and configs/versions.env to the latest stable tool versions",
+	Short: "Sync README.md, day1.md, day1-sidecar.md, day2.md, INSTALL_REQUIREMENTS.md, mise.toml and configs/versions.env to the latest stable tool versions",
 	Long: `update resolves the latest stable version of every tool this repo pins
 (Istio, Gateway API, kind, Helm, kubectl, MetalLB - see "istio-upgrade versions
 latest") and rewrites the matching version tokens in:
 
   README.md, day1.md, day1-sidecar.md, day2.md, INSTALL_REQUIREMENTS.md,
-  .tool-versions, and agents/upgrade/configs/versions.env (consumed by scripts/*.sh)
+  mise.toml, and agents/upgrade/configs/versions.env (consumed by
+  scripts/*.sh) - mise.toml holds the kind/helm/kubectl/istioctl pins
 
 It never touches the kind node image's tag+digest in INSTALL_REQUIREMENTS.md
 (that needs a manually verified sha256 - see agents/upgrade/README.md) or any

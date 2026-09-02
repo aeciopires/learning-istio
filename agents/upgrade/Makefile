@@ -130,7 +130,7 @@ docs-update-apply: ## Apply `docs update` changes to the repo (writes files)
 ## See INSTALL_REQUIREMENTS.md#mise for how to install mise itself.
 
 .PHONY: install-tools
-install-tools: ## Install kind/helm/kubectl/istioctl pinned in $(REPO_ROOT)/.tool-versions via mise
+install-tools: ## Install kind/helm/kubectl/istioctl pinned in $(REPO_ROOT)/mise.toml via mise
 	@command -v mise >/dev/null 2>&1 || { echo "mise not found on PATH - see INSTALL_REQUIREMENTS.md#mise"; exit 1; }
 	# Scoped to these 4 tools on purpose: a bare "mise install" also installs
 	# whatever is pinned in the user's *global* mise config, not just this repo.
