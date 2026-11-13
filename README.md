@@ -10,6 +10,8 @@
 - [Day 4](#day-4)
 - [Day 5](#day-5)
 - [Day 6](#day-6)
+- [Day 7](#day-7)
+- [Automação: Helm, Argo CD e a CLI istio-upgrade](#automação-helm-argo-cd-e-a-cli-istio-upgrade)
 - [Guia de Estudos: Istio e Envoy](#guia-de-estudos-istio-e-envoy)
 - [Referências](#referências)
   - [Documentação do Istio](#documentação-do-istio)
@@ -40,9 +42,11 @@ As versões dos softwares utilizados foram:
 - Docker: 29.2.1
 - Kubernetes (kind): 1.37.0
 - kubectl: 1.37.2
-- Helm: 3.22.1
+- Helm: 4.3.1
 - Istio: 1.32
 - istioctl: 1.32.0
+- Go: 1.27.4 (opcional, apenas para compilar a CLI de [agents/upgrade](agents/upgrade))
+- Argo CD: 3.6.1 (opcional, deploy via GitOps - veja [agents/upgrade](agents/upgrade/README.md#deploy-com-argo-cd-gitops))
 
 # Requisitos para executar o Istio
 
@@ -68,6 +72,7 @@ Veja mais detalhes sobre os requisitos da aplicação em:
 | Iniciante a avançado | [Day 4](day4.md): exportação de métricas para Prometheus/Grafana (addons, Prometheus existente, produção) e Datadog | Sim | Sim |
 | Intermediário a avançado | [Day 5](day5.md): EnvoyFilter, filtros do Envoy, compressão (gzip, brotli, zstd), Lua e rate limit local | Sim | Gateways (em waypoints, use `TrafficExtension`) |
 | Iniciante a avançado | [Day 6](day6.md): Envoy Gateway (Gateway API, políticas, compressão, observabilidade, EnvoyPatchPolicy) | Não usa mesh | Não usa mesh |
+| Iniciante a avançado | [Day 7](day7.md): segurança entre clusters - SPIFFE, AuthorizationPolicy entre aplicações em clusters diferentes e autorização por JWT (claims) | Sim | Sim (JWT exige waypoint) |
 
 # Day 1
 
@@ -92,6 +97,22 @@ EnvoyFilter, filtros do Envoy e compressão. Veja os comandos [aqui](day5.md).
 # Day 6
 
 Envoy Gateway. Veja os comandos [aqui](day6.md).
+
+# Day 7
+
+Segurança entre clusters: identidade SPIFFE, AuthorizationPolicy entre aplicações implantadas em clusters diferentes e autorização por JWT (incluindo claims), com tokens gerados pela CLI deste repositório. Veja os comandos [aqui](day7.md).
+
+# Automação: Helm, Argo CD e a CLI istio-upgrade
+
+O diretório [agents/upgrade](agents/upgrade/README.md) automatiza o ambiente de prática e mantém as versões deste repositório atualizadas. Tudo é acionado por um `Makefile`:
+
+| Para quê | Comandos (em `agents/upgrade/`) |
+|---|---|
+| Criar o cluster e instalar tudo com **Helm/kubectl** | `make bootstrap-ambient` ou `make bootstrap-sidecar` |
+| Instalar tudo com **Argo CD** (GitOps: charts oficiais + values deste repositório) | `make create-cluster`, `make argocd-install`, `make argocd-deploy-ambient` (ou `-sidecar`); para remover: `make argocd-undeploy` |
+| Gerar, decodificar e verificar **tokens JWT** para o [Day 7](day7.md) | `make jwt-keygen`, `make jwt-sign`, `make jwt-decode` |
+| Atualizar as versões dos arquivos do repositório | `make docs-update` (simulação) e `make docs-update-apply` |
+| Analisar release notes do Istio/Envoy entre duas versões | `make analyze ARGS="--from 1.31 --to 1.32"` |
 
 # Guia de Estudos: Istio e Envoy
 

@@ -1797,6 +1797,8 @@ spec:
 
 Fonte: [Istio / Authentication Policy (JWT)](https://istio.io/v1.32/docs/tasks/security/authentication/authn-policy/), [Istio / RequestAuthentication reference](https://istio.io/v1.32/docs/reference/config/security/request_authentication/), [Istio / AuthorizationPolicy reference](https://istio.io/v1.32/docs/reference/config/security/authorization-policy/).
 
+> **Prática:** o cenário **entre clusters** (a mesma identidade SPIFFE nos dois clusters, políticas aplicadas em cada cluster), a explicação dos claims do JWT e um laboratório de autorização por claims com um token por aplicação - gerados pela CLI deste repositório - estão no [Day 7](day7.md).
+
 ---
 
 # 9. Exercícios de troubleshooting
