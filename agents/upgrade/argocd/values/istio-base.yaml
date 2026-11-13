@@ -1,0 +1,10 @@
+# Values for Istio's official "base" chart, used by the "istio-base"
+# Argo CD Application.
+#
+# Argo CD renders charts with "helm template" and applies them with
+# server-side apply. Istio's docs require this value in that case, to avoid
+# a field-manager conflict on the ValidatingWebhookConfiguration's
+# failurePolicy (the chart and istiod would otherwise both manage it):
+# https://istio.io/latest/docs/setup/install/helm/
+base:
+  validationFailurePolicy: Fail

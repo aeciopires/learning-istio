@@ -1,0 +1,4 @@
+# Values for Istio's official "cni" chart in SIDECAR mode: the chart
+# defaults are used as-is (same as scripts/install-istio.sh, which passes
+# no extra flags in this mode).
+{}

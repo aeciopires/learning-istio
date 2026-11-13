@@ -1,0 +1,9 @@
+# Values for the official MetalLB chart (https://metallb.github.io/metallb),
+# used by the "metallb" Argo CD Application. Same settings as
+# scripts/install-metallb.sh / INSTALL_REQUIREMENTS.md#metallb.
+controller:
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      effect: NoSchedule
+speaker:
+  tolerateMaster: true

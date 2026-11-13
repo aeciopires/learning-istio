@@ -1,0 +1,414 @@
+# Argo CD Applications that deploy every component of this repository's
+# study cluster (the same ones "make bootstrap-sidecar|ambient" installs
+# with Helm/kubectl): MetalLB, the Kubernetes Gateway API CRDs, Istio
+# (base, istiod, CNI, ztunnel, ingress gateway), Bookinfo and the addons.
+#
+# This file is a TEMPLATE: scripts/argocd.sh ("make argocd-deploy-*")
+# replaces the ${PLACEHOLDERS} with the pins from configs/versions.env and
+# applies the Applications in the order given by the "learning-istio/step"
+# label, waiting for each step to become Healthy before the next one.
+# Applications labelled "learning-istio/mode: ambient" are applied in
+# ambient mode only. To inspect the rendered result: make argocd-render.
+#
+# Each Helm-based Application combines two sources (Argo CD "multiple
+# sources"): the OFFICIAL chart from its upstream Helm repository, plus the
+# values file kept in THIS Git repository (argocd/values/*.yaml), referenced
+# through "$values". Argo CD reads those files from
+# ${ARGOCD_VALUES_REPO_URL} at revision ${ARGOCD_VALUES_REVISION}, so they
+# must be pushed there.
+#
+# References:
+#   https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/
+#   https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/
+#   https://argo-cd.readthedocs.io/en/stable/user-guide/app_deletion/
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metallb
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "1"
+    learning-istio/mode: all
+  # Cascade delete: removing the Application also removes what it deployed.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metallb-system
+  sources:
+    - repoURL: https://metallb.github.io/metallb
+      chart: metallb
+      targetRevision: ${METALLB_VERSION}
+      helm:
+        releaseName: metallb
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/metallb.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  # MetalLB's bgppeers CRD declares a conversion webhook whose CA bundle is
+  # not in the chart - it is filled in on the live object at runtime. Ignore
+  # that field so the Application can settle as Synced.
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jqPathExpressions:
+        - .spec.conversion.webhook.clientConfig.caBundle
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-crds
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "2"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+  # Not a chart: the upstream project publishes its standard-channel CRDs
+  # as a kustomize base in its own Git repository.
+  source:
+    repoURL: https://github.com/kubernetes-sigs/gateway-api.git
+    targetRevision: ${GATEWAY_API_VERSION}
+    path: config/crd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # The CRDs are too large for client-side apply's annotation.
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-base
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "2"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  sources:
+    - repoURL: https://blob.istio.io/istio-release/charts
+      chart: base
+      targetRevision: ${ISTIO_VERSION}
+      helm:
+        releaseName: istio-base
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/istio-base.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istiod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "3"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  sources:
+    - repoURL: https://blob.istio.io/istio-release/charts
+      chart: istiod
+      targetRevision: ${ISTIO_VERSION}
+      helm:
+        releaseName: istiod
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/istiod-${ISTIO_MODE}.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  # istiod patches the CA bundle of its own webhooks at runtime.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-cni
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "4"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  sources:
+    - repoURL: https://blob.istio.io/istio-release/charts
+      chart: cni
+      targetRevision: ${ISTIO_VERSION}
+      helm:
+        releaseName: istio-cni
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/istio-cni-${ISTIO_MODE}.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ztunnel
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "4"
+    # Ambient only: there is no ztunnel in sidecar mode.
+    learning-istio/mode: ambient
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  sources:
+    - repoURL: https://blob.istio.io/istio-release/charts
+      chart: ztunnel
+      targetRevision: ${ISTIO_VERSION}
+      helm:
+        releaseName: ztunnel
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/ztunnel.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-ingress
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "5"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  sources:
+    - repoURL: https://blob.istio.io/istio-release/charts
+      chart: gateway
+      targetRevision: ${ISTIO_VERSION}
+      helm:
+        releaseName: istio-ingress
+        valueFiles:
+          - $values/agents/upgrade/argocd/values/istio-gateway.yaml
+    - repoURL: ${ARGOCD_VALUES_REPO_URL}
+      targetRevision: ${ARGOCD_VALUES_REVISION}
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bookinfo
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "6"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${MY_NAMESPACE}
+  # Not a chart either: Istio publishes Bookinfo as plain manifests. Two
+  # directories of the same repository, each filtered to the files day1.md
+  # applies by hand.
+  sources:
+    - repoURL: https://github.com/istio/istio.git
+      targetRevision: ${ISTIO_VERSION}
+      path: samples/bookinfo/platform/kube
+      directory:
+        include: '{bookinfo.yaml,bookinfo-versions.yaml}'
+    - repoURL: https://github.com/istio/istio.git
+      targetRevision: ${ISTIO_VERSION}
+      path: samples/bookinfo/gateway-api
+      directory:
+        include: 'bookinfo-gateway.yaml'
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    # Enrolls the namespace in the mesh: "istio-injection: enabled" in
+    # sidecar mode, "istio.io/dataplane-mode: ambient" in ambient mode.
+    managedNamespaceMetadata:
+      labels:
+        ${BOOKINFO_NAMESPACE_LABEL_KEY}: ${BOOKINFO_NAMESPACE_LABEL_VALUE}
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-addons
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: learning-istio
+    learning-istio/step: "6"
+    learning-istio/mode: all
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  # Grafana, Prometheus, Kiali and Jaeger from Istio's own sample manifests
+  # (demo-grade, exactly what day1.md installs) - the versions track
+  # ISTIO_VERSION, not the informational *_VERSION fields of versions.env.
+  source:
+    repoURL: https://github.com/istio/istio.git
+    targetRevision: ${ISTIO_VERSION}
+    path: samples/addons
+    directory:
+      include: '{grafana.yaml,prometheus.yaml,kiali.yaml,jaeger.yaml}'
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

@@ -1,0 +1,2 @@
+# Values for Istio's official "cni" chart in AMBIENT mode.
+profile: ambient
