@@ -3,11 +3,17 @@
 - [learning-istio](#learning-istio)
 - [Configurações do Ambiente](#configurações-do-ambiente)
 - [Requisitos para executar o Istio](#requisitos-para-executar-o-istio)
+- [Trilha de estudos (do iniciante ao avançado)](#trilha-de-estudos-do-iniciante-ao-avançado)
 - [Day 1](#day-1)
 - [Day 2](#day-2)
+- [Day 3](#day-3)
+- [Day 4](#day-4)
+- [Day 5](#day-5)
+- [Day 6](#day-6)
 - [Guia de Estudos: Istio e Envoy](#guia-de-estudos-istio-e-envoy)
 - [Referências](#referências)
   - [Documentação do Istio](#documentação-do-istio)
+  - [Documentação do Envoy e do Envoy Gateway](#documentação-do-envoy-e-do-envoy-gateway)
 - [Mantenedores](#mantenedores)
 - [Licença](#licença)
 
@@ -33,23 +39,35 @@ As versões dos softwares utilizados foram:
 
 - Docker: 29.2.1
 - Kubernetes (kind): 1.37.0
-- kubectl: 1.37.0
-- Helm: 3.21.2
-- Istio: 1.31
-- istioctl: 1.31.0
+- kubectl: 1.37.2
+- Helm: 3.22.1
+- Istio: 1.32
+- istioctl: 1.32.0
 
 # Requisitos para executar o Istio
 
-Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.31/docs/setup/platform-setup/docker/
+Veja os requisitos de CPU e memória para executar o Istio: https://istio.io/v1.32/docs/setup/platform-setup/docker/
 
-Veja as provedores de Kubernetes suportados: https://istio.io/v1.31/docs/ambient/install/platform-prerequisites/
+Veja as provedores de Kubernetes suportados: https://istio.io/v1.32/docs/ambient/install/platform-prerequisites/
 
-Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.31/docs/releases/supported-releases/#support-status-of-istio-releases
+Veja as versões de Kubernetes suportadas por cada versão do Istio: https://istio.io/v1.32/docs/releases/supported-releases/#support-status-of-istio-releases
 
 Veja mais detalhes sobre os requisitos da aplicação em:
 
-- https://istio.io/v1.31/docs/ops/deployment/application-requirements/
-- https://istio.io/v1.31/docs/ops/deployment/platform-requirements/
+- https://istio.io/v1.32/docs/ops/deployment/application-requirements/
+- https://istio.io/v1.32/docs/ops/deployment/platform-requirements/
+
+# Trilha de estudos (do iniciante ao avançado)
+
+| Nível | Conteúdo | Modo sidecar | Modo ambient |
+|---|---|---|---|
+| Iniciante | [Day 1](day1.md) / [Day 1 - sidecar](day1-sidecar.md): cluster kind, instalação do Istio via Helm, Bookinfo e addons (Grafana, Prometheus, Kiali, Jaeger) | Sim | Sim |
+| Iniciante | [Day 2](day2.md): gerenciamento de tráfego (request routing, traffic shifting, fault injection, mirroring) | Sim | Sim |
+| Iniciante a avançado | [Guia de Estudos](ISTIO_ENVOY_GUIA_DE_ESTUDOS.md): glossário, arquitetura do Istio e do Envoy, xDS, observabilidade, segurança e 14 laboratórios de troubleshooting | Sim | Sim |
+| Intermediário a avançado | [Day 3](day3.md): multicluster e mesh única (multi-primary em redes diferentes, east-west gateway, confiança comum) | Sim | Sim |
+| Iniciante a avançado | [Day 4](day4.md): exportação de métricas para Prometheus/Grafana (addons, Prometheus existente, produção) e Datadog | Sim | Sim |
+| Intermediário a avançado | [Day 5](day5.md): EnvoyFilter, filtros do Envoy, compressão (gzip, brotli, zstd), Lua e rate limit local | Sim | Gateways (em waypoints, use `TrafficExtension`) |
+| Iniciante a avançado | [Day 6](day6.md): Envoy Gateway (Gateway API, políticas, compressão, observabilidade, EnvoyPatchPolicy) | Não usa mesh | Não usa mesh |
 
 # Day 1
 
@@ -58,6 +76,22 @@ Veja os comandos [aqui](day1.md) (modo ambient) ou [aqui](day1-sidecar.md) (modo
 # Day 2
 
 Veja os comandos [aqui](day2.md)
+
+# Day 3
+
+Multicluster e mesh única, nos modos sidecar e ambient. Veja os comandos [aqui](day3.md).
+
+# Day 4
+
+Exportação de métricas para o Prometheus, Grafana e Datadog. Veja os comandos [aqui](day4.md).
+
+# Day 5
+
+EnvoyFilter, filtros do Envoy e compressão. Veja os comandos [aqui](day5.md).
+
+# Day 6
+
+Envoy Gateway. Veja os comandos [aqui](day6.md).
 
 # Guia de Estudos: Istio e Envoy
 
@@ -80,15 +114,21 @@ Glossário, diagramas (mermaid), comandos e exercícios de troubleshooting sobre
 
 ## Documentação do Istio
 
-- https://istio.io/v1.31/docs/overview/what-is-istio/
-- https://istio.io/v1.31/docs/overview/why-choose-istio/
-- https://istio.io/v1.31/docs/overview/dataplane-modes/
-- https://istio.io/v1.31/docs/concepts/
-- https://istio.io/v1.31/docs/setup/
-- https://istio.io/v1.31/docs/ambient/
-- https://istio.io/v1.31/docs/tasks/
-- https://istio.io/v1.31/docs/examples/
-- https://istio.io/v1.31/docs/ops/
+- https://istio.io/v1.32/docs/overview/what-is-istio/
+- https://istio.io/v1.32/docs/overview/why-choose-istio/
+- https://istio.io/v1.32/docs/overview/dataplane-modes/
+- https://istio.io/v1.32/docs/concepts/
+- https://istio.io/v1.32/docs/setup/
+- https://istio.io/v1.32/docs/ambient/
+- https://istio.io/v1.32/docs/tasks/
+- https://istio.io/v1.32/docs/examples/
+- https://istio.io/v1.32/docs/ops/
+
+## Documentação do Envoy e do Envoy Gateway
+
+- https://www.envoyproxy.io/docs/envoy/latest/
+- https://gateway.envoyproxy.io
+- https://gateway-api.sigs.k8s.io
 
 # Mantenedores
 
