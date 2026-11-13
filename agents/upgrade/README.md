@@ -470,15 +470,17 @@ make argocd-bootstrap-ambient     # ou: make argocd-bootstrap-sidecar
 
 **Como o `application.yaml` é montado**
 
-- É um arquivo com **várias `Application`** (uma por componente). Os
-  componentes que têm chart oficial usam o recurso de
-  [múltiplas fontes](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/)
-  do Argo CD: a primeira fonte é o **chart oficial** no repositório Helm do
-  projeto, e a segunda é **este repositório Git**, de onde vêm os arquivos
-  de values (`$values/agents/upgrade/argocd/values/*.yaml`).
-- O arquivo é um **template**: `scripts/argocd.sh` substitui os
-  `${PLACEHOLDERS}` pelas versões de `configs/versions.env` antes de aplicar.
-  Para ver o resultado sem aplicar nada: `make argocd-render MODE=sidecar`.
+- É um arquivo com **várias `Application`** (uma por componente). Nos
+  componentes que têm chart oficial, a fonte é o **chart oficial** no
+  repositório Helm do projeto, e os values vêm do **diretório local**
+  [argocd/values/](argocd/values/).
+- O arquivo é um **template**: antes de aplicar, `scripts/argocd.sh`
+  substitui os `${PLACEHOLDERS}` pelas versões de `configs/versions.env` e
+  troca cada linha `# values-from: <arquivo>` pelo conteúdo do arquivo
+  correspondente, **lido do disco**, que fica embutido na `Application` em
+  `helm.valuesObject`.
+- Para ver o resultado sem aplicar nada (não precisa de cluster):
+  `make argocd-render MODE=sidecar`.
 
 | Application | Passo | Fonte | Values |
 |---|---|---|---|
@@ -509,22 +511,24 @@ gateway precisa do `istiod`, e assim por diante).
   que o Docker deu à rede `kind` **nesta máquina**, então não pode ficar em
   um arquivo estático no Git. O script os aplica logo após o passo 1.
 
-**Os values vêm do Git - atenção ao trabalhar em uma branch ou fork**
+**Os values são lidos do diretório local, não de uma branch do Git**
 
-O Argo CD roda dentro do cluster e baixa os arquivos de values **do
-repositório remoto**, não do seu disco. Alterações locais só valem depois
-de um `git push`. Por padrão ele lê a branch `main` deste repositório:
+O Argo CD roda dentro do cluster e não enxerga o disco da sua máquina; por
+isso o conteúdo de cada arquivo de `argocd/values/` é embutido na
+`Application` no momento em que o script a renderiza. Consequências:
 
-```bash
-ARGOCD_VALUES_REPO_URL=https://github.com/<usuario>/learning-istio.git \
-ARGOCD_VALUES_REVISION=<branch> \
-make argocd-deploy-ambient
-```
+- O que está **no seu disco** é o que é implantado - não é preciso fazer
+  `git push`, e não importa em qual branch você está.
+- Para aplicar uma alteração de values, edite o arquivo e rode de novo
+  `make argocd-deploy-ambient` (ou `-sidecar`): o `kubectl apply` atualiza a
+  `Application` e o Argo CD sincroniza a mudança sozinho (sync automático).
+- Os **charts** continuam sendo baixados pelo Argo CD dos repositórios
+  oficiais, e os manifestos do Gateway API, do Bookinfo e dos addons, dos
+  repositórios Git dos próprios projetos.
 
 | Variável | Padrão | Uso |
 |---|---|---|
-| `ARGOCD_VALUES_REPO_URL` | `https://github.com/aeciopires/learning-istio.git` | Repositório Git com `argocd/values/` (precisa ser acessível pelo cluster; repositórios privados exigem cadastrar a credencial no Argo CD) |
-| `ARGOCD_VALUES_REVISION` | `main` | Branch, tag ou commit de onde ler os values |
+| `ARGOCD_VALUES_DIR` | `agents/upgrade/argocd/values` | Diretório local com os arquivos de values (um por chart) |
 | `ARGOCD_WAIT_TIMEOUT` | `900s` | Tempo máximo de espera por passo |
 | `MY_NAMESPACE` | `myapp` | Namespace do Bookinfo |
 
@@ -575,7 +579,8 @@ make docker-run ARGS="analyze --from 1.10 --to 1.30"
 make test           # testes unitários (rápidos, offline, sem docker/kind/helm/kubectl)
 make test-verbose
 make coverage
-make lint           # gofmt -l + go vet + golangci-lint (se instalado)
+make lint           # gofmt -l + go vet + golangci-lint (compilado em bin/ na primeira execução)
+make install-lint   # (re)compila o golangci-lint pinado no Makefile, com o Go do app/go.mod
 ```
 
 Os testes unitários usam `httptest` e fixtures locais (sem rede real) para
@@ -612,7 +617,7 @@ agents/upgrade/
 │   └── lib/common.sh            # env vars (versions.env), logging, helpers
 ├── argocd/                     # deploy via Argo CD (alternativa ao bootstrap-*)
 │   ├── application.yaml         # template das Applications (charts oficiais + values)
-│   └── values/                  # values de cada chart, lidos pelo Argo CD a partir do Git
+│   └── values/                  # values de cada chart, lidos do disco e embutidos na Application
 ├── plans/                      # histórico dos planos de implantação executados
 ├── bin/                        # binário compilado (make build; não versionado)
 └── app/                        # TUDO que é específico do CLI em Go
@@ -649,9 +654,14 @@ agents/upgrade/
   etc.) - isso é esperado, é o histórico real de commits entre as duas tags.
 - `docs update` cobre apenas os arquivos listados acima; não reescreve
   prosa (ex.: `ISTIO_ENVOY_GUIA_DE_ESTUDOS.md`) nem arquivos em `OLD/`.
-- A versão do **Go** (`mise.toml` e `app/go.mod`) e a do **Envoy Gateway**
+- A versão do **Go** (`mise.toml` e `app/go.mod`), a do **golangci-lint**
+  (`GOLANGCI_LINT_VERSION` no `Makefile`) e a do **Envoy Gateway**
   (`day6.md`) **não** são gerenciadas pelo `docs update`: são atualizadas à
-  mão. A do **Argo CD** é (`ARGOCD_VERSION` em `configs/versions.env`).
+  mão.
+- O **golangci-lint** é compilado em `bin/` com o mesmo Go do
+  `app/go.mod` (`make install-lint`, acionado sozinho pelo `make lint`): um
+  binário pré-compilado se recusa a analisar um módulo que mira um Go mais
+  novo do que aquele com que ele foi compilado. A do **Argo CD** é (`ARGOCD_VERSION` em `configs/versions.env`).
 - `GRAFANA_VERSION`/`PROMETHEUS_VERSION`/`KIALI_VERSION`/`JAEGER_VERSION`
   em `configs/versions.env` são **informativos**: os addons são instalados
   a partir dos manifests prontos do `istio/istio` (pinados por

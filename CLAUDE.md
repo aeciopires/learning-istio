@@ -109,7 +109,7 @@ correction made explicitly during this tool's development:
    and has *it* deploy the same components from
    `argocd/application.yaml` - one multi-document file of Argo CD
    `Application`s, each combining an **official chart** with a values
-   file from `argocd/values/` (multi-source `$values`); Gateway API CRDs,
+   file from the local `argocd/values/` directory; Gateway API CRDs,
    Bookinfo and the addons have no official chart, so they are read from
    their upstream Git repositories instead. It was **added next to** the
    Helm/kubectl flow, which must keep working unchanged - never replace
@@ -120,16 +120,19 @@ correction made explicitly during this tool's development:
      placeholder means adding it to `render_applications` too; the script
      fails if one is left unresolved. `make argocd-render` shows the
      result without a cluster.
+   - Values are read from the **local directory, not from a Git branch**
+     (an explicit request): each `# values-from: <file>` line in the
+     template is replaced by the content of `argocd/values/<file>` and
+     ends up embedded under `helm.valuesObject`. Don't reintroduce
+     multi-source `$values`/`ref` pointing at this repo - that made the
+     deploy depend on what was pushed to a branch. To apply a values
+     change: edit the file and re-run `make argocd-deploy-*`.
    - Ordering is done by the script, not Argo CD: Applications carry a
      `learning-istio/step` label, are applied step by step
      (`kubectl apply -l`), and each step must finish syncing and be
      `Healthy` before the next. `learning-istio/mode: ambient` marks
      ambient-only Applications (ztunnel). Bump `LAST_STEP` in the script
      if you add a step.
-   - Argo CD fetches the values files **from Git, not from disk**
-     (`ARGOCD_VALUES_REPO_URL`/`ARGOCD_VALUES_REVISION`, default: this
-     repo's `main`). A values change does nothing until it is pushed, and
-     on a branch/fork those two variables must point at it.
    - Strict ARP and the MetalLB address pool stay in bash
      (`metallb_enable_strict_arp`/`metallb_configure_address_pool` in
      `scripts/lib/common.sh`, shared with `install-metallb.sh`): the pool
@@ -144,7 +147,7 @@ app`/etc., so you never need to `cd app` yourself):
 make build && ./bin/istio-upgrade --help   # binary lands in agents/upgrade/bin/
 make build-all                # cross-compile linux/darwin x amd64/arm64 into bin/
 make test                    # unit tests, offline
-make lint                    # gofmt -l + go vet + golangci-lint if present
+make lint                    # gofmt -l + go vet + golangci-lint (auto-built into bin/, see below)
 make docs-update-apply       # sync version pins repo-wide from GitHub
 make bootstrap-sidecar       # real kind cluster + Istio sidecar + Bookinfo + addons + validation
 make bootstrap-ambient       # same, ambient mode
@@ -185,6 +188,15 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
   breaks the exact commands this repo documents. Pass
   `--allow-major-bump` to override deliberately. (That is how Helm went
   3 → 4 here: a deliberate, reviewed bump.)
+- **golangci-lint must be built with a Go at least as new as
+  `app/go.mod`'s `go` directive**, or it refuses to run ("the Go language
+  version used to build golangci-lint is lower than the targeted Go
+  version"). A prebuilt binary, and even a plain `go install ...@version`
+  (which follows golangci-lint's *own* toolchain line), can be too old.
+  `make install-lint` therefore builds the version pinned in the
+  Makefile (`GOLANGCI_LINT_VERSION`) with `GOTOOLCHAIN=go<go.mod
+  version>` into `bin/`, and `make lint` rebuilds it automatically when
+  either pin changes. Bump the lint pin by hand - `docs update` doesn't.
 - **This repo is on Helm 4.** Every flag the docs/scripts use (`--wait`,
   `--timeout`, `--create-namespace`, `--debug`, `--force-update`) still
   exists; what changed is documented in `INSTALL_REQUIREMENTS.md#helm`
