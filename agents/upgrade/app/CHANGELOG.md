@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
+## [0.5.0] - 2026-11-13
+
+### Added
+
+- `jwt` subcommand (`keygen`, `jwks`, `sign`, `decode`), built on
+  [github.com/golang-jwt/jwt](https://github.com/golang-jwt/jwt) v5: generates
+  an RSA key pair plus the JWKS that Istio's `RequestAuthentication` reads,
+  signs RS256 tokens with `iss`/`sub`/`aud` and custom string or
+  list-of-strings claims, and decodes a token with or without verifying its
+  signature and expiry. Offline, for study clusters only. Exposed through
+  the Makefile as `jwt-keygen`, `jwt-jwks`, `jwt-sign` and `jwt-decode`, and
+  used by the new `day7.md` walkthrough.
+- `versions latest` / `docs update` now track Argo CD (`argoproj/argo-cd`)
+  and write `ARGOCD_VERSION` to `configs/versions.env`, consumed by the new
+  `scripts/argocd.sh` (`make argocd-*` targets).
+- `docs update` also syncs `day7.md` (optional, like `day3.md`-`day6.md`).
+
+### Changed
+
+- Built with Go 1.27.4 (`go.mod`, also pinned in the repository's
+  `mise.toml`).
+- The repository moved to Helm 4 (pinned with `--allow-major-bump`
+  semantics, by hand). Helm 4 keeps every flag the docs and scripts use
+  (`--wait`, `--timeout`, `--create-namespace`, `--force-update`).
+
 ## [0.4.0] - 2026-11-13
 
 ### Added

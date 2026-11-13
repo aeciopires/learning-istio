@@ -26,6 +26,9 @@ day1.md, day1-sidecar.md, day2.md, INSTALL_REQUIREMENTS.md, mise.toml, and
 agents/upgrade/configs/versions.env) pinned to the latest stable tool
 versions from their official sources.
 
+The "jwt" subcommand generates keys and creates, decodes and verifies JSON
+Web Tokens (offline) for the JWT authorization walkthrough.
+
 It does NOT create Kubernetes clusters or install Istio itself - that is
 the job of the Makefile and scripts/ in this same directory (see
 agents/upgrade/README.md).`,

@@ -46,6 +46,7 @@ var Catalog = []Tool{
 	{Key: "kubectl", Repo: "kubernetes/kubernetes", Label: "kubectl / Kubernetes"},
 	{Key: "metallb", Repo: "metallb/metallb", Label: "MetalLB"},
 	{Key: "gateway-api", Repo: "kubernetes-sigs/gateway-api", Label: "Gateway API"},
+	{Key: "argocd", Repo: "argoproj/argo-cd", Label: "Argo CD"},
 	{Key: "grafana", Repo: "grafana/grafana", Label: "Grafana (addon, informational)"},
 	{Key: "prometheus", Repo: "prometheus/prometheus", Label: "Prometheus (addon, informational)"},
 	{Key: "kiali", Repo: "kiali/kiali", Label: "Kiali (addon, informational)"},

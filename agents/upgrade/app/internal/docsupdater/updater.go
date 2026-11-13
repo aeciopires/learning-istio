@@ -17,7 +17,7 @@ var RequiredDayFiles = []string{"day1.md", "day1-sidecar.md", "day2.md"}
 // ISTIO_RELEASE/VERSION_ISTIO/GATEWAY_API_VERSION exports and
 // istio.io/vX.Y/ links. They are synced when present and skipped
 // silently otherwise.
-var OptionalDayFiles = []string{"day3.md", "day4.md", "day5.md", "day6.md"}
+var OptionalDayFiles = []string{"day3.md", "day4.md", "day5.md", "day6.md", "day7.md"}
 
 // Updater applies docsupdater's rewrite rules across a checkout of the
 // learning-istio repository.

@@ -36,7 +36,7 @@ latest") and rewrites the matching version tokens in:
   mise.toml, and agents/upgrade/configs/versions.env (consumed by
   scripts/*.sh) - mise.toml holds the kind/helm/kubectl/istioctl pins
 
-day3.md, day4.md, day5.md and day6.md get the same ISTIO_RELEASE /
+day3.md to day7.md get the same ISTIO_RELEASE /
 VERSION_ISTIO / GATEWAY_API_VERSION / istio.io link rewrites when they exist.
 
 It never touches the kind node image's tag+digest in INSTALL_REQUIREMENTS.md
