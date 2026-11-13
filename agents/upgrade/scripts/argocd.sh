@@ -2,7 +2,8 @@
 # GitOps alternative to bootstrap.sh: installs Argo CD on the kind cluster
 # and lets IT deploy every component (MetalLB, Gateway API CRDs, Istio,
 # Bookinfo, addons) from argocd/application.yaml - official charts combined
-# with the values files in argocd/values/.
+# with the values files of the LOCAL directory argocd/values/, which this
+# script embeds in each Application when rendering it.
 #
 # Usage: argocd.sh <command> [ambient|sidecar]
 #   install             install Argo CD itself (official install manifest)
@@ -25,11 +26,11 @@ ARGOCD_NAMESPACE="argocd"
 ARGOCD_INSTALL_URL="https://raw.githubusercontent.com/argoproj/argo-cd/v${ARGOCD_VERSION}/manifests/install.yaml"
 APPLICATION_TEMPLATE="$AGENT_DIR/argocd/application.yaml"
 
-# Where Argo CD (running inside the cluster) fetches argocd/values/*.yaml
-# from. The files must exist at that revision of that repository: while
-# working on a branch or a fork, point these at it.
-ARGOCD_VALUES_REPO_URL="${ARGOCD_VALUES_REPO_URL:-https://github.com/aeciopires/learning-istio.git}"
-ARGOCD_VALUES_REVISION="${ARGOCD_VALUES_REVISION:-main}"
+# Local directory holding one values file per chart. Argo CD runs inside
+# the cluster and cannot read this disk, so render_applications embeds each
+# file's content in its Application (helm.valuesObject) instead of pointing
+# Argo CD at a Git branch - what you have on disk is what gets deployed.
+ARGOCD_VALUES_DIR="${ARGOCD_VALUES_DIR:-$AGENT_DIR/argocd/values}"
 ARGOCD_WAIT_TIMEOUT="${ARGOCD_WAIT_TIMEOUT:-900s}"
 
 # Highest "learning-istio/step" label used in application.yaml.
@@ -41,9 +42,10 @@ usage() {
 }
 
 # render_applications <mode>
-# Prints application.yaml with every ${PLACEHOLDER} replaced. Plain bash
-# substitution on a fixed list of names - no envsubst dependency (not
-# installed by default on macOS), and nothing else in the file is touched.
+# Prints application.yaml with every ${PLACEHOLDER} replaced and every
+# "# values-from: <file>" line replaced by that file's content. Plain bash
+# on a fixed list of names - no envsubst dependency (not installed by
+# default on macOS), and nothing else in the file is touched.
 render_applications() {
   local mode="$1" label_key label_value content name
   if [[ "$mode" == "ambient" ]]; then
@@ -56,11 +58,9 @@ render_applications() {
 
   content="$(<"$APPLICATION_TEMPLATE")"
   local -a names=(ISTIO_VERSION METALLB_VERSION GATEWAY_API_VERSION MY_NAMESPACE
-    ISTIO_MODE ARGOCD_VALUES_REPO_URL ARGOCD_VALUES_REVISION
-    BOOKINFO_NAMESPACE_LABEL_KEY BOOKINFO_NAMESPACE_LABEL_VALUE)
+    ISTIO_MODE BOOKINFO_NAMESPACE_LABEL_KEY BOOKINFO_NAMESPACE_LABEL_VALUE)
   local -a values=("$ISTIO_VERSION" "$METALLB_VERSION" "$GATEWAY_API_VERSION" "$MY_NAMESPACE"
-    "$mode" "$ARGOCD_VALUES_REPO_URL" "$ARGOCD_VALUES_REVISION"
-    "$label_key" "$label_value")
+    "$mode" "$label_key" "$label_value")
   local i
   for i in "${!names[@]}"; do
     name="\${${names[$i]}}"
@@ -73,7 +73,32 @@ render_applications() {
     grep -v '^#' <<<"$content" | grep -n '\${' >&2
     exit 1
   fi
-  printf '%s\n' "$content"
+
+  # Embed the local values files. The directive must be indented (the
+  # header comment, which starts at column 0, only documents it).
+  local line indent file path values_line
+  local include_re='^([[:space:]]+)# values-from: ([^[:space:]]+)$'
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ $include_re ]]; then
+      indent="${BASH_REMATCH[1]}"
+      file="${BASH_REMATCH[2]}"
+      path="$ARGOCD_VALUES_DIR/$file"
+      if [[ ! -f "$path" ]]; then
+        log_error "values file not found: $path (referenced by $APPLICATION_TEMPLATE)"
+        exit 1
+      fi
+      printf '%s# from argocd/values/%s (local file)\n' "$indent" "$file"
+      while IFS= read -r values_line || [[ -n "$values_line" ]]; do
+        if [[ -z "$values_line" ]]; then
+          printf '\n'
+        else
+          printf '%s%s\n' "$indent" "$values_line"
+        fi
+      done <"$path"
+    else
+      printf '%s\n' "$line"
+    fi
+  done <<<"$content"
 }
 
 # step_selector <step> <mode>
@@ -143,7 +168,7 @@ cmd_deploy() {
   require_argocd
 
   log_step "Deploying all components through Argo CD (mode=$mode)"
-  log_info "Charts: official upstream repositories. Values: $ARGOCD_VALUES_REPO_URL @ $ARGOCD_VALUES_REVISION"
+  log_info "Charts: official upstream repositories. Values: local directory $ARGOCD_VALUES_DIR"
 
   rendered="$(mktemp "${TMPDIR:-/tmp}/learning-istio-argocd.XXXXXX")"
   # shellcheck disable=SC2064 # expand $rendered now, not at exit

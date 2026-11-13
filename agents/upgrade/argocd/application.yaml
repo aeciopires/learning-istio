@@ -10,16 +10,20 @@
 # Applications labelled "learning-istio/mode: ambient" are applied in
 # ambient mode only. To inspect the rendered result: make argocd-render.
 #
-# Each Helm-based Application combines two sources (Argo CD "multiple
-# sources"): the OFFICIAL chart from its upstream Helm repository, plus the
-# values file kept in THIS Git repository (argocd/values/*.yaml), referenced
-# through "$values". Argo CD reads those files from
-# ${ARGOCD_VALUES_REPO_URL} at revision ${ARGOCD_VALUES_REVISION}, so they
-# must be pushed there.
+# Each Helm-based Application combines the OFFICIAL chart, fetched by
+# Argo CD from its upstream Helm repository, with the values file kept in
+# the LOCAL directory argocd/values/. A line of the form
+#
+#     # values-from: <file>
+#
+# is replaced by scripts/argocd.sh with the content of argocd/values/<file>
+# (read from disk, indented to match), so it ends up embedded under
+# "helm.valuesObject". Nothing is read from a Git branch: edit the values
+# file and re-run "make argocd-deploy-*" to apply the change.
 #
 # References:
 #   https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/
-#   https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/
+#   https://argo-cd.readthedocs.io/en/stable/user-guide/helm/
 #   https://argo-cd.readthedocs.io/en/stable/user-guide/app_deletion/
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -39,17 +43,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: metallb-system
-  sources:
-    - repoURL: https://metallb.github.io/metallb
-      chart: metallb
-      targetRevision: ${METALLB_VERSION}
-      helm:
-        releaseName: metallb
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/metallb.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://metallb.github.io/metallb
+    chart: metallb
+    targetRevision: ${METALLB_VERSION}
+    helm:
+      releaseName: metallb
+      valuesObject:
+        # values-from: metallb.yaml
   # MetalLB's bgppeers CRD declares a conversion webhook whose CA bundle is
   # not in the chart - it is filled in on the live object at runtime. Ignore
   # that field so the Application can settle as Synced.
@@ -124,17 +125,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
-  sources:
-    - repoURL: https://blob.istio.io/istio-release/charts
-      chart: base
-      targetRevision: ${ISTIO_VERSION}
-      helm:
-        releaseName: istio-base
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/istio-base.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://blob.istio.io/istio-release/charts
+    chart: base
+    targetRevision: ${ISTIO_VERSION}
+    helm:
+      releaseName: istio-base
+      valuesObject:
+        # values-from: istio-base.yaml
   ignoreDifferences:
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
@@ -171,17 +169,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
-  sources:
-    - repoURL: https://blob.istio.io/istio-release/charts
-      chart: istiod
-      targetRevision: ${ISTIO_VERSION}
-      helm:
-        releaseName: istiod
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/istiod-${ISTIO_MODE}.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://blob.istio.io/istio-release/charts
+    chart: istiod
+    targetRevision: ${ISTIO_VERSION}
+    helm:
+      releaseName: istiod
+      valuesObject:
+        # values-from: istiod-${ISTIO_MODE}.yaml
   # istiod patches the CA bundle of its own webhooks at runtime.
   ignoreDifferences:
     - group: admissionregistration.k8s.io
@@ -222,17 +217,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
-  sources:
-    - repoURL: https://blob.istio.io/istio-release/charts
-      chart: cni
-      targetRevision: ${ISTIO_VERSION}
-      helm:
-        releaseName: istio-cni
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/istio-cni-${ISTIO_MODE}.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://blob.istio.io/istio-release/charts
+    chart: cni
+    targetRevision: ${ISTIO_VERSION}
+    helm:
+      releaseName: istio-cni
+      valuesObject:
+        # values-from: istio-cni-${ISTIO_MODE}.yaml
   syncPolicy:
     automated:
       prune: true
@@ -263,17 +255,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
-  sources:
-    - repoURL: https://blob.istio.io/istio-release/charts
-      chart: ztunnel
-      targetRevision: ${ISTIO_VERSION}
-      helm:
-        releaseName: ztunnel
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/ztunnel.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://blob.istio.io/istio-release/charts
+    chart: ztunnel
+    targetRevision: ${ISTIO_VERSION}
+    helm:
+      releaseName: ztunnel
+      valuesObject:
+        # values-from: ztunnel.yaml
   syncPolicy:
     automated:
       prune: true
@@ -303,17 +292,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
-  sources:
-    - repoURL: https://blob.istio.io/istio-release/charts
-      chart: gateway
-      targetRevision: ${ISTIO_VERSION}
-      helm:
-        releaseName: istio-ingress
-        valueFiles:
-          - $values/agents/upgrade/argocd/values/istio-gateway.yaml
-    - repoURL: ${ARGOCD_VALUES_REPO_URL}
-      targetRevision: ${ARGOCD_VALUES_REVISION}
-      ref: values
+  source:
+    repoURL: https://blob.istio.io/istio-release/charts
+    chart: gateway
+    targetRevision: ${ISTIO_VERSION}
+    helm:
+      releaseName: istio-ingress
+      valuesObject:
+        # values-from: istio-gateway.yaml
   syncPolicy:
     automated:
       prune: true
