@@ -82,13 +82,28 @@ coverage: ## Run unit tests with coverage report
 	go test -C $(APP_DIR) ./... -count=1 -coverprofile=coverage.out
 	go -C $(APP_DIR) tool cover -func=coverage.out
 
+## golangci-lint is built from source into bin/ with the Go version of
+## app/go.mod: a prebuilt binary (or a plain `go install`, which follows
+## golangci-lint's own toolchain line) is compiled with whatever Go its
+## release used, and golangci-lint refuses to lint a module that targets a
+## NEWER Go than the one it was built with.
+GOLANGCI_LINT_VERSION ?= 2.15.0
+GOLANGCI_LINT         := $(abspath $(BUILD_DIR))/golangci-lint
+GO_VERSION            := $(shell awk '/^go /{print $$2}' $(APP_DIR)/go.mod)
+
+.PHONY: install-lint
+install-lint: ## Build golangci-lint $(GOLANGCI_LINT_VERSION) into bin/ with the Go version of app/go.mod
+	GOBIN=$(abspath $(BUILD_DIR)) GOTOOLCHAIN=go$(GO_VERSION) \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION)
+	@$(GOLANGCI_LINT) --version
+
 .PHONY: lint
-lint: fmt-check vet ## fmt-check + vet, plus golangci-lint if installed
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		(cd $(APP_DIR) && golangci-lint run ./...); \
-	else \
-		echo "golangci-lint not installed, skipping (fmt-check + vet already ran)"; \
+lint: fmt-check vet ## fmt-check + vet + golangci-lint (built into bin/ on first use or when its pin / the Go version changes)
+	@if ! $(GOLANGCI_LINT) --version 2>/dev/null | grep -q "version $(GOLANGCI_LINT_VERSION) built with go$(GO_VERSION) "; then \
+		echo "golangci-lint $(GOLANGCI_LINT_VERSION) (built with go$(GO_VERSION)) not found in $(BUILD_DIR)/ - building it"; \
+		$(MAKE) --no-print-directory install-lint; \
 	fi
+	cd $(APP_DIR) && $(GOLANGCI_LINT) run ./...
 
 .PHONY: clean
 clean: ## Remove build artifacts
@@ -237,9 +252,9 @@ bootstrap-ambient: ## Full pipeline: cluster + MetalLB + Istio (ambient) + Booki
 ## argocd/application.yaml: official charts + the values in argocd/values/.
 ## The Helm/kubectl targets above are unchanged - use one flow or the other
 ## on a given cluster. Needs an existing cluster (make create-cluster).
-## Argo CD reads the values files from Git, so they must be pushed:
-##   ARGOCD_VALUES_REPO_URL (default: this repo on GitHub)
-##   ARGOCD_VALUES_REVISION (default: main)
+## The values files are read from the LOCAL argocd/values/ directory and
+## embedded in each Application when it is rendered: edit a file and re-run
+## argocd-deploy-* to apply it - no git push involved.
 
 .PHONY: argocd-install
 argocd-install: ## Install Argo CD on the cluster (official install manifest, version from configs/versions.env)
