@@ -24,6 +24,19 @@ community convention - don't "fix" that to Portuguese.
   commands go" - `agents/upgrade/scripts/*.sh` mirror them for automation
   (`docs update` keeps `ISTIO_RELEASE`/`VERSION_ISTIO`/`GATEWAY_API_VERSION`
   in sync across all three files identically).
+- `day3.md` (multicluster / single mesh, sidecar and ambient) / `day4.md`
+  (metrics export to Prometheus/Grafana and Datadog) / `day5.md`
+  (EnvoyFilter, Envoy filters, compression) / `day6.md` (Envoy Gateway) -
+  intermediate/advanced walkthroughs added on top of the course material.
+  Every command in them is taken from the official docs linked in each
+  section (istio.io, envoyproxy.io, gateway.envoyproxy.io,
+  docs.datadoghq.com) - keep it that way: don't add behaviour you can't
+  point to an official source for. `docs update` syncs their
+  `ISTIO_RELEASE`/`VERSION_ISTIO`/`GATEWAY_API_VERSION` exports and
+  `istio.io/vX.Y/` links too (they're optional for the CLI: a missing
+  one is skipped). `day6.md`'s `ENVOY_GATEWAY_VERSION` is **not**
+  CLI-managed - bump it by hand against Envoy Gateway's compatibility
+  matrix.
 - `INSTALL_REQUIREMENTS.md` - OS packages, [mise](https://mise.jdx.dev)
   (the asdf-compatible version manager used here - not asdf itself),
   Docker, Helm, kubectl, istioctl (required, mainly for troubleshooting -
@@ -146,6 +159,11 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
   prefix instead of a template. Use `mktemp "${TMPDIR:-/tmp}/NAME.XXXXXX"`
   (no `-t`) instead - portable across both - see
   `scripts/create-cluster.sh`.
+- **`EnvoyFilter` is not supported on ambient waypoints** (stated in
+  Istio's ambient L7-features and migration docs) and doesn't apply to
+  `ztunnel` at all (it isn't Envoy). Don't write ambient examples that
+  patch a waypoint with `EnvoyFilter` - `day5.md` points to
+  `TrafficExtension` (alpha) instead.
 - **Addon versions in `configs/versions.env`** (`GRAFANA_VERSION`,
   `PROMETHEUS_VERSION`, `KIALI_VERSION`, `JAEGER_VERSION`) are
   **informational only** - `scripts/install-addons.sh` installs them from
@@ -158,7 +176,7 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
 ## Working conventions
 
 - Version pins are duplicated across `README.md`, `day1.md`,
-  `day1-sidecar.md`, `day2.md`, `INSTALL_REQUIREMENTS.md` and
+  `day1-sidecar.md`, `day2.md`, `day3.md`-`day6.md`, `INSTALL_REQUIREMENTS.md` and
   `mise.toml` by design (each file is meant to be readable/runnable
   standalone). Keep them consistent - prefer running `agents/upgrade`'s
   `docs update` over hand-editing when bumping tool versions.
