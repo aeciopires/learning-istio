@@ -32,6 +32,7 @@ type ResolvedVersions struct {
 	Helm          string // "3.21.2"
 	Kubectl       string // "1.36.2"
 	MetalLB       string // "0.16.1"
+	ArgoCD        string // "3.6.1" (no "v" prefix; scripts/argocd.sh adds it)
 
 	// KindNodeK8s is the Kubernetes version baked into the kind node
 	// image currently pinned in INSTALL_REQUIREMENTS.md (e.g. "1.35.5").
@@ -146,6 +147,7 @@ func BuildResolvedVersions(results []toolversions.Result, installRequirementsCon
 	rv.Helm = get("helm", current.Helm)
 	rv.Kubectl = get("kubectl", current.Kubectl)
 	rv.MetalLB = get("metallb", "")
+	rv.ArgoCD = get("argocd", "")
 
 	// Informational only (see the ResolvedVersions doc comment) - no
 	// current-version guard, since there's no pin to compare against.

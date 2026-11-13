@@ -15,6 +15,8 @@
 - [istioctl](#istioctl)
 - [kind](#kind)
 - [MetalLB](#metallb)
+- [Go (opcional)](#go-opcional)
+- [Argo CD (opcional)](#argo-cd-opcional)
 
 <!-- TOC -->
 
@@ -141,7 +143,8 @@ Fonte: https://mise.jdx.dev/installing-mise.html
 
 > Atalho: como este repositório já traz um arquivo
 > [`mise.toml`](mise.toml) com as versões de `kind`, `helm`, `kubectl` e
-> `istioctl` já definidas, depois de instalar o mise basta rodar `mise
+> `istioctl` já definidas (além do `go`, opcional - veja
+> [Go (opcional)](#go-opcional)), depois de instalar o mise basta rodar `mise
 > install helm kubectl kind istioctl` na raiz do repositório para
 > instalar as quatro de uma vez, na versão exata que está pinada (também
 > disponível via `make install-tools` em [agents/upgrade](agents/upgrade)).
@@ -247,7 +250,7 @@ sudo rm -f /etc/apt/sources.list.d/helm-stable-debian.list
 Documentação: https://helm.sh/docs/
 
 ```bash
-VERSION="3.21.2"
+VERSION="4.3.1"
 
 mise latest helm
 mise install helm@$VERSION
@@ -257,6 +260,35 @@ mise ls helm
 mise use --pin --path mise.toml helm@$VERSION
 mise ls helm
 ```
+
+> Este repositório usa o **Helm 4**. O que muda em relação ao Helm 3,
+> segundo o [Helm 4 Overview](https://helm.sh/docs/overview/) oficial:
+>
+> - **Server-side apply por padrão** ao instalar uma release **nova**. Em
+>   `upgrade`/`rollback`, o Helm segue o método usado anteriormente pela
+>   release - ou seja, releases criadas com o Helm 3 continuam com
+>   client-side apply depois da troca para o Helm 4. O comportamento pode
+>   ser forçado com a flag `--server-side`.
+> - **Flags renomeadas** (as antigas continuam funcionando, com aviso de
+>   obsolescência): `--atomic` → `--rollback-on-failure` e `--force` →
+>   `--force-replace`.
+> - **`--wait`** passa a aceitar uma estratégia (`watcher`, `hookOnly` ou
+>   `legacy`); usado sozinho, como neste repositório, equivale a `watcher`.
+> - Post-renderers passam a ser plugins e `helm registry login` aceita
+>   apenas o domínio (sem URL completa).
+>
+> As flags usadas nos comandos deste repositório (`--wait`, `--timeout`,
+> `--create-namespace`, `--debug`, `--force-update`) continuam existindo
+> no Helm 4. A documentação do Istio informa que o
+> [Helm 4 é suportado](https://istio.io/v1.32/docs/setup/install/helm/) e
+> traz um aviso específico: se os recursos do Istio foram criados pelo
+> `istioctl`, o Helm 4 falha com conflito de *field ownership*; nesse caso
+> use `helm install istio-base istio/base -n istio-system
+> --server-side=false --take-ownership`.
+>
+> Compatibilidade com o Kubernetes
+> ([Helm Version Support Policy](https://helm.sh/docs/topics/version_skew/)):
+> o Helm 4.3.x suporta o Kubernetes 1.34.x a 1.37.x.
 
 # kubectl
 
@@ -269,7 +301,7 @@ Execute os seguintes comandos.
 Documentação: https://kubernetes.io/docs/reference/kubectl/overview/
 
 ```bash
-VERSION_OPTION_1="1.37.0"
+VERSION_OPTION_1="1.37.2"
 
 mise latest kubectl
 mise install kubectl@$VERSION_OPTION_1
@@ -301,7 +333,7 @@ inspecionar a configuração efetiva de um proxy Envoy
 Documentação: https://istio.io/latest/docs/reference/commands/istioctl/
 
 ```bash
-VERSION="1.31.0"
+VERSION="1.32.0"
 
 mise latest istioctl
 mise install istioctl@$VERSION
@@ -445,7 +477,7 @@ Execute os seguintes comandos para instalar o [MetalLB](https://metallb.universe
 > - https://metallb.universe.tf/installation/
 
 ```bash
-export HELM_CHART_VERSION="0.16.1"
+export HELM_CHART_VERSION="0.16.2"
 
 # actually apply the changes, returns nonzero returncode on errors only
 kubectl get configmap kube-proxy -n kube-system -o yaml | \
@@ -512,3 +544,40 @@ EOF
 
 kubectl apply -f $HOME/metallb-ingress-address.yaml --namespace metallb-system
 ```
+
+# Go (opcional)
+
+O [Go](https://go.dev) só é necessário para **compilar** a CLI
+`istio-upgrade` de [agents/upgrade](agents/upgrade) (comandos `make build`,
+`make test`, `make jwt-*`, `make docs-update`). Os passos manuais do
+[Day 1](day1.md) ao [Day 7](day7.md) não dependem dele - exceto a geração de
+tokens JWT do Day 7, que usa a CLI.
+
+A versão está pinada em [`mise.toml`](mise.toml) e é a mesma da diretiva
+`go` de [agents/upgrade/app/go.mod](agents/upgrade/app/go.mod). Ao trocar
+uma, troque a outra (essa versão **não** é atualizada pela CLI).
+
+```bash
+GO_VERSION="1.27.4"
+
+mise latest go
+mise install go@$GO_VERSION
+mise ls go
+
+# Definindo a versão padrão deste repositório (grava em mise.toml)
+mise use --pin --path mise.toml go@$GO_VERSION
+go version
+```
+
+# Argo CD (opcional)
+
+O [Argo CD](https://argo-cd.readthedocs.io) é uma ferramenta de GitOps para
+Kubernetes. Neste repositório ele é uma forma **alternativa** de instalar
+os mesmos componentes do Day 1 (MetalLB, Istio, Bookinfo e addons), de modo
+declarativo, a partir de um arquivo de `Application`. Não é preciso
+instalar nada na sua máquina além do `kubectl`: o Argo CD roda dentro do
+cluster e é instalado e operado pelos alvos `make argocd-*`. Veja
+[agents/upgrade/README.md](agents/upgrade/README.md#deploy-com-argo-cd-gitops).
+
+A versão usada fica em `ARGOCD_VERSION`, no arquivo
+[agents/upgrade/configs/versions.env](agents/upgrade/configs/versions.env).

@@ -12,12 +12,11 @@
 
 FROM golang:1.27-alpine AS builder
 
-# go.mod pins the exact toolchain patch (go 1.27.1); the golang:1.27-alpine
-# base image ships whatever the latest published 1.27.x point release is
-# (currently 1.27.0, since Docker Hub's official images lag a Go patch
-# release by a bit) and defaults GOTOOLCHAIN=local, which would otherwise
-# hard-fail on that mismatch instead of fetching 1.27.1 - see
-# https://go.dev/doc/toolchain.
+# go.mod pins the exact toolchain patch (go 1.27.4); the golang:1.27-alpine
+# base image ships whatever 1.27.x point release Docker Hub currently
+# publishes (its official images can lag a Go patch release by a bit) and
+# defaults GOTOOLCHAIN=local, which would hard-fail on an older patch
+# instead of fetching 1.27.4 - see https://go.dev/doc/toolchain.
 ENV GOTOOLCHAIN=auto
 
 WORKDIR /src

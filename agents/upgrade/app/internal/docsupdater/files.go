@@ -211,6 +211,7 @@ KIND_VERSION=%s
 HELM_VERSION=%s
 KUBECTL_VERSION=%s
 METALLB_VERSION=%s
+ARGOCD_VERSION=%s
 KIND_NODE_K8S_VERSION=%s
 
 # Latest upstream addon versions (informational only - see
@@ -220,6 +221,6 @@ GRAFANA_VERSION=%s
 PROMETHEUS_VERSION=%s
 KIALI_VERSION=%s
 JAEGER_VERSION=%s
-`, rv.IstioMinor, rv.IstioPatch, rv.IstioPatch, rv.GatewayAPI, rv.Kind, rv.Helm, rv.Kubectl, rv.MetalLB, rv.KindNodeK8s,
+`, rv.IstioMinor, rv.IstioPatch, rv.IstioPatch, rv.GatewayAPI, rv.Kind, rv.Helm, rv.Kubectl, rv.MetalLB, rv.ArgoCD, rv.KindNodeK8s,
 		rv.Grafana, rv.Prometheus, rv.Kiali, rv.Jaeger)
 }

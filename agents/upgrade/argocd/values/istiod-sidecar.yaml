@@ -1,0 +1,12 @@
+# Values for Istio's official "istiod" chart in SIDECAR mode.
+#
+# There is no "profile: sidecar": sidecar injection is the chart's default.
+# pilot.cni.enabled makes the injector rely on the CNI node agent instead of
+# the privileged istio-init container (same as scripts/install-istio.sh).
+pilot:
+  cni:
+    enabled: true
+# Required when the chart is applied with server-side apply (Argo CD) - see
+# istio-base.yaml.
+base:
+  validationFailurePolicy: Fail

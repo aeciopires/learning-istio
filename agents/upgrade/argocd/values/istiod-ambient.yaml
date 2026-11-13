@@ -1,0 +1,6 @@
+# Values for Istio's official "istiod" chart in AMBIENT mode.
+profile: ambient
+# Required when the chart is applied with server-side apply (Argo CD) - see
+# istio-base.yaml.
+base:
+  validationFailurePolicy: Fail

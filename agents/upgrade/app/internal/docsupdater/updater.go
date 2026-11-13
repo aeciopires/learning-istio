@@ -1,12 +1,23 @@
 package docsupdater
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/aeciopires/learning-istio/agents/upgrade/internal/toolversions"
 )
+
+// RequiredDayFiles are the walkthroughs every checkout must have; Plan
+// fails if one is missing.
+var RequiredDayFiles = []string{"day1.md", "day1-sidecar.md", "day2.md"}
+
+// OptionalDayFiles are later walkthroughs that reuse the same
+// ISTIO_RELEASE/VERSION_ISTIO/GATEWAY_API_VERSION exports and
+// istio.io/vX.Y/ links. They are synced when present and skipped
+// silently otherwise.
+var OptionalDayFiles = []string{"day3.md", "day4.md", "day5.md", "day6.md", "day7.md"}
 
 // Updater applies docsupdater's rewrite rules across a checkout of the
 // learning-istio repository.
@@ -59,9 +70,23 @@ func (u *Updater) Plan(results []toolversions.Result) (*PlanResult, error) {
 
 	plan.Files = append(plan.Files, UpdateREADME(string(readme), rv))
 
-	for _, name := range []string{"day1.md", "day1-sidecar.md", "day2.md"} {
+	for _, name := range RequiredDayFiles {
 		path := filepath.Join(u.RepoRoot, name)
 		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", path, err)
+		}
+		plan.Files = append(plan.Files, UpdateDayFile(name, string(content), rv))
+	}
+
+	// Later walkthroughs share the same pins/links but are optional: a
+	// checkout that predates them (or dropped one) must still sync.
+	for _, name := range OptionalDayFiles {
+		path := filepath.Join(u.RepoRoot, name)
+		content, err := os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %w", path, err)
 		}

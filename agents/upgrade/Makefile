@@ -82,13 +82,28 @@ coverage: ## Run unit tests with coverage report
 	go test -C $(APP_DIR) ./... -count=1 -coverprofile=coverage.out
 	go -C $(APP_DIR) tool cover -func=coverage.out
 
+## golangci-lint is built from source into bin/ with the Go version of
+## app/go.mod: a prebuilt binary (or a plain `go install`, which follows
+## golangci-lint's own toolchain line) is compiled with whatever Go its
+## release used, and golangci-lint refuses to lint a module that targets a
+## NEWER Go than the one it was built with.
+GOLANGCI_LINT_VERSION ?= 2.15.0
+GOLANGCI_LINT         := $(abspath $(BUILD_DIR))/golangci-lint
+GO_VERSION            := $(shell awk '/^go /{print $$2}' $(APP_DIR)/go.mod)
+
+.PHONY: install-lint
+install-lint: ## Build golangci-lint $(GOLANGCI_LINT_VERSION) into bin/ with the Go version of app/go.mod
+	GOBIN=$(abspath $(BUILD_DIR)) GOTOOLCHAIN=go$(GO_VERSION) \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION)
+	@$(GOLANGCI_LINT) --version
+
 .PHONY: lint
-lint: fmt-check vet ## fmt-check + vet, plus golangci-lint if installed
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		(cd $(APP_DIR) && golangci-lint run ./...); \
-	else \
-		echo "golangci-lint not installed, skipping (fmt-check + vet already ran)"; \
+lint: fmt-check vet ## fmt-check + vet + golangci-lint (built into bin/ on first use or when its pin / the Go version changes)
+	@if ! $(GOLANGCI_LINT) --version 2>/dev/null | grep -q "version $(GOLANGCI_LINT_VERSION) built with go$(GO_VERSION) "; then \
+		echo "golangci-lint $(GOLANGCI_LINT_VERSION) (built with go$(GO_VERSION)) not found in $(BUILD_DIR)/ - building it"; \
+		$(MAKE) --no-print-directory install-lint; \
 	fi
+	cd $(APP_DIR) && $(GOLANGCI_LINT) run ./...
 
 .PHONY: clean
 clean: ## Remove build artifacts
@@ -126,6 +141,39 @@ docs-update: ## Dry-run: show what `docs update` would change in the repo
 docs-update-apply: ## Apply `docs update` changes to the repo (writes files)
 	go run -C $(APP_DIR) . docs update --apply --repo-root $(REPO_ROOT)
 
+## --- JWT helper (the Go CLI's "jwt" subcommand; offline) -------------------
+## Mints one token per application for the JWT authorization walkthrough
+## (day7.md). Built on github.com/golang-jwt/jwt. Keys and tokens are for
+## study clusters only; JWT_DIR is git-ignored.
+
+JWT_DIR      ?= $(REPO_ROOT)/.jwt
+JWT_KID      ?= learning-istio
+JWT_ISSUER   ?= learning-istio@example.com
+JWT_SUBJECT  ?= curl
+JWT_EXPIRES  ?= 1h
+JWT_CLAIMS   ?=
+JWT_AUDIENCE ?=
+TOKEN        ?=
+
+.PHONY: jwt-keygen
+jwt-keygen: ## Generate the RSA key pair + JWKS into JWT_DIR (refuses to overwrite; add ARGS=--force to replace)
+	@go run -C $(APP_DIR) . jwt keygen --out-dir $(JWT_DIR) --kid $(JWT_KID) $(ARGS)
+
+.PHONY: jwt-jwks
+jwt-jwks: ## Print the JWKS (for RequestAuthentication's "jwks" field)
+	@go run -C $(APP_DIR) . jwt jwks --public-key $(JWT_DIR)/public.pem --kid $(JWT_KID)
+
+.PHONY: jwt-sign
+jwt-sign: ## Print a signed token, e.g. `make jwt-sign JWT_SUBJECT=curl JWT_CLAIMS="--claim app=curl --claim-list groups=readers"`
+	@go run -C $(APP_DIR) . jwt sign --private-key $(JWT_DIR)/private.pem --kid $(JWT_KID) \
+		--issuer $(JWT_ISSUER) --subject $(JWT_SUBJECT) --expires-in $(JWT_EXPIRES) \
+		$(if $(JWT_AUDIENCE),--audience $(JWT_AUDIENCE)) $(JWT_CLAIMS)
+
+.PHONY: jwt-decode
+jwt-decode: ## Decode AND verify a token against JWT_DIR's public key, e.g. `make jwt-decode TOKEN=eyJ...`
+	@test -n "$(TOKEN)" || { echo "usage: make jwt-decode TOKEN=<jwt>"; exit 1; }
+	@go run -C $(APP_DIR) . jwt decode --token $(TOKEN) --public-key $(JWT_DIR)/public.pem
+
 ## --- Host tooling (kind/helm/kubectl, via mise) -----------------------------
 ## See INSTALL_REQUIREMENTS.md#mise for how to install mise itself.
 
@@ -137,6 +185,11 @@ install-tools: ## Install kind/helm/kubectl/istioctl pinned in $(REPO_ROOT)/mise
 	# mise itself is idempotent here: a tool version already installed is
 	# reported (not re-downloaded) and this never fails because of it.
 	cd $(REPO_ROOT) && mise install helm kubectl kind istioctl
+
+.PHONY: install-go
+install-go: ## Install the Go toolchain pinned in $(REPO_ROOT)/mise.toml via mise (only needed to build the CLI)
+	@command -v mise >/dev/null 2>&1 || { echo "mise not found on PATH - see INSTALL_REQUIREMENTS.md#mise"; exit 1; }
+	cd $(REPO_ROOT) && mise install go
 
 ## --- Cluster lifecycle (kind + MetalLB + Istio + Bookinfo) -----------------
 ## NOTE: these targets shell out to scripts/*.sh, NOT the Go CLI - they
@@ -192,3 +245,61 @@ bootstrap-sidecar: ## Full pipeline: cluster + MetalLB + Istio (sidecar) + Booki
 .PHONY: bootstrap-ambient
 bootstrap-ambient: ## Full pipeline: cluster + MetalLB + Istio (ambient) + Bookinfo + validate
 	scripts/bootstrap.sh ambient
+
+## --- GitOps alternative: deploy everything through Argo CD -----------------
+## Same components as bootstrap-sidecar/bootstrap-ambient (MetalLB, Gateway
+## API CRDs, Istio, Bookinfo, addons), but installed BY Argo CD from
+## argocd/application.yaml: official charts + the values in argocd/values/.
+## The Helm/kubectl targets above are unchanged - use one flow or the other
+## on a given cluster. Needs an existing cluster (make create-cluster).
+## The values files are read from the LOCAL argocd/values/ directory and
+## embedded in each Application when it is rendered: edit a file and re-run
+## argocd-deploy-* to apply it - no git push involved.
+
+.PHONY: argocd-install
+argocd-install: ## Install Argo CD on the cluster (official install manifest, version from configs/versions.env)
+	scripts/argocd.sh install
+
+.PHONY: argocd-render
+argocd-render: ## Print the rendered Argo CD Applications without applying, e.g. `make argocd-render MODE=sidecar`
+	@scripts/argocd.sh render $(MODE)
+
+.PHONY: argocd-deploy-sidecar
+argocd-deploy-sidecar: ## Deploy ALL components through Argo CD, Istio in sidecar mode
+	scripts/argocd.sh deploy sidecar
+
+.PHONY: argocd-deploy-ambient
+argocd-deploy-ambient: ## Deploy ALL components through Argo CD, Istio in ambient mode
+	scripts/argocd.sh deploy ambient
+
+.PHONY: argocd-status
+argocd-status: ## Show sync/health status of the Argo CD Applications
+	scripts/argocd.sh status
+
+.PHONY: argocd-password
+argocd-password: ## Print Argo CD's initial admin password and how to open the UI
+	scripts/argocd.sh password
+
+.PHONY: argocd-undeploy
+argocd-undeploy: ## Remove ALL components deployed through Argo CD (cascade delete of the Applications)
+	scripts/argocd.sh undeploy
+
+.PHONY: argocd-uninstall
+argocd-uninstall: ## Remove Argo CD itself (run argocd-undeploy first)
+	scripts/argocd.sh uninstall
+
+.PHONY: argocd-bootstrap-sidecar
+argocd-bootstrap-sidecar: ## Full GitOps pipeline: cluster + Argo CD + all components (sidecar) + validate
+	scripts/preflight.sh
+	scripts/create-cluster.sh
+	scripts/argocd.sh install
+	scripts/argocd.sh deploy sidecar
+	scripts/validate-cluster.sh sidecar
+
+.PHONY: argocd-bootstrap-ambient
+argocd-bootstrap-ambient: ## Full GitOps pipeline: cluster + Argo CD + all components (ambient) + validate
+	scripts/preflight.sh
+	scripts/create-cluster.sh
+	scripts/argocd.sh install
+	scripts/argocd.sh deploy ambient
+	scripts/validate-cluster.sh ambient

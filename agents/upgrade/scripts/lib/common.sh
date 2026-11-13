@@ -105,3 +105,49 @@ kube_resource_note() {
     log_info "$desc does not exist yet - creating it."
   fi
 }
+
+# --- MetalLB pieces shared by install-metallb.sh (Helm) and argocd.sh -------
+# Neither is part of the MetalLB chart: strict ARP is a kube-proxy setting,
+# and the address pool depends on the subnet Docker gave THIS host's "kind"
+# network, so it can't live in a static values file or Git manifest.
+
+# metallb_enable_strict_arp
+metallb_enable_strict_arp() {
+  log_step "Enabling strict ARP mode on kube-proxy"
+  kubectl get configmap kube-proxy -n kube-system -o yaml |
+    sed -e "s/strictARP: false/strictARP: true/" |
+    kubectl apply -f - -n kube-system
+}
+
+# metallb_configure_address_pool
+# Requires the MetalLB CRDs and webhook to be ready.
+metallb_configure_address_pool() {
+  log_step "Configuring the MetalLB address pool"
+  local kind_address kind_lb_range
+  kind_address="$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | test("^[0-9]+\\.")) | .Subnet' | cut -d"." -f1-3 | head -1)"
+  if [[ -z "$kind_address" ]]; then
+    log_error "Could not determine the kind docker network's IPv4 subnet."
+    exit 1
+  fi
+  kind_lb_range="${kind_address}.${METALLB_ADDRESS_END}/${METALLB_NETMASK}"
+  log_info "Using load balancer address range: $kind_lb_range"
+
+  kube_resource_note "IPAddressPool 'first-pool'" ipaddresspool first-pool metallb-system
+  cat <<EOF | kubectl apply --namespace metallb-system -f -
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+spec:
+  addresses:
+  - $kind_lb_range
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: example
+spec:
+  ipAddressPools:
+  - first-pool
+EOF
+}

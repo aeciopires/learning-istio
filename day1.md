@@ -22,7 +22,7 @@ Instale o **MetalLB** com as instruções da página: [INSTALL_REQUIREMENTS.md#m
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
-export ISTIO_RELEASE=1.31
+export ISTIO_RELEASE=1.32
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
 export GATEWAY_API_VERSION="v1.6.1"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
@@ -37,8 +37,8 @@ Instale o **Istio** com os seguintes comandos:
 ```bash
 #-------
 # Referencias:
-# https://istio.io/v1.31/docs/setup/getting-started/
-# https://istio.io/v1.31/docs/setup/install/helm/
+# https://istio.io/v1.32/docs/setup/getting-started/
+# https://istio.io/v1.32/docs/setup/install/helm/
 # Liberar todas essas portas no firewall: https://istio.io/latest/docs/ops/deployment/application-requirements/
 
 # Todos os comandos "helm upgrade --install" abaixo são idempotentes: se
@@ -47,7 +47,7 @@ Instale o **Istio** com os seguintes comandos:
 # com a mesma URL - --force-update deixa isso explícito.
 
 # Configure o repositório Helm (usando o ambient mode):
-# https://istio.io/v1.31/docs/ambient/install/helm/
+# https://istio.io/v1.32/docs/ambient/install/helm/
 helm repo add istio https://blob.istio.io/istio-release/charts --force-update
 helm repo update
 
@@ -113,7 +113,7 @@ kubectl -n istio-system get all --output wide
 
 Faça o deploy da aplicação de exemplo chamada **Bookinfo**.
 
-> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.31/docs/ambient/getting-started/deploy-sample-app
+> Documentação de referência para os arquivos e comandos mostrados a seguir: https://istio.io/v1.32/docs/ambient/getting-started/deploy-sample-app
 
 Instale a aplicação de exemplo:
 
@@ -234,7 +234,7 @@ Acesse cada addon nos seguintes endereços:
 - Kiali: http://localhost:20001
 - Jaeger: http://localhost:8081
 
-Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.31/docs/ambient/getting-started/secure-and-visualize/):
+Permita que o Istio gerencie as aplicações de determinado namespace (Ambient mode https://istio.io/v1.32/docs/ambient/getting-started/secure-and-visualize/):
 
 ```bash
 kubectl label namespace $MY_NAMESPACE istio.io/dataplane-mode=ambient

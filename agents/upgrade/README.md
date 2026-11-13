@@ -10,7 +10,9 @@
   - [`analyze` - relatório de release notes Istio/Envoy](#analyze---relatório-de-release-notes-istioenvoy)
   - [`docs update` - sincronizar versões nos arquivos do repositório](#docs-update---sincronizar-versões-nos-arquivos-do-repositório)
   - [`versions latest`](#versions-latest)
+  - [`jwt` - chaves e tokens para o Day 7](#jwt---chaves-e-tokens-para-o-day-7)
 - [Automação de cluster (Makefile + scripts, não é o CLI)](#automação-de-cluster-makefile--scripts-não-é-o-cli)
+- [Deploy com Argo CD (GitOps)](#deploy-com-argo-cd-gitops)
 - [Docker](#docker)
 - [Testes](#testes)
 - [Estrutura do projeto](#estrutura-do-projeto)
@@ -32,6 +34,10 @@ CLI em Go, com dois papéis bem separados:
    descobre a versão estável mais recente de cada ferramenta usada neste
    repositório (Istio, Envoy, kind, Helm, kubectl, MetalLB, Gateway API) e
    atualiza os arquivos de instalação/configuração do repositório.
+
+Além disso, o subcomando `jwt` gera chaves e cria, decodifica e verifica
+tokens JWT (offline), para o laboratório de autorização por JWT do
+[Day 7](../../day7.md).
 
 **Importante:** este CLI **não cria cluster nem instala o Istio**. Isso é
 feito pelo `Makefile` e pelos scripts em [scripts/](scripts/) - veja a seção
@@ -68,7 +74,7 @@ flowchart TB
 
     versionsEnv[("configs/versions.env\n(gerado por docs update --apply)")]
     docsupdater -- escreve --> versionsEnv
-    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nINSTALL_REQUIREMENTS.md · mise.toml"]
+    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nday3.md a day7.md (opcionais)\nINSTALL_REQUIREMENTS.md · mise.toml"]
 
     subgraph AUTOMATION["Makefile + scripts/*.sh (NÃO é o CLI)"]
         direction TB
@@ -173,7 +179,8 @@ sequenceDiagram
   `--envoy-from`/`--envoy-to` (ou `--component envoy`) para analisar o Envoy
   separadamente.
 - **Bump de versão MAJOR nunca é automático**: se a versão mais recente de
-  Helm/kind/kubectl/Istio for um major novo (ex.: Helm 3 → 4), o
+  Helm/kind/kubectl/Istio for um major novo (foi o caso do Helm 3 → 4, já
+  adotado neste repositório de forma deliberada), o
   `docs update` **não aplica** essa mudança sozinho - ela normalmente quebra
   os comandos exatos documentados neste repositório. Um aviso é impresso e o
   pin atual é mantido; use `--allow-major-bump` para aplicar mesmo assim.
@@ -189,7 +196,10 @@ sequenceDiagram
 
 # Instalação / build
 
-Pré-requisitos: Go 1.26+ (veja [app/go.mod](app/go.mod)). Para a automação de
+Pré-requisitos: Go 1.27.4 (a versão da diretiva `go` de
+[app/go.mod](app/go.mod), também pinada em [mise.toml](../../mise.toml) -
+`make install-go` a instala via mise; veja
+[INSTALL_REQUIREMENTS.md#go-opcional](../../INSTALL_REQUIREMENTS.md#go-opcional)). Para a automação de
 cluster (não para o CLI em si): Docker, [kind](https://kind.sigs.k8s.io),
 [Helm](https://helm.sh), `kubectl`, `istioctl` (útil para troubleshooting
 da malha) e `jq` (veja
@@ -306,6 +316,7 @@ istio-upgrade docs update --apply --allow-major-bump
 ```
 
 Atualiza: `README.md`, `day1.md`, `day1-sidecar.md`, `day2.md`,
+`day3.md` a `day7.md` (opcionais - são ignorados se não existirem),
 `INSTALL_REQUIREMENTS.md`, `mise.toml` (na raiz do repositório) e
 [configs/versions.env](configs/versions.env) (consumido pelos scripts de
 cluster - veja a próxima seção, inclusive as versões *informativas* dos
@@ -320,6 +331,41 @@ diretório atual (procura por `.git/` + `README.md`).
 istio-upgrade versions latest              # tabela
 istio-upgrade versions latest --format json
 ```
+
+## `jwt` - chaves e tokens para o Day 7
+
+Subcomando **offline**, construído sobre a biblioteca
+[golang-jwt/jwt](https://github.com/golang-jwt/jwt) (v5), que faz o papel
+de emissor de tokens no laboratório de autorização por JWT do
+[Day 7](../../day7.md). Ele não fala com o cluster.
+
+| Subcomando | O que faz |
+|---|---|
+| `jwt keygen` | Gera um par de chaves RSA e grava `private.pem` (PKCS#8, modo `0600`), `public.pem` (PKIX) e `jwks.json` (o JWKS que o `RequestAuthentication` do Istio lê). Não sobrescreve uma chave existente sem `--force` |
+| `jwt jwks` | Imprime o JWKS de uma chave pública existente |
+| `jwt sign` | Cria um token assinado em RS256 com `iss`, `sub`, `aud`, `exp`, `iat` e claims customizados: `--claim nome=valor` (string) e `--claim-list nome=a,b` (lista de strings) - os dois formatos de claim que o `AuthorizationPolicy` consegue casar |
+| `jwt decode` | Imprime o header e os claims. Com `--public-key`, **verifica** a assinatura e a validade (e falha se não conferirem); sem ela, apenas decodifica e informa `"verified": false` |
+
+```bash
+make jwt-keygen                       # grava em ../../.jwt/ (diretório ignorado pelo Git)
+make jwt-jwks                         # JWKS para colar no RequestAuthentication
+make jwt-sign JWT_SUBJECT=curl JWT_AUDIENCE=helloworld \
+  JWT_CLAIMS="--claim app=curl --claim-list groups=leitores,time-a"
+make jwt-decode TOKEN=eyJ...          # decodifica E verifica com a chave pública
+
+# Direto pelo binário (todas as flags: istio-upgrade jwt <subcomando> --help)
+istio-upgrade jwt sign --private-key .jwt/private.pem \
+  --issuer learning-istio@example.com --subject curl --expires-in 24h \
+  --claim app=curl --claim-list groups=leitores
+```
+
+Variáveis dos alvos `make jwt-*`: `JWT_DIR` (padrão `../../.jwt`),
+`JWT_KID` (`learning-istio`), `JWT_ISSUER` (`learning-istio@example.com`),
+`JWT_SUBJECT` (`curl`), `JWT_AUDIENCE` (vazio), `JWT_EXPIRES` (`1h`) e
+`JWT_CLAIMS` (vazio).
+
+> As chaves e os tokens são **apenas para clusters de estudo**. Nunca faça
+> commit de `.jwt/` nem reutilize essas chaves em outro lugar.
 
 # Automação de cluster (Makefile + scripts, não é o CLI)
 
@@ -336,6 +382,7 @@ pré-requisitos de cada SO.
 
 ```bash
 make install-tools          # instala kind/helm/kubectl/istioctl via mise (INSTALL_REQUIREMENTS.md#mise)
+make install-go             # instala o Go pinado no mise.toml (só para compilar o CLI)
 make preflight               # valida docker/kind/helm/kubectl/istioctl/jq instalados
 make bootstrap-sidecar       # cluster + MetalLB + Istio (sidecar) + Bookinfo + addons + validação
 make bootstrap-ambient       # idem, em modo ambient
@@ -396,6 +443,123 @@ ambiente): `CLUSTER_NAME` (padrão `istio-upgrade`), `MY_NAMESPACE` (padrão
 `myapp`), `ISTIO_MODE` (padrão `ambient`), `INSTALL_BOOKINFO` e
 `INSTALL_ADDONS` (padrão `true` nos dois).
 
+# Deploy com Argo CD (GitOps)
+
+Alternativa ao `bootstrap-*`: em vez de os scripts rodarem `helm` e
+`kubectl apply`, o [Argo CD](https://argo-cd.readthedocs.io) é instalado no
+cluster e **ele** instala todos os componentes (MetalLB, CRDs do Gateway
+API, Istio, Bookinfo e addons), a partir do arquivo
+[argocd/application.yaml](argocd/application.yaml). Os alvos de Helm/kubectl
+da seção anterior **continuam existindo** e não foram alterados - use um
+fluxo **ou** o outro em um mesmo cluster.
+
+```bash
+make create-cluster               # o cluster kind continua sendo criado pelo script
+make argocd-install               # instala o Argo CD (manifesto oficial, versão de configs/versions.env)
+make argocd-deploy-ambient        # ou: make argocd-deploy-sidecar
+make argocd-status                # sync/health de cada Application
+make validate MODE=ambient        # mesma validação do fluxo Helm
+make argocd-password              # senha inicial do admin + como abrir a UI
+
+make argocd-undeploy              # remove TODOS os componentes (cascade delete das Applications)
+make argocd-uninstall             # remove o próprio Argo CD
+
+# Tudo de uma vez (preflight + cluster + Argo CD + componentes + validação):
+make argocd-bootstrap-ambient     # ou: make argocd-bootstrap-sidecar
+```
+
+**Como o `application.yaml` é montado**
+
+- É um arquivo com **várias `Application`** (uma por componente). Nos
+  componentes que têm chart oficial, a fonte é o **chart oficial** no
+  repositório Helm do projeto, e os values vêm do **diretório local**
+  [argocd/values/](argocd/values/).
+- O arquivo é um **template**: antes de aplicar, `scripts/argocd.sh`
+  substitui os `${PLACEHOLDERS}` pelas versões de `configs/versions.env` e
+  troca cada linha `# values-from: <arquivo>` pelo conteúdo do arquivo
+  correspondente, **lido do disco**, que fica embutido na `Application` em
+  `helm.valuesObject`.
+- Para ver o resultado sem aplicar nada (não precisa de cluster):
+  `make argocd-render MODE=sidecar`.
+
+| Application | Passo | Fonte | Values |
+|---|---|---|---|
+| `metallb` | 1 | chart `metallb` (`https://metallb.github.io/metallb`) | `values/metallb.yaml` |
+| `gateway-api-crds` | 2 | Git `kubernetes-sigs/gateway-api`, `config/crd` (kustomize) | - |
+| `istio-base` | 2 | chart `base` (`https://blob.istio.io/istio-release/charts`) | `values/istio-base.yaml` |
+| `istiod` | 3 | chart `istiod` | `values/istiod-<modo>.yaml` |
+| `istio-cni` | 4 | chart `cni` | `values/istio-cni-<modo>.yaml` |
+| `ztunnel` (só no ambient) | 4 | chart `ztunnel` | `values/ztunnel.yaml` |
+| `istio-ingress` | 5 | chart `gateway` | `values/istio-gateway.yaml` |
+| `bookinfo` | 6 | Git `istio/istio`, `samples/bookinfo` (manifestos) | - |
+| `istio-addons` | 6 | Git `istio/istio`, `samples/addons` (manifestos) | - |
+
+Os CRDs do Gateway API, o Bookinfo e os addons **não têm chart oficial**:
+os próprios projetos os publicam como manifestos no Git, e é de lá que o
+Argo CD os lê (os mesmos arquivos que o [Day 1](../../day1.md) aplica).
+
+**Ordem e espera**: as `Application` são aplicadas na ordem do label
+`learning-istio/step`, e o script espera cada passo terminar o sync e ficar
+`Healthy` antes de seguir (o `istiod` precisa dos CRDs do `istio-base`, o
+gateway precisa do `istiod`, e assim por diante).
+
+**O que continua fora do Argo CD** (e por quê):
+
+- A **criação do cluster kind** e a **instalação do próprio Argo CD**.
+- O **strict ARP** do kube-proxy e o **pool de endereços do MetalLB**
+  (`IPAddressPool`/`L2Advertisement`): a faixa de IPs depende da sub-rede
+  que o Docker deu à rede `kind` **nesta máquina**, então não pode ficar em
+  um arquivo estático no Git. O script os aplica logo após o passo 1.
+
+**Os values são lidos do diretório local, não de uma branch do Git**
+
+O Argo CD roda dentro do cluster e não enxerga o disco da sua máquina; por
+isso o conteúdo de cada arquivo de `argocd/values/` é embutido na
+`Application` no momento em que o script a renderiza. Consequências:
+
+- O que está **no seu disco** é o que é implantado - não é preciso fazer
+  `git push`, e não importa em qual branch você está.
+- Para aplicar uma alteração de values, edite o arquivo e rode de novo
+  `make argocd-deploy-ambient` (ou `-sidecar`): o `kubectl apply` atualiza a
+  `Application` e o Argo CD sincroniza a mudança sozinho (sync automático).
+- Os **charts** continuam sendo baixados pelo Argo CD dos repositórios
+  oficiais, e os manifestos do Gateway API, do Bookinfo e dos addons, dos
+  repositórios Git dos próprios projetos.
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `ARGOCD_VALUES_DIR` | `agents/upgrade/argocd/values` | Diretório local com os arquivos de values (um por chart) |
+| `ARGOCD_WAIT_TIMEOUT` | `900s` | Tempo máximo de espera por passo |
+| `MY_NAMESPACE` | `myapp` | Namespace do Bookinfo |
+
+**Detalhes de configuração que vêm das documentações oficiais**
+
+- O Argo CD é instalado com `kubectl apply --server-side --force-conflicts`,
+  como manda o [Getting Started](https://argo-cd.readthedocs.io/en/stable/getting_started/)
+  (alguns CRDs do Argo CD excedem o limite de tamanho da annotation do
+  apply client-side).
+- `base.validationFailurePolicy: Fail` nos values de `istio-base` e
+  `istiod`: a documentação do Istio exige esse valor quando os charts são
+  renderizados com `helm template` e aplicados com server-side apply (caso
+  do Argo CD), para evitar conflito de *field manager* no
+  `ValidatingWebhookConfiguration`.
+- `ignoreDifferences` no campo `caBundle` dos webhooks: ele é preenchido em
+  tempo de execução, e sem isso a `Application` nunca ficaria `Synced` (o
+  padrão está na página de
+  [Diffing](https://argo-cd.readthedocs.io/en/stable/user-guide/diffing/) do
+  Argo CD).
+- Cada `Application` tem o finalizer
+  `resources-finalizer.argocd.argoproj.io`: apagar a `Application` apaga
+  também o que ela instalou
+  ([App Deletion](https://argo-cd.readthedocs.io/en/stable/user-guide/app_deletion/)).
+  É isso que o `make argocd-undeploy` usa. Os namespaces criados por
+  `CreateNamespace=true` são mantidos; o comando para removê-los é impresso
+  ao final.
+- A documentação do Istio lista ressalvas de instalar via `helm template`
+  (o que o Argo CD faz): a ordem de dependências não é a mesma do
+  `helm install`, e o método **não é testado como parte das releases do
+  Istio**.
+
 # Docker
 
 A imagem Docker empacota **só o CLI** (`analyze`/`docs update`/`versions`) -
@@ -415,7 +579,8 @@ make docker-run ARGS="analyze --from 1.10 --to 1.30"
 make test           # testes unitários (rápidos, offline, sem docker/kind/helm/kubectl)
 make test-verbose
 make coverage
-make lint           # gofmt -l + go vet + golangci-lint (se instalado)
+make lint           # gofmt -l + go vet + golangci-lint (compilado em bin/ na primeira execução)
+make install-lint   # (re)compila o golangci-lint pinado no Makefile, com o Go do app/go.mod
 ```
 
 Os testes unitários usam `httptest` e fixtures locais (sem rede real) para
@@ -448,7 +613,11 @@ agents/upgrade/
 │   ├── preflight.sh · create-cluster.sh · install-metallb.sh
 │   ├── install-istio.sh · deploy-bookinfo.sh · install-addons.sh
 │   ├── validate-cluster.sh · destroy-cluster.sh · bootstrap.sh
+│   ├── argocd.sh                # fluxo GitOps: instala o Argo CD e aplica argocd/application.yaml
 │   └── lib/common.sh            # env vars (versions.env), logging, helpers
+├── argocd/                     # deploy via Argo CD (alternativa ao bootstrap-*)
+│   ├── application.yaml         # template das Applications (charts oficiais + values)
+│   └── values/                  # values de cada chart, lidos do disco e embutidos na Application
 ├── plans/                      # histórico dos planos de implantação executados
 ├── bin/                        # binário compilado (make build; não versionado)
 └── app/                        # TUDO que é específico do CLI em Go
@@ -456,12 +625,13 @@ agents/upgrade/
     ├── CHANGELOG.md
     ├── Dockerfile / .dockerignore
     ├── go.mod / go.sum
-    ├── main.go / cmd/            # entrypoint + comandos cobra (analyze, docs, versions, version)
+    ├── main.go / cmd/            # entrypoint + comandos cobra (analyze, docs, versions, jwt, version)
     ├── internal/
     │   ├── semverx/               # parsing e expansão de intervalos de versão (minor + patch)
     │   ├── releasenotes/           # busca/parse das release notes Istio (istio.io+GitHub) e Envoy
     │   ├── toolversions/            # última versão estável de cada ferramenta via GitHub API
-    │   └── docsupdater/              # regras de reescrita dos arquivos do repositório
+    │   ├── docsupdater/              # regras de reescrita dos arquivos do repositório
+    │   └── jwttool/                   # chaves RSA, JWKS e tokens JWT (golang-jwt/jwt)
     └── testdata/, examples/         # fixtures de teste e exemplos reais de saída do `analyze`
 ```
 
@@ -484,6 +654,14 @@ agents/upgrade/
   etc.) - isso é esperado, é o histórico real de commits entre as duas tags.
 - `docs update` cobre apenas os arquivos listados acima; não reescreve
   prosa (ex.: `ISTIO_ENVOY_GUIA_DE_ESTUDOS.md`) nem arquivos em `OLD/`.
+- A versão do **Go** (`mise.toml` e `app/go.mod`), a do **golangci-lint**
+  (`GOLANGCI_LINT_VERSION` no `Makefile`) e a do **Envoy Gateway**
+  (`day6.md`) **não** são gerenciadas pelo `docs update`: são atualizadas à
+  mão.
+- O **golangci-lint** é compilado em `bin/` com o mesmo Go do
+  `app/go.mod` (`make install-lint`, acionado sozinho pelo `make lint`): um
+  binário pré-compilado se recusa a analisar um módulo que mira um Go mais
+  novo do que aquele com que ele foi compilado. A do **Argo CD** é (`ARGOCD_VERSION` em `configs/versions.env`).
 - `GRAFANA_VERSION`/`PROMETHEUS_VERSION`/`KIALI_VERSION`/`JAEGER_VERSION`
   em `configs/versions.env` são **informativos**: os addons são instalados
   a partir dos manifests prontos do `istio/istio` (pinados por

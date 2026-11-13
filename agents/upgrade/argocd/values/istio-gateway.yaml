@@ -1,0 +1,4 @@
+# Values for Istio's official "gateway" chart (the "istio-ingress" release):
+# the chart defaults are used as-is, same as scripts/install-istio.sh. The
+# Service is of type LoadBalancer, so it needs MetalLB's address pool.
+{}

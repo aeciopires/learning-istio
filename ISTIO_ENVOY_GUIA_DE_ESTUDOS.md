@@ -94,7 +94,7 @@ Este documento é um **material de estudo** (glossário + diagramas + comandos +
 
 Todo o conteúdo técnico aqui apresentado foi extraído/conferido nas fontes oficiais listadas na seção [10. Referências](#10-referências) (documentação oficial do Istio, documentação oficial do Envoy e conteúdos publicados por Matt Klein, criador do Envoy). Nenhum comportamento interno foi inventado: onde a documentação oficial não detalha algo (ex.: código-fonte específico), isso é indicado explicitamente.
 
-**Versão de referência:** Istio **1.31** (versão estável mais recente em 2026-09-01) e Envoy na versão empacotada por ela, seguindo o padrão já usado no restante do repositório (`ISTIO_RELEASE=1.31`), conforme confirmado em [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/) e nas releases do [github.com/istio/istio](https://github.com/istio/istio/releases/).
+**Versão de referência:** Istio **1.32** (versão estável mais recente em 2026-11-13) e Envoy na versão empacotada por ela, seguindo o padrão já usado no restante do repositório (`ISTIO_RELEASE=1.32`), conforme confirmado em [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/) e nas releases do [github.com/istio/istio](https://github.com/istio/istio/releases/).
 
 O ambiente prático usado neste guia é o mesmo do restante do repositório: cluster **kind** + **MetalLB** + **Istio** (modo `ambient` por padrão, com o modo `sidecar` como alternativa documentada em [day1-sidecar.md](day1-sidecar.md)). Veja os pré-requisitos completos em [INSTALL_REQUIREMENTS.md](INSTALL_REQUIREMENTS.md).
 
@@ -112,11 +112,11 @@ O ambiente prático usado neste guia é o mesmo do restante do repositório: clu
 | **Sidecar** | Padrão de implantação em que um container auxiliar (o proxy) roda dentro do mesmo Pod da aplicação, compartilhando o ciclo de vida e a rede (`localhost`) com o container principal. |
 | **mTLS (mutual TLS)** | Autenticação TLS em que **ambas** as partes (cliente e servidor) apresentam certificados, usada pelo Istio para autenticar e criptografar o tráfego entre workloads na mesh. |
 
-Fonte: [Istio / What is Istio?](https://istio.io/v1.31/docs/overview/what-is-istio/), [Istio / Glossary](https://istio.io/v1.31/docs/reference/glossary/).
+Fonte: [Istio / What is Istio?](https://istio.io/v1.32/docs/overview/what-is-istio/), [Istio / Glossary](https://istio.io/v1.32/docs/reference/glossary/).
 
 ## 1.2. Glossário do Istio
 
-Termos extraídos do glossário oficial ([istio.io/v1.31/docs/reference/glossary/](https://istio.io/v1.31/docs/reference/glossary/)):
+Termos extraídos do glossário oficial ([istio.io/v1.32/docs/reference/glossary/](https://istio.io/v1.32/docs/reference/glossary/)):
 
 | Termo | Definição (oficial, resumida) |
 |---|---|
@@ -141,7 +141,7 @@ Termos extraídos do glossário oficial ([istio.io/v1.31/docs/reference/glossary
 | **PeerAuthentication** *(idem)* | Define a política de mTLS (`STRICT`, `PERMISSIVE`, `DISABLE`) para um namespace ou workload. |
 | **AuthorizationPolicy** *(idem)* | Define regras de autorização (`ALLOW`/`DENY`) para tráfego entre workloads. |
 
-Fonte: [Istio / Glossary](https://istio.io/v1.31/docs/reference/glossary/), [Istio / Architecture](https://istio.io/v1.31/docs/ops/deployment/architecture/), [Istio / Ambient Architecture](https://istio.io/v1.31/docs/ambient/architecture/), [Istio / Traffic Redirection](https://istio.io/v1.31/docs/ambient/architecture/traffic-redirection/).
+Fonte: [Istio / Glossary](https://istio.io/v1.32/docs/reference/glossary/), [Istio / Architecture](https://istio.io/v1.32/docs/ops/deployment/architecture/), [Istio / Ambient Architecture](https://istio.io/v1.32/docs/ambient/architecture/), [Istio / Traffic Redirection](https://istio.io/v1.32/docs/ambient/architecture/traffic-redirection/).
 
 ## 1.3. Glossário do Envoy
 
@@ -225,11 +225,11 @@ flowchart TB
     ISTIOD -->|"xDS gRPC :15012"| GwEnvoy
 ```
 
-Pontos-chave (fonte: [Istio / Architecture](https://istio.io/v1.31/docs/ops/deployment/architecture/), [Istio / Dataplane modes](https://istio.io/v1.31/docs/overview/dataplane-modes/)):
+Pontos-chave (fonte: [Istio / Architecture](https://istio.io/v1.32/docs/ops/deployment/architecture/), [Istio / Dataplane modes](https://istio.io/v1.32/docs/overview/dataplane-modes/)):
 
 - O **data plane** é o conjunto de proxies Envoy implantados como sidecars, responsáveis por descoberta de serviço, load balancing, terminação TLS, HTTP/2 e proxy gRPC, circuit breaking, health checks, injeção de falhas e coleta de métricas.
 - O **control plane** (**istiod**) fornece descoberta de serviço, gerenciamento de configuração e gerenciamento de certificados; converte as regras de roteamento (CRDs) em configuração específica do Envoy e atua como Autoridade Certificadora (CA) para o mTLS.
-- O `istiod` **encapsula** (desde a versão 1.5) as antigas funções separadas **Pilot**, **Galley** e **Citadel** em um único binário — ver [Istio / Glossary — Istiod](https://istio.io/v1.31/docs/reference/glossary/).
+- O `istiod` **encapsula** (desde a versão 1.5) as antigas funções separadas **Pilot**, **Galley** e **Citadel** em um único binário — ver [Istio / Glossary — Istiod](https://istio.io/v1.32/docs/reference/glossary/).
 
 ## 2.2. Modo Ambient
 
@@ -280,7 +280,7 @@ flowchart TB
     CNI2 -.->|"programa redirecionamento de tráfego"| ZT2
 ```
 
-Pontos-chave (fonte: [Istio / Ambient Overview](https://istio.io/latest/docs/ambient/overview/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.31/docs/ambient/architecture/traffic-redirection/), [Istio / Glossary](https://istio.io/v1.31/docs/reference/glossary/)):
+Pontos-chave (fonte: [Istio / Ambient Overview](https://istio.io/latest/docs/ambient/overview/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.32/docs/ambient/architecture/traffic-redirection/), [Istio / Glossary](https://istio.io/v1.32/docs/reference/glossary/)):
 
 - O **ztunnel** é escrito em Rust e é **intencionalmente restrito** a funções L3/L4: mTLS, autenticação, autorização L4 e telemetria — ele **não** termina tráfego HTTP nem interpreta headers HTTP da aplicação.
 - **HBONE** ("HTTP-Based Overlay Network Environment") é o protocolo de tunelamento seguro usado entre ztunnels e entre ztunnel e waypoint; usa a porta **15008**.
@@ -299,7 +299,7 @@ Pontos-chave (fonte: [Istio / Ambient Overview](https://istio.io/latest/docs/amb
 | Overhead de recursos por Pod | Um Envoy completo por Pod | Nenhum por padrão; custo concentrado no `ztunnel`/`waypoint` compartilhados |
 | Uso de `iptables`/CNI | Sim | Sim |
 
-Fonte: [Istio / Dataplane modes](https://istio.io/v1.31/docs/overview/dataplane-modes/), [Istio / Ambient Overview](https://istio.io/latest/docs/ambient/overview/).
+Fonte: [Istio / Dataplane modes](https://istio.io/v1.32/docs/overview/dataplane-modes/), [Istio / Ambient Overview](https://istio.io/latest/docs/ambient/overview/).
 
 ## 2.4. Portas usadas pelo Istio e pelo Envoy
 
@@ -319,7 +319,7 @@ Fonte: [Istio / Dataplane modes](https://istio.io/v1.31/docs/overview/dataplane-
 | 15053 | DNS | Porta de DNS, quando o DNS capture está habilitado |
 | 15090 | HTTP | Telemetria Prometheus do Envoy |
 
-Fonte: [Istio / Application Requirements — Ports Used by Istio](https://istio.io/v1.31/docs/ops/deployment/application-requirements/), [Istio / Debug Endpoints](https://istio.io/latest/docs/ops/integrations/integration-guide/debug-endpoints/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.31/docs/ambient/architecture/traffic-redirection/).
+Fonte: [Istio / Application Requirements — Ports Used by Istio](https://istio.io/v1.32/docs/ops/deployment/application-requirements/), [Istio / Debug Endpoints](https://istio.io/latest/docs/ops/integrations/integration-guide/debug-endpoints/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.32/docs/ambient/architecture/traffic-redirection/).
 
 ## 2.5. Componentes de software do Istio
 
@@ -366,11 +366,11 @@ flowchart TB
     WH -.->|"injeta o container istio-proxy no Pod"| PodApp
 ```
 
-Fonte: [Istio / Glossary — Istiod](https://istio.io/v1.31/docs/reference/glossary/), [Istio / Security Concepts](https://istio.io/v1.31/docs/concepts/security/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.31/docs/ambient/architecture/traffic-redirection/).
+Fonte: [Istio / Glossary — Istiod](https://istio.io/v1.32/docs/reference/glossary/), [Istio / Security Concepts](https://istio.io/v1.32/docs/concepts/security/), [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.32/docs/ambient/architecture/traffic-redirection/).
 
 ## 2.6. Topologias de implantação da mesh (multicluster, multi-network, multi-mesh)
 
-Tudo visto até aqui (seções [2.1](#21-modo-sidecar)/[2.2](#22-modo-ambient)) assume implicitamente **um único cluster**. A documentação oficial do Istio ([Deployment Models](https://istio.io/v1.31/docs/ops/deployment/deployment-models/)) organiza as decisões de topologia de instalação em **dimensões independentes**, que podem ser combinadas: modelo de **cluster** (único ou múltiplos), modelo de **rede** (única ou múltiplas), modelo de **control plane** (único/compartilhado, múltiplos, ou externo), modelo de **mesh** (única ou múltiplas — federação) e modelo de **tenancy** (por namespace, por cluster ou por mesh).
+Tudo visto até aqui (seções [2.1](#21-modo-sidecar)/[2.2](#22-modo-ambient)) assume implicitamente **um único cluster**. A documentação oficial do Istio ([Deployment Models](https://istio.io/v1.32/docs/ops/deployment/deployment-models/)) organiza as decisões de topologia de instalação em **dimensões independentes**, que podem ser combinadas: modelo de **cluster** (único ou múltiplos), modelo de **rede** (única ou múltiplas), modelo de **control plane** (único/compartilhado, múltiplos, ou externo), modelo de **mesh** (única ou múltiplas — federação) e modelo de **tenancy** (por namespace, por cluster ou por mesh).
 
 > Fonte complementar (com exemplos práticos passo a passo): **POSTA, Christian E.; MALOKU, Rinor. *Istio in Action*. Manning Publications, 2022, ISBN 9781617295829 — Capítulo 12, "Scaling Istio in your organization"** (o mesmo Christian Posta do blog [blog.christianposta.com](https://blog.christianposta.com/tags/istio/) citado nas referências deste guia).
 
@@ -509,7 +509,9 @@ Nesse desenho, como as três VPCs formam uma **única rede roteável** (via Tran
 
 > Este é um padrão de infraestrutura observado na prática (a documentação oficial do Istio não cita nomes de produtos de nuvem específicos); os CIDRs de Pod/Service de cada cluster ainda precisam ser planejados para não se sobrepor entre si, um requisito explícito do modelo de rede única do Istio.
 
-Fonte: [Istio / Deployment Models](https://istio.io/v1.31/docs/ops/deployment/deployment-models/), *Istio in Action* (Posta & Maloku, Manning 2022) — capítulo 12, [AWS / Transit Gateway](https://aws.amazon.com/transit-gateway/).
+Fonte: [Istio / Deployment Models](https://istio.io/v1.32/docs/ops/deployment/deployment-models/), *Istio in Action* (Posta & Maloku, Manning 2022) — capítulo 12, [AWS / Transit Gateway](https://aws.amazon.com/transit-gateway/).
+
+> **Prática:** o passo a passo de uma mesh única em dois clusters kind (multi-primary em redes diferentes, nos modos sidecar e ambient), com os comandos Helm dos guias oficiais, está no [Day 3](day3.md).
 
 ---
 
@@ -588,7 +590,7 @@ sequenceDiagram
     Envoy-->>Istiod: ACK (versionInfo + nonce) ou NACK em caso de erro
 ```
 
-Fonte: [Envoy / xDS REST and gRPC protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol), [Istio / Architecture](https://istio.io/v1.31/docs/ops/deployment/architecture/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+Fonte: [Envoy / xDS REST and gRPC protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol), [Istio / Architecture](https://istio.io/v1.32/docs/ops/deployment/architecture/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 O comando `istioctl proxy-status` mostra o estado de sincronização de cada proxy da malha em relação ao istiod:
 
@@ -601,7 +603,7 @@ stateDiagram-v2
     SYNCED --> [*]
 ```
 
-Fonte: [Istio / Debugging Envoy and Istiod — proxy-status](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+Fonte: [Istio / Debugging Envoy and Istiod — proxy-status](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ## 3.4. Life of a Request (o ciclo de vida de uma requisição no Envoy)
 
@@ -843,7 +845,7 @@ kubectl -n $MY_NAMESPACE logs deploy/reviews-v1 -c istio-proxy | grep -oE '"[a-z
 
 **Causas mais comuns de "a ordem dos filtros não é a que eu esperava":** um `EnvoyFilter` (seção [7](#7-envoyfilter)) com `patch.operation: INSERT_FIRST` competindo com outro `EnvoyFilter` também com `INSERT_FIRST` (o resultado depende da ordem de aplicação entre `EnvoyFilter`s — seção [7.2](#72-estrutura-do-objeto-workloadselector-configpatches-e-match)); confundir a cadeia `SIDECAR_INBOUND` com a `SIDECAR_OUTBOUND` (Lab 12); ou assumir que `jwt_authn`/`rbac` sempre existem quando, na verdade, só existem se houver `RequestAuthentication`/`AuthorizationPolicy` aplicável àquele workload.
 
-Fonte: [Envoy / Response Code Details](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details), [Envoy / RBAC filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rbac_filter), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+Fonte: [Envoy / Response Code Details](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details), [Envoy / RBAC filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rbac_filter), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ---
 
@@ -854,14 +856,14 @@ Fonte: [Envoy / Response Code Details](https://www.envoyproxy.io/docs/envoy/late
 Siga [INSTALL_REQUIREMENTS.md](INSTALL_REQUIREMENTS.md) e [day1.md](day1.md) para: instalar Docker, criar o cluster `kind`, instalar Helm e MetalLB, e instalar o Istio no modo `ambient` (ou [OLD/day1-sidecar.md](OLD/day1-sidecar.md) para o modo `sidecar`). As variáveis de ambiente usadas abaixo seguem o padrão já definido nesses arquivos:
 
 ```bash
-export ISTIO_RELEASE=1.31
+export ISTIO_RELEASE=1.32
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
 export MY_NAMESPACE='myapp'
 ```
 
 ## 4.2. istioctl: comandos essenciais
 
-Fonte: [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/), [Istio / istioctl reference](https://istio.io/v1.31/docs/reference/commands/istioctl/).
+Fonte: [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/), [Istio / istioctl reference](https://istio.io/v1.32/docs/reference/commands/istioctl/).
 
 ```bash
 # Visão geral de sincronização de TODOS os proxies da malha (sidecars, gateways, ztunnel, waypoints)
@@ -970,7 +972,7 @@ istioctl proxy-config all deploy/waypoint -n $MY_NAMESPACE
 
 ## 4.5. Comandos avançados de troubleshooting do Envoy
 
-Fonte: [Envoy / Administration interface](https://www.envoyproxy.io/docs/envoy/latest/operations/admin), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/), [Discuss Istio — How do I take an Istio mTLS tcpdump?](https://discuss.istio.io/t/how-do-i-take-istio-mtls-tcpdump/9795).
+Fonte: [Envoy / Administration interface](https://www.envoyproxy.io/docs/envoy/latest/operations/admin), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/), [Discuss Istio — How do I take an Istio mTLS tcpdump?](https://discuss.istio.io/t/how-do-i-take-istio-mtls-tcpdump/9795).
 
 ```bash
 export PP_POD=$(kubectl -n $MY_NAMESPACE get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}')
@@ -1031,7 +1033,7 @@ Labels (tags) documentadas para essas métricas incluem: `response_code`, `grpc_
 
 > As métricas expostas (e suas tags) podem ser customizadas/reduzidas pelo recurso `Telemetry` (campo `metricsOverrides`/`tagOverride`).
 
-Fonte: [Istio / Standard Metrics Reference](https://istio.io/v1.31/docs/reference/config/metrics/).
+Fonte: [Istio / Standard Metrics Reference](https://istio.io/v1.32/docs/reference/config/metrics/).
 
 ## 5.2. Estatísticas internas do Envoy
 
@@ -1104,7 +1106,7 @@ spec:
           istio-discovery: enabled
 ```
 
-Fonte: [Istio / Performance and Scalability](https://istio.io/v1.31/docs/ops/deployment/performance-and-scalability/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
+Fonte: [Istio / Performance and Scalability](https://istio.io/v1.32/docs/ops/deployment/performance-and-scalability/), [Datadog — How to Monitor Istiod](https://www.datadoghq.com/blog/how-to-monitor-istiod/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
 
 ## 5.4. Response Flags do Envoy
 
@@ -1127,7 +1129,7 @@ O Envoy anota cada entrada do **access log** com "response flags" (`%RESPONSE_FL
 
 Múltiplas flags podem aparecer juntas separadas por vírgula (ex.: `UC,URX` = a conexão upstream foi terminada **e** os retries se esgotaram).
 
-Fonte: [Envoy / Substitution Formatter — Response Flags](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Standard Metrics Reference](https://istio.io/v1.31/docs/reference/config/metrics/).
+Fonte: [Envoy / Substitution Formatter — Response Flags](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Standard Metrics Reference](https://istio.io/v1.32/docs/reference/config/metrics/).
 
 ## 5.5. Prometheus + Grafana
 
@@ -1145,7 +1147,7 @@ O [day1.md](day1.md) já instala o Prometheus e o Grafana via `samples/addons` d
 
 ```bash
 # Alternativa de instalação via kubectl (equivalente ao que já é feito em day1.md)
-kubectl apply -f "https://raw.githubusercontent.com/istio/istio/release-1.30/samples/addons/grafana.yaml"
+kubectl apply -f "https://raw.githubusercontent.com/istio/istio/release-1.32/samples/addons/grafana.yaml"
 
 # Acesso local (já documentado em day1.md)
 kubectl -n istio-system port-forward service/grafana 3000:3000
@@ -1170,7 +1172,9 @@ sum(rate(istio_requests_total{response_flags=~"UH|UO"}[5m])) by (destination_ser
 envoy_cluster_outlier_detection_ejections_active
 ```
 
-Fonte: [Istio / Grafana](https://istio.io/v1.31/docs/ops/integrations/grafana/), [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/).
+Fonte: [Istio / Grafana](https://istio.io/v1.32/docs/ops/integrations/grafana/), [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/).
+
+> **Prática:** como exportar as métricas para um Prometheus/Grafana já existentes (metrics merging, jobs de scrape, Prometheus Operator, mTLS STRICT), o desenho de produção (recording rules + federação) e a configuração completa do Datadog nos modos sidecar e ambient estão no [Day 4](day4.md).
 
 ## 5.6. Datadog
 
@@ -1280,7 +1284,7 @@ kubectl -n istio-system port-forward "$ISTIOD" 9876:9876
 # Acesse http://localhost:9876 no navegador para ver/ajustar os escopos de log em tempo real
 ```
 
-Fonte: [Istio / Component logging](https://istio.io/v1.31/docs/ops/diagnostic-tools/component-logging/).
+Fonte: [Istio / Component logging](https://istio.io/v1.32/docs/ops/diagnostic-tools/component-logging/).
 
 ## 6.3. Access log: habilitar e customizar campos
 
@@ -1322,7 +1326,7 @@ Que produz uma linha como esta (exemplo oficial):
 
 **Adicionando informação ao log**: para customizar o formato (adicionar/remover campos), defina `providers[].name: envoy` no `Telemetry` e um `extensionProviders` do tipo `envoyFileAccessLog` no `meshConfig` (seção [8.2](#82-meshconfig-configurações-globais-da-malha)) com um `logFormat` próprio, reutilizando quaisquer *command operators* do Envoy (`%...%`), incluindo cabeçalhos de requisição/resposta arbitrários via `%REQ(<nome-do-header>)%`/`%RESP(<nome-do-header>)%` — por exemplo, para logar um header de tracing customizado ou um `X-Tenant-Id` de aplicação multi-tenant.
 
-Fonte: [Istio / Envoy Access Logs](https://istio.io/v1.31/docs/tasks/observability/logs/access-log/), [Envoy / Access logging](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage).
+Fonte: [Istio / Envoy Access Logs](https://istio.io/v1.32/docs/tasks/observability/logs/access-log/), [Envoy / Access logging](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage).
 
 ## 6.4. Latência e outras métricas visíveis apenas no log
 
@@ -1347,7 +1351,7 @@ flowchart LR
 
 Na prática, para investigar **por que uma requisição específica foi lenta**, compare `%DURATION%` (tempo total no Envoy) com `%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%` (tempo só no serviço upstream): se a diferença for grande, o tempo foi gasto no próprio Envoy/rede (fila de conexão, TLS handshake, retries) e não na aplicação de destino.
 
-Fonte: [Envoy / Substitution Formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Envoy Access Logs](https://istio.io/v1.31/docs/tasks/observability/logs/access-log/).
+Fonte: [Envoy / Substitution Formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter), [Istio / Envoy Access Logs](https://istio.io/v1.32/docs/tasks/observability/logs/access-log/).
 
 ## 6.5. Comandos de troubleshooting usando logs
 
@@ -1516,7 +1520,9 @@ spec:
 
 Isso insere o filtro `envoy.filters.http.compressor` (com a biblioteca `gzip`) imediatamente antes do `router`, na cadeia **inbound** do sidecar do `productpage`: quando o cliente envia `Accept-Encoding: gzip`, o Envoy comprime a resposta antes de enviá-la, removendo `content-length` e adicionando `transfer-encoding: chunked`.
 
-Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.31/docs/reference/config/networking/envoy-filter/), [Envoy / Compressor filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter).
+Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.32/docs/reference/config/networking/envoy-filter/), [Envoy / Compressor filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter).
+
+> **Prática:** mais laboratórios de `EnvoyFilter` (compressão gzip/brotli/zstd no gateway, Lua, rate limit local, `targetRefs`, `priority`, `filterClass`), a lista de filtros compilados no proxy do Istio e a alternativa para o modo ambient (`TrafficExtension`, já que `EnvoyFilter` não é suportado em waypoints) estão no [Day 5](day5.md). A mesma compressão feita com o Envoy Gateway está no [Day 6](day6.md).
 
 ## 7.7. Comandos de troubleshooting de EnvoyFilter
 
@@ -1543,7 +1549,7 @@ kill %1
 - `match.listener.portNumber`/`filterChain` não corresponde exatamente ao listener real (confira com `istioctl proxy-config listener`, seção [4.2](#42-istioctl-comandos-essenciais)).
 - Tentar `INSERT_AFTER`/`REPLACE` referenciando um `subFilter` que não existe com esse nome exato na versão do Envoy empacotada pelo Istio em uso.
 
-Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.31/docs/reference/config/networking/envoy-filter/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+Fonte: [Istio / EnvoyFilter reference](https://istio.io/v1.32/docs/reference/config/networking/envoy-filter/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ---
 
@@ -1582,7 +1588,7 @@ spec:
 
 Campos principais: `selector`/`targetRefs` (no máximo um dos dois, escolhe o(s) workload(s) alvo), `metrics[].providers`, `metrics[].overrides[].match.metric` (`REQUEST_COUNT`, `REQUEST_DURATION`, `REQUEST_SIZE`, `RESPONSE_SIZE`, `TCP_OPENED_CONNECTIONS`, `TCP_CLOSED_CONNECTIONS`, `TCP_SENT_BYTES`, `TCP_RECEIVED_BYTES`, `ALL_METRICS`), `tagOverrides[].operation` (`UPSERT` para adicionar/alterar uma dimensão, `REMOVE` para excluí-la), e `tracing[].randomSamplingPercentage`/`disableSpanReporting`/`customTags`.
 
-Fonte: [Istio / Telemetry API reference](https://istio.io/v1.31/docs/reference/config/telemetry/).
+Fonte: [Istio / Telemetry API reference](https://istio.io/v1.32/docs/reference/config/telemetry/).
 
 ## 8.2. MeshConfig: configurações globais da malha
 
@@ -1614,7 +1620,7 @@ Alguns campos úteis de `meshConfig`:
 | `trustDomain` | Raiz de confiança usada para montar as identidades SPIFFE dos workloads (ex.: `cluster.local`) |
 | `defaultServiceExportTo` | Visibilidade padrão dos serviços entre namespaces (`*`, `.`, `~`) |
 
-Fonte: [Istio / MeshConfig reference](https://istio.io/v1.31/docs/reference/config/istio.mesh.v1alpha1/), [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/).
+Fonte: [Istio / MeshConfig reference](https://istio.io/v1.32/docs/reference/config/istio.mesh.v1alpha1/), [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/).
 
 ## 8.3. Certificados mTLS: plugando uma CA própria e rotação
 
@@ -1646,7 +1652,7 @@ kubectl get secret cacerts -n istio-system
 kubectl get configmap istio-ca-root-cert -n istio-system -o yaml
 ```
 
-Fonte: [Istio / Plug in CA Certificates](https://istio.io/v1.31/docs/tasks/security/cert-management/plugin-ca-cert/), [Istio / Security Concepts](https://istio.io/v1.31/docs/concepts/security/).
+Fonte: [Istio / Plug in CA Certificates](https://istio.io/v1.32/docs/tasks/security/cert-management/plugin-ca-cert/), [Istio / Security Concepts](https://istio.io/v1.32/docs/concepts/security/).
 
 ## 8.4. Sidecar: restringindo com quais endereços um workload se relaciona
 
@@ -1672,7 +1678,7 @@ Campos principais: `workloadSelector` (a quais Pods esse `Sidecar` se aplica —
 
 > O impacto prático de restringir o `egress` é grande: o livro *Istio in Action* mede, em um exemplo real, a configuração do Envoy de um workload caindo de **2 MB para 644 KB** (uma redução de ~70%) só por aplicar um `Sidecar` restringindo o egress ao essencial — o que também reduz o número de pushes que o istiod precisa fazer a cada mudança (seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência)).
 
-Fonte: [Istio / Sidecar reference](https://istio.io/v1.31/docs/reference/config/networking/sidecar/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
+Fonte: [Istio / Sidecar reference](https://istio.io/v1.32/docs/reference/config/networking/sidecar/), POSTA & MALOKU, *Istio in Action* (Manning, 2022), capítulo 11.
 
 ## 8.5. AuthorizationPolicy: autorizando apenas aplicações específicas
 
@@ -1722,7 +1728,7 @@ Campos de `rules[].from[].source`: `principals` (identidade SPIFFE do peer mTLS,
 
 > ATENÇÃO!!! `principals`/`namespaces`/`requestPrincipals` só funcionam de forma confiável com **mTLS habilitado** (`PeerAuthentication` `STRICT` — Lab 2) — sem mTLS, o Envoy não tem como verificar criptograficamente a identidade de origem, e a documentação recomenda fortemente usar mTLS `STRICT` junto com essas regras para evitar bypass de política.
 
-Fonte: [Istio / AuthorizationPolicy reference](https://istio.io/v1.31/docs/reference/config/security/authorization-policy/).
+Fonte: [Istio / AuthorizationPolicy reference](https://istio.io/v1.32/docs/reference/config/security/authorization-policy/).
 
 ## 8.6. Autorizando por JWT e/ou mTLS (RequestAuthentication + AuthorizationPolicy)
 
@@ -1789,7 +1795,9 @@ spec:
             methods: ["GET"]
 ```
 
-Fonte: [Istio / Authentication Policy (JWT)](https://istio.io/v1.31/docs/tasks/security/authentication/authn-policy/), [Istio / RequestAuthentication reference](https://istio.io/v1.31/docs/reference/config/security/request_authentication/), [Istio / AuthorizationPolicy reference](https://istio.io/v1.31/docs/reference/config/security/authorization-policy/).
+Fonte: [Istio / Authentication Policy (JWT)](https://istio.io/v1.32/docs/tasks/security/authentication/authn-policy/), [Istio / RequestAuthentication reference](https://istio.io/v1.32/docs/reference/config/security/request_authentication/), [Istio / AuthorizationPolicy reference](https://istio.io/v1.32/docs/reference/config/security/authorization-policy/).
+
+> **Prática:** o cenário **entre clusters** (a mesma identidade SPIFFE nos dois clusters, políticas aplicadas em cada cluster), a explicação dos claims do JWT e um laboratório de autorização por claims com um token por aplicação - gerados pela CLI deste repositório - estão no [Day 7](day7.md).
 
 ---
 
@@ -1848,7 +1856,7 @@ kubectl -n $MY_NAMESPACE rollout restart deployment
 istioctl ztunnel-config workload | grep $MY_NAMESPACE
 ```
 
-**Referência:** [Istio / Ambient — Secure and visualize your mesh](https://istio.io/v1.31/docs/ambient/getting-started/secure-and-visualize/), [Istio / Troubleshoot ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/).
+**Referência:** [Istio / Ambient — Secure and visualize your mesh](https://istio.io/v1.32/docs/ambient/getting-started/secure-and-visualize/), [Istio / Troubleshoot ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/).
 
 ## Lab 2 - mTLS STRICT quebrando tráfego (sidecar)
 
@@ -1896,7 +1904,7 @@ kubectl -n $MY_NAMESPACE patch peerauthentication default --type merge -p '{"spe
 kubectl -n $MY_NAMESPACE delete peerauthentication default
 ```
 
-**Referência:** [Istio / Mutual TLS Migration](https://istio.io/v1.31/docs/tasks/security/authentication/mtls-migration/), [Istio / PeerAuthentication reference](https://istio.io/v1.31/docs/reference/config/security/peer_authentication/).
+**Referência:** [Istio / Mutual TLS Migration](https://istio.io/v1.32/docs/tasks/security/authentication/mtls-migration/), [Istio / PeerAuthentication reference](https://istio.io/v1.32/docs/reference/config/security/peer_authentication/).
 
 ## Lab 3 - VirtualService/DestinationRule com host errado (503 / no healthy upstream)
 
@@ -1954,7 +1962,7 @@ kubectl -n $MY_NAMESPACE delete virtualservice reviews-quebrado
 kubectl -n $MY_NAMESPACE delete destinationrule reviews-quebrado
 ```
 
-**Referência:** [Istio / Common Problems — 503 errors after setting a DestinationRule](https://istio.io/v1.31/docs/ops/common-problems/network-issues/), [Istio / istioctl analyze](https://istio.io/v1.31/docs/ops/diagnostic-tools/istioctl-analyze/).
+**Referência:** [Istio / Common Problems — 503 errors after setting a DestinationRule](https://istio.io/v1.32/docs/ops/common-problems/network-issues/), [Istio / istioctl analyze](https://istio.io/v1.32/docs/ops/diagnostic-tools/istioctl-analyze/).
 
 ## Lab 4 - istiod fora de sincronia (STALE / NOT SENT)
 
@@ -1989,7 +1997,7 @@ kubectl -n istio-system rollout status deployment/istiod --timeout=180s
 istioctl proxy-status
 ```
 
-**Referência:** [Istio / Debugging Envoy and Istiod — proxy-status](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+**Referência:** [Istio / Debugging Envoy and Istiod — proxy-status](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ## Lab 5 - Inspecionando o Envoy diretamente pela Admin API
 
@@ -2108,7 +2116,7 @@ istioctl analyze --all-namespaces
 
 Tipos de achado, conforme a documentação: **erros** (ex.: `Referenced selector not found`, quando um `Gateway` referencia um selector inexistente), **avisos** (ex.: host do `DestinationRule` sem correspondência com nenhum serviço na mesh) e **informações** (ex.: namespace sem sidecar injection habilitada).
 
-**Referência:** [Istio / istioctl analyze](https://istio.io/v1.31/docs/ops/diagnostic-tools/istioctl-analyze/).
+**Referência:** [Istio / istioctl analyze](https://istio.io/v1.32/docs/ops/diagnostic-tools/istioctl-analyze/).
 
 ## Lab 9 - Fault injection e timeout (retomando o Day 2)
 
@@ -2117,7 +2125,7 @@ Os exercícios de **fault injection** (delay de 7s entre `reviews:v2` e `ratings
 - Confirmar, via `istioctl proxy-config route`, que o `timeout`/`fault.delay` está presente na rota ativa do Envoy (não apenas no YAML aplicado).
 - Observar, via `/stats` da Admin API do Envoy, os contadores `upstream_rq_timeout` e `upstream_rq_pending_overflow` durante o teste.
 
-**Referência:** [Istio / Fault Injection](https://istio.io/v1.31/docs/tasks/traffic-management/fault-injection/), [day2.md](day2.md).
+**Referência:** [Istio / Fault Injection](https://istio.io/v1.32/docs/tasks/traffic-management/fault-injection/), [day2.md](day2.md).
 
 ## Lab 10 - Circuit breaking e overflow detectados via métricas
 
@@ -2179,7 +2187,7 @@ sum(rate(istio_requests_total{destination_service_name="reviews", response_flags
 kubectl -n $MY_NAMESPACE delete destinationrule reviews-circuit-breaker
 ```
 
-**Referência:** [Envoy / Circuit breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking), [Istio / DestinationRule reference](https://istio.io/v1.31/docs/reference/config/networking/destination-rule/).
+**Referência:** [Envoy / Circuit breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking), [Istio / DestinationRule reference](https://istio.io/v1.32/docs/reference/config/networking/destination-rule/).
 
 ## Lab 11 - Medindo o tempo de convergência do istiod
 
@@ -2206,7 +2214,7 @@ kubectl -n $MY_NAMESPACE delete -f "${ISTIO_BOOKINFO_URL}networking/virtual-serv
 
 Se estiver usando o Prometheus dos addons, a consulta PromQL da seção [5.3](#53-métricas-do-control-plane-istiod-e-tempo-de-convergência) mostra a mesma informação de forma agregada e histórica, o que é mais útil do que ler o texto bruto da métrica em produção.
 
-**Referência:** [Istio / Performance and Scalability](https://istio.io/v1.31/docs/ops/deployment/performance-and-scalability/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/).
+**Referência:** [Istio / Performance and Scalability](https://istio.io/v1.32/docs/ops/deployment/performance-and-scalability/), [Istio / Debugging Envoy and Istiod](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/).
 
 ## Lab 12 - Compressão gzip via EnvoyFilter não aplicada
 
@@ -2278,7 +2286,7 @@ istioctl proxy-config listener deploy/productpage-v1.$MY_NAMESPACE --port 9080 -
 kubectl -n $MY_NAMESPACE delete envoyfilter enable-gzip-compression
 ```
 
-**Referência:** [Istio / EnvoyFilter reference](https://istio.io/v1.31/docs/reference/config/networking/envoy-filter/), seção [7.7](#77-comandos-de-troubleshooting-de-envoyfilter) deste guia.
+**Referência:** [Istio / EnvoyFilter reference](https://istio.io/v1.32/docs/reference/config/networking/envoy-filter/), seção [7.7](#77-comandos-de-troubleshooting-de-envoyfilter) deste guia.
 
 ## Lab 13 - AuthorizationPolicy negando (ou liberando) por engano
 
@@ -2326,7 +2334,7 @@ istioctl x describe pod "$(kubectl -n $MY_NAMESPACE get pod -l app=reviews -o js
 kubectl -n $MY_NAMESPACE delete authorizationpolicy reviews-allow-only-productpage
 ```
 
-**Referência:** [Istio / AuthorizationPolicy reference](https://istio.io/v1.31/docs/reference/config/security/authorization-policy/), seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas) deste guia.
+**Referência:** [Istio / AuthorizationPolicy reference](https://istio.io/v1.32/docs/reference/config/security/authorization-policy/), seção [8.5](#85-authorizationpolicy-autorizando-apenas-aplicações-específicas) deste guia.
 
 ## Lab 14 - JWT inválido/ausente sendo rejeitado (ou não)
 
@@ -2392,7 +2400,7 @@ kubectl -n $MY_NAMESPACE delete authorizationpolicy require-jwt-productpage
 kubectl -n $MY_NAMESPACE delete requestauthentication jwt-example
 ```
 
-**Referência:** [Istio / Authentication Policy (JWT)](https://istio.io/v1.31/docs/tasks/security/authentication/authn-policy/), seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy) deste guia.
+**Referência:** [Istio / Authentication Policy (JWT)](https://istio.io/v1.32/docs/tasks/security/authentication/authn-policy/), seção [8.6](#86-autorizando-por-jwt-eou-mtls-requestauthentication--authorizationpolicy) deste guia.
 
 ---
 
@@ -2400,42 +2408,42 @@ kubectl -n $MY_NAMESPACE delete requestauthentication jwt-example
 
 **Istio (documentação oficial, versão 1.30):**
 
-- [Istio / What is Istio?](https://istio.io/v1.31/docs/overview/what-is-istio/)
-- [Istio / Dataplane modes](https://istio.io/v1.31/docs/overview/dataplane-modes/)
-- [Istio / Architecture (deployment)](https://istio.io/v1.31/docs/ops/deployment/architecture/)
+- [Istio / What is Istio?](https://istio.io/v1.32/docs/overview/what-is-istio/)
+- [Istio / Dataplane modes](https://istio.io/v1.32/docs/overview/dataplane-modes/)
+- [Istio / Architecture (deployment)](https://istio.io/v1.32/docs/ops/deployment/architecture/)
 - [Istio / Ambient Overview](https://istio.io/latest/docs/ambient/overview/)
-- [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.31/docs/ambient/architecture/traffic-redirection/)
-- [Istio / Glossary](https://istio.io/v1.31/docs/reference/glossary/)
-- [Istio / Application Requirements (portas)](https://istio.io/v1.31/docs/ops/deployment/application-requirements/)
+- [Istio / Ambient Architecture — Traffic Redirection](https://istio.io/v1.32/docs/ambient/architecture/traffic-redirection/)
+- [Istio / Glossary](https://istio.io/v1.32/docs/reference/glossary/)
+- [Istio / Application Requirements (portas)](https://istio.io/v1.32/docs/ops/deployment/application-requirements/)
 - [Istio / Debug Endpoints](https://istio.io/latest/docs/ops/integrations/integration-guide/debug-endpoints/)
-- [Istio / Debugging Envoy and Istiod (istioctl proxy-status / proxy-config)](https://istio.io/v1.31/docs/ops/diagnostic-tools/proxy-cmd/)
-- [Istio / istioctl analyze](https://istio.io/v1.31/docs/ops/diagnostic-tools/istioctl-analyze/)
-- [Istio / istioctl command reference](https://istio.io/v1.31/docs/reference/commands/istioctl/)
-- [Istio / Common Problems — Network Issues](https://istio.io/v1.31/docs/ops/common-problems/network-issues/)
-- [Istio / Mutual TLS Migration](https://istio.io/v1.31/docs/tasks/security/authentication/mtls-migration/)
-- [Istio / PeerAuthentication reference](https://istio.io/v1.31/docs/reference/config/security/peer_authentication/)
-- [Istio / Fault Injection](https://istio.io/v1.31/docs/tasks/traffic-management/fault-injection/)
+- [Istio / Debugging Envoy and Istiod (istioctl proxy-status / proxy-config)](https://istio.io/v1.32/docs/ops/diagnostic-tools/proxy-cmd/)
+- [Istio / istioctl analyze](https://istio.io/v1.32/docs/ops/diagnostic-tools/istioctl-analyze/)
+- [Istio / istioctl command reference](https://istio.io/v1.32/docs/reference/commands/istioctl/)
+- [Istio / Common Problems — Network Issues](https://istio.io/v1.32/docs/ops/common-problems/network-issues/)
+- [Istio / Mutual TLS Migration](https://istio.io/v1.32/docs/tasks/security/authentication/mtls-migration/)
+- [Istio / PeerAuthentication reference](https://istio.io/v1.32/docs/reference/config/security/peer_authentication/)
+- [Istio / Fault Injection](https://istio.io/v1.32/docs/tasks/traffic-management/fault-injection/)
 - [Istio / Troubleshoot connectivity issues with ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/)
 - [Istio / Troubleshoot issues with waypoints](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/)
 - [Istio / Supported Releases](https://istio.io/latest/docs/releases/supported-releases/)
-- [Istio / Security Concepts](https://istio.io/v1.31/docs/concepts/security/)
-- [Istio / Standard Metrics Reference](https://istio.io/v1.31/docs/reference/config/metrics/)
+- [Istio / Security Concepts](https://istio.io/v1.32/docs/concepts/security/)
+- [Istio / Standard Metrics Reference](https://istio.io/v1.32/docs/reference/config/metrics/)
 - [Istio / Envoy Statistics](https://istio.io/latest/docs/ops/configuration/telemetry/envoy-stats/)
-- [Istio / Performance and Scalability](https://istio.io/v1.31/docs/ops/deployment/performance-and-scalability/)
-- [Istio / Grafana](https://istio.io/v1.31/docs/ops/integrations/grafana/)
+- [Istio / Performance and Scalability](https://istio.io/v1.32/docs/ops/deployment/performance-and-scalability/)
+- [Istio / Grafana](https://istio.io/v1.32/docs/ops/integrations/grafana/)
 - [Istio / Visualizing Metrics with Grafana](https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/)
-- [Istio / DestinationRule reference](https://istio.io/v1.31/docs/reference/config/networking/destination-rule/)
-- [Istio / Component logging](https://istio.io/v1.31/docs/ops/diagnostic-tools/component-logging/)
-- [Istio / Envoy Access Logs](https://istio.io/v1.31/docs/tasks/observability/logs/access-log/)
-- [Istio / EnvoyFilter reference](https://istio.io/v1.31/docs/reference/config/networking/envoy-filter/)
-- [Istio / Telemetry API reference](https://istio.io/v1.31/docs/reference/config/telemetry/)
-- [Istio / MeshConfig reference](https://istio.io/v1.31/docs/reference/config/istio.mesh.v1alpha1/)
-- [Istio / Plug in CA Certificates](https://istio.io/v1.31/docs/tasks/security/cert-management/plugin-ca-cert/)
-- [Istio / Sidecar reference](https://istio.io/v1.31/docs/reference/config/networking/sidecar/)
-- [Istio / AuthorizationPolicy reference](https://istio.io/v1.31/docs/reference/config/security/authorization-policy/)
-- [Istio / Authentication Policy (JWT)](https://istio.io/v1.31/docs/tasks/security/authentication/authn-policy/)
-- [Istio / RequestAuthentication reference](https://istio.io/v1.31/docs/reference/config/security/request_authentication/)
-- [Istio / Deployment Models](https://istio.io/v1.31/docs/ops/deployment/deployment-models/)
+- [Istio / DestinationRule reference](https://istio.io/v1.32/docs/reference/config/networking/destination-rule/)
+- [Istio / Component logging](https://istio.io/v1.32/docs/ops/diagnostic-tools/component-logging/)
+- [Istio / Envoy Access Logs](https://istio.io/v1.32/docs/tasks/observability/logs/access-log/)
+- [Istio / EnvoyFilter reference](https://istio.io/v1.32/docs/reference/config/networking/envoy-filter/)
+- [Istio / Telemetry API reference](https://istio.io/v1.32/docs/reference/config/telemetry/)
+- [Istio / MeshConfig reference](https://istio.io/v1.32/docs/reference/config/istio.mesh.v1alpha1/)
+- [Istio / Plug in CA Certificates](https://istio.io/v1.32/docs/tasks/security/cert-management/plugin-ca-cert/)
+- [Istio / Sidecar reference](https://istio.io/v1.32/docs/reference/config/networking/sidecar/)
+- [Istio / AuthorizationPolicy reference](https://istio.io/v1.32/docs/reference/config/security/authorization-policy/)
+- [Istio / Authentication Policy (JWT)](https://istio.io/v1.32/docs/tasks/security/authentication/authn-policy/)
+- [Istio / RequestAuthentication reference](https://istio.io/v1.32/docs/reference/config/security/request_authentication/)
+- [Istio / Deployment Models](https://istio.io/v1.32/docs/ops/deployment/deployment-models/)
 - [howardjohn's blog — Everything you need to know about Istio installation](https://blog.howardjohn.info/posts/istio-install/)
 - [github.com/istio/istio — Releases](https://github.com/istio/istio/releases/)
 

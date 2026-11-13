@@ -1,10 +1,15 @@
-# mise's native config format, mirroring .tool-versions (the asdf-compatible
-# format) - both files pin the exact same four tools to the exact same
-# versions, and "istio-upgrade docs update --apply" keeps them in sync
-# automatically. Pick whichever file you prefer to look at; mise reads both.
+# mise's native config format (this repo does not use the asdf-compatible
+# .tool-versions format). "istio-upgrade docs update --apply" keeps the
+# kind/helm/kubectl/istioctl pins in sync with README.md and
+# INSTALL_REQUIREMENTS.md automatically.
+#
+# "go" is only needed to build the istio-upgrade CLI (agents/upgrade) and is
+# NOT managed by "docs update": keep it equal to the "go" directive in
+# agents/upgrade/app/go.mod when bumping it by hand.
 
 [tools]
 kind = "0.33.0"
-helm = "3.21.2"
-kubectl = "1.37.0"
-istioctl = "1.31.0"
+helm = "4.3.1"
+kubectl = "1.37.2"
+istioctl = "1.32.0"
+go = "1.27.4"
