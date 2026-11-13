@@ -247,7 +247,7 @@ sudo rm -f /etc/apt/sources.list.d/helm-stable-debian.list
 Documentação: https://helm.sh/docs/
 
 ```bash
-VERSION="3.21.2"
+VERSION="3.22.1"
 
 mise latest helm
 mise install helm@$VERSION
@@ -269,7 +269,7 @@ Execute os seguintes comandos.
 Documentação: https://kubernetes.io/docs/reference/kubectl/overview/
 
 ```bash
-VERSION_OPTION_1="1.37.0"
+VERSION_OPTION_1="1.37.2"
 
 mise latest kubectl
 mise install kubectl@$VERSION_OPTION_1
@@ -301,7 +301,7 @@ inspecionar a configuração efetiva de um proxy Envoy
 Documentação: https://istio.io/latest/docs/reference/commands/istioctl/
 
 ```bash
-VERSION="1.31.0"
+VERSION="1.32.0"
 
 mise latest istioctl
 mise install istioctl@$VERSION
@@ -445,7 +445,7 @@ Execute os seguintes comandos para instalar o [MetalLB](https://metallb.universe
 > - https://metallb.universe.tf/installation/
 
 ```bash
-export HELM_CHART_VERSION="0.16.1"
+export HELM_CHART_VERSION="0.16.2"
 
 # actually apply the changes, returns nonzero returncode on errors only
 kubectl get configmap kube-proxy -n kube-system -o yaml | \
