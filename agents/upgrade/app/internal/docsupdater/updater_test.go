@@ -94,3 +94,43 @@ func TestUpdater_PlanAndApply_WritesDay1Sidecar(t *testing.T) {
 		t.Errorf("expected mise.toml to be rewritten with the new kind pin, got:\n%s", gotMiseToml)
 	}
 }
+
+func TestUpdater_Plan_OptionalDayFiles(t *testing.T) {
+	root := writeFixtureRepo(t)
+	u := &Updater{RepoRoot: root}
+
+	// None of the optional walkthroughs exist yet: Plan must not fail
+	// and must not invent entries for them.
+	plan, err := u.Plan(fixtureToolversionsResults())
+	if err != nil {
+		t.Fatalf("unexpected error without optional day files: %v", err)
+	}
+	for _, f := range plan.Files {
+		if f.Path == "day3.md" {
+			t.Fatal("day3.md must not be planned when the file is absent")
+		}
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "day3.md"), []byte(dayFileFixture), 0o644); err != nil {
+		t.Fatalf("writing day3.md: %v", err)
+	}
+	plan, err = u.Plan(fixtureToolversionsResults())
+	if err != nil {
+		t.Fatalf("unexpected error with day3.md present: %v", err)
+	}
+	var day3 *FileUpdate
+	for _, f := range plan.Files {
+		if f.Path == "day3.md" {
+			day3 = f
+		}
+	}
+	if day3 == nil {
+		t.Fatal("expected day3.md to be part of the plan once it exists")
+	}
+	if !day3.Changed {
+		t.Errorf("expected day3.md to be marked as changed, notes: %v", day3.Notes)
+	}
+	if !strings.Contains(day3.After, "export ISTIO_RELEASE=1.31") {
+		t.Errorf("expected day3.md to be rewritten to the resolved Istio minor, got:\n%s", day3.After)
+	}
+}

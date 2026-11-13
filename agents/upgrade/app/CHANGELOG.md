@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
+## [0.4.0] - 2026-11-13
+
+### Added
+
+- `docs update`: the later walkthroughs `day3.md`, `day4.md`, `day5.md` and
+  `day6.md` (multicluster, observability, EnvoyFilter/compression, Envoy
+  Gateway) now get the same `ISTIO_RELEASE` / `VERSION_ISTIO` /
+  `GATEWAY_API_VERSION` / `istio.io/vX.Y/` rewrites as `day1.md`,
+  `day1-sidecar.md` and `day2.md`. Unlike those three, they are optional:
+  a missing file is skipped instead of failing the run
+  (`docsupdater.OptionalDayFiles`).
+
 ## [0.3.0] - 2026-09-01
 
 ### Fixed

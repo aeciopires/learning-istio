@@ -68,7 +68,7 @@ flowchart TB
 
     versionsEnv[("configs/versions.env\n(gerado por docs update --apply)")]
     docsupdater -- escreve --> versionsEnv
-    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nINSTALL_REQUIREMENTS.md · mise.toml"]
+    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nday3.md a day6.md (opcionais)\nINSTALL_REQUIREMENTS.md · mise.toml"]
 
     subgraph AUTOMATION["Makefile + scripts/*.sh (NÃO é o CLI)"]
         direction TB
@@ -306,6 +306,7 @@ istio-upgrade docs update --apply --allow-major-bump
 ```
 
 Atualiza: `README.md`, `day1.md`, `day1-sidecar.md`, `day2.md`,
+`day3.md` a `day6.md` (opcionais - são ignorados se não existirem),
 `INSTALL_REQUIREMENTS.md`, `mise.toml` (na raiz do repositório) e
 [configs/versions.env](configs/versions.env) (consumido pelos scripts de
 cluster - veja a próxima seção, inclusive as versões *informativas* dos
