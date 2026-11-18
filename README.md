@@ -11,6 +11,7 @@
 - [Day 5](#day-5)
 - [Day 6](#day-6)
 - [Day 7](#day-7)
+- [Day 8](#day-8)
 - [Automação: Helm, Argo CD e a CLI istio-upgrade](#automação-helm-argo-cd-e-a-cli-istio-upgrade)
 - [Guia de Estudos: Istio e Envoy](#guia-de-estudos-istio-e-envoy)
 - [Referências](#referências)
@@ -39,10 +40,10 @@ Para fins de aprendizado, o Kubernetes foi provisionado utilizando o [kind](http
 
 As versões dos softwares utilizados foram:
 
-- Docker: 29.2.1
+- Docker: 29.10.0
 - Kubernetes (kind): 1.37.0
 - kubectl: 1.37.2
-- Helm: 4.3.1
+- Helm: 4.3.2
 - Istio: 1.32
 - istioctl: 1.32.0
 - Go: 1.27.4 (opcional, apenas para compilar a CLI de [agents/upgrade](agents/upgrade))
@@ -73,6 +74,7 @@ Veja mais detalhes sobre os requisitos da aplicação em:
 | Intermediário a avançado | [Day 5](day5.md): EnvoyFilter, filtros do Envoy, compressão (gzip, brotli, zstd), Lua e rate limit local | Sim | Gateways (em waypoints, use `TrafficExtension`) |
 | Iniciante a avançado | [Day 6](day6.md): Envoy Gateway (Gateway API, políticas, compressão, observabilidade, EnvoyPatchPolicy) | Não usa mesh | Não usa mesh |
 | Iniciante a avançado | [Day 7](day7.md): segurança entre clusters - SPIFFE, AuthorizationPolicy entre aplicações em clusters diferentes e autorização por JWT (claims) | Sim | Sim (JWT exige waypoint) |
+| Iniciante a avançado | [Day 8](day8.md): access logs do Envoy - formato JSON, `REQUEST_TX_DURATION`, filtros e métricas a partir de logs no Datadog | Sim | Gateways e waypoints |
 
 # Day 1
 
@@ -101,6 +103,10 @@ Envoy Gateway. Veja os comandos [aqui](day6.md).
 # Day 7
 
 Segurança entre clusters: identidade SPIFFE, AuthorizationPolicy entre aplicações implantadas em clusters diferentes e autorização por JWT (incluindo claims), com tokens gerados pela CLI deste repositório. Veja os comandos [aqui](day7.md).
+
+# Day 8
+
+Customização dos access logs do Envoy no gateway do Istio: formato JSON, campo `REQUEST_TX_DURATION`, filtros e envio ao Datadog. Veja os comandos [aqui](day8.md).
 
 # Automação: Helm, Argo CD e a CLI istio-upgrade
 

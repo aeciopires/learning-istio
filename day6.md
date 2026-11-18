@@ -156,6 +156,7 @@ Sem LoadBalancer (port-forward):
 ```bash
 export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
 kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
+sleep 3
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
@@ -194,7 +195,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --set crds.enabled=false
 ```
 
-Tanto o Istio 1.32 quanto o Envoy Gateway v1.10 são testados com o Gateway API **v1.6.1** (conforme a tabela de [releases suportadas do Istio](https://istio.io/latest/docs/releases/supported-releases/) e a matriz do Envoy Gateway), mas a compatibilidade de **canal** e dos recursos exigidos precisa ser avaliada caso a caso. Por isso este dia usa um cluster dedicado.
+Tanto o Istio 1.32 quanto o Envoy Gateway v1.10 são testados com o Gateway API **v1.6.1** (conforme a tabela de [releases suportadas do Istio](https://istio.io/latest/docs/releases/supported-releases/) e a matriz do Envoy Gateway), mas a compatibilidade de **canal** e dos recursos exigidos precisa ser avaliada caso a caso. A versão instalada pelo Day 1 (`GATEWAY_API_VERSION`) acompanha o release mais recente do Gateway API e pode ser mais nova que a listada nessas tabelas. Por isso este dia usa um cluster dedicado.
 
 # Nível intermediário: políticas
 
@@ -313,6 +314,7 @@ Métricas do **data plane** direto do endpoint de admin do Envoy (`/stats/promet
 ```bash
 export ENVOY_POD_NAME=$(kubectl get pod -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
 kubectl port-forward pod/$ENVOY_POD_NAME -n envoy-gateway-system 19001:19001 &
+sleep 3
 
 curl -s localhost:19001/stats/prometheus | grep "default/backend/rule/0"
 ```
@@ -322,6 +324,7 @@ Métricas do **control plane** (as métricas Prometheus do Envoy Gateway vêm ha
 ```bash
 export EG_POD_NAME=$(kubectl get pod -n envoy-gateway-system --selector=control-plane=envoy-gateway,app.kubernetes.io/instance=eg -o jsonpath='{.items[0].metadata.name}')
 kubectl port-forward pod/$EG_POD_NAME -n envoy-gateway-system 19002:19001 &
+sleep 3
 
 curl -s localhost:19002/metrics | head -20
 ```
@@ -331,6 +334,7 @@ Consultando pelo Prometheus dos add-ons:
 ```bash
 export PROMETHEUS_PORT=$(kubectl get service prometheus -n monitoring -o jsonpath='{.spec.ports[0].port}')
 kubectl port-forward service/prometheus -n monitoring 19003:$PROMETHEUS_PORT &
+sleep 3
 
 curl -s 'http://localhost:19003/api/v1/query?query=topk(1,envoy_cluster_upstream_cx_connect_ms_sum)' | jq .
 ```
@@ -383,6 +387,14 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 Exemplo da documentação: trocar a resposta `404` por um `406` com corpo customizado, alterando o listener gerado para o `Gateway` `eg`:
 
 ```bash
+# O HTTPRoute do Quickstart casa com "/", então nenhuma rota devolveria 404.
+# Como na documentação oficial, restrinja-o ao caminho /get.
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/rules/0/matches/0/path/value
+    value: /get
+  '
+
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
@@ -415,6 +427,9 @@ spec:
             body:
               inline_string: "could not find what you are looking for"
 EOF
+
+# Aguarde a configuração chegar ao proxy
+sleep 10
 
 # Uma rota inexistente agora devolve 406
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/find

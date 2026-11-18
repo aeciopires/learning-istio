@@ -104,7 +104,7 @@ Os guias oficiais de multicluster usam arquivos que vêm dentro do pacote da rel
 ```bash
 export ISTIO_RELEASE=1.32
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
-export GATEWAY_API_VERSION="v1.6.1"
+export GATEWAY_API_VERSION="v1.7.0"
 
 cd /tmp
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$VERSION_ISTIO sh -

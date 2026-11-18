@@ -43,6 +43,11 @@ community convention - don't "fix" that to Portuguese.
   mints its tokens with the CLI's `jwt` subcommand (`make jwt-*`). Same
   "official sources only" rule and same optional `docs update` sync as
   `day3.md`-`day6.md`.
+- `day8.md` (Envoy access logs: `Telemetry` + `envoyFileAccessLog`
+  providers, JSON and text formats, `%REQUEST_TX_DURATION%`, filters,
+  waypoints, and log-based metrics in Datadog) - builds on the Day 1
+  environment and on `day4.md`'s Datadog Agent. Same rules and optional
+  sync as `day3.md`-`day7.md`.
 - `INSTALL_REQUIREMENTS.md` - OS packages, [mise](https://mise.jdx.dev)
   (the asdf-compatible version manager used here - not asdf itself),
   Docker, Helm, kubectl, istioctl (required, mainly for troubleshooting -
@@ -241,7 +246,7 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
   passwordless sudo is available, else prints the exact commands to run.
   **`fs.inotify` is Linux-only** - on macOS `preflight.sh` detects
   `uname -s == Darwin` and skips the host-level check (the relevant
-  kernel is Docker Desktop's Linux VM, not the host).
+  kernel is the Linux VM of Docker Desktop or Colima, not the host).
 - **macOS/BSD `mktemp` isn't a drop-in for GNU `mktemp`**: `mktemp -t
   NAME-XXXXXX.yaml` (GNU) silently produces the wrong filename on BSD
   mktemp (macOS), which treats the whole `-t` argument as a literal
@@ -253,6 +258,29 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
   `ztunnel` at all (it isn't Envoy). Don't write ambient examples that
   patch a waypoint with `EnvoyFilter` - `day5.md` points to
   `TrafficExtension` (alpha) instead.
+- **`day2.md`'s `VirtualService`s route to subsets**, so
+  `destination-rule-all.yaml` must be applied first. Without it `reviews`
+  fails and a "no stars" check passes for the wrong reason.
+- **Address the gateway by name** (`get gateway bookinfo-gateway`): once a
+  waypoint exists, listing all `Gateway`s returns two addresses and breaks
+  `GATEWAY_IP`.
+- **`istioctl proxy-config listener` on a gateway needs `--port 80`** when
+  looking at compressors: Istio 1.32's stats listener already has its own
+  `envoy.filters.http.compressor.*` filters.
+- **Access log `labels` are typed JSON** (`request_tx_duration` is a number,
+  `null` without an upstream). `meshConfig.accessLogFile` turns logs on for
+  every proxy, so gateway-only examples use a provider plus a `Telemetry`
+  with `targetRefs`.
+- **`Gateway.spec.infrastructure.annotations` does not reach the Pod** (only
+  the `Deployment` and `Service`, verified on Istio 1.32). Pod annotations,
+  such as Datadog Autodiscovery, go through `parametersRef`.
+- **Datadog Agent on kind needs `datadog.kubelet.tlsVerify: false`** or the
+  `agent` container crash-loops. In ambient mode there is no `ztunnel`
+  `Service` and the waypoint `Service` has no `15020`, so `day4.md` uses Pod
+  annotations instead of Datadog's static URLs.
+- **Authorization changes are not instant on open connections**: in
+  `day7.md`'s two-cluster tests, requests kept passing for under a minute
+  after the policy was applied, so its checks wait 60s first.
 - **Addon versions in `configs/versions.env`** (`GRAFANA_VERSION`,
   `PROMETHEUS_VERSION`, `KIALI_VERSION`, `JAEGER_VERSION`) are
   **informational only** - `scripts/install-addons.sh` installs them from
@@ -265,7 +293,7 @@ and update `agents/upgrade/app/CHANGELOG.md` alongside it.
 ## Working conventions
 
 - Version pins are duplicated across `README.md`, `day1.md`,
-  `day1-sidecar.md`, `day2.md`, `day3.md`-`day7.md`, `INSTALL_REQUIREMENTS.md` and
+  `day1-sidecar.md`, `day2.md`, `day3.md`-`day8.md`, `INSTALL_REQUIREMENTS.md` and
   `mise.toml` by design (each file is meant to be readable/runnable
   standalone). Keep them consistent - prefer running `agents/upgrade`'s
   `docs update` over hand-editing when bumping tool versions.

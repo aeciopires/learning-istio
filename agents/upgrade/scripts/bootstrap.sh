@@ -48,7 +48,7 @@ log_info "Namespace: $MY_NAMESPACE"
 log_info ""
 if [[ "$INSTALL_BOOKINFO" == "true" ]]; then
   log_info "Get the gateway address:"
-  log_info "  kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}'"
+  log_info "  kubectl -n $MY_NAMESPACE get gateway bookinfo-gateway -o jsonpath='{.status.addresses[0].value}'"
   log_info "Or port-forward:"
   log_info "  kubectl -n $MY_NAMESPACE port-forward svc/bookinfo-gateway-istio 8080:80"
   log_info ""

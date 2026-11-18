@@ -31,8 +31,8 @@ log_info "Docker daemon OK."
 # files" (documented in ../../day1.md). Fix it proactively instead of
 # letting `make bootstrap-*` hit it. fs.inotify is a Linux kernel feature
 # with no macOS equivalent on the host - on macOS the relevant kernel is
-# inside Docker Desktop's Linux VM, not reachable via the host's sysctl,
-# so this check only applies on Linux.
+# inside the Linux VM of Docker Desktop or Colima, not reachable via the
+# host's sysctl, so this check only applies on Linux.
 OS_NAME="$(uname -s)"
 if [[ "$OS_NAME" == "Linux" ]]; then
   log_step "Checking fs.inotify limits (needed for istio-cni)"
@@ -57,10 +57,12 @@ if [[ "$OS_NAME" == "Linux" ]]; then
 elif [[ "$OS_NAME" == "Darwin" ]]; then
   log_step "Checking fs.inotify limits (needed for istio-cni)"
   log_info "macOS detected - this host-level check doesn't apply (the relevant kernel is"
-  log_info "Docker Desktop's Linux VM). If istio-cni-node CrashLoopBackOffs with"
-  log_info "'too many open files', increase Docker Desktop's resources (Settings > Resources)"
-  log_info "and, if needed, raise the limits inside the VM: docker run --rm --privileged --pid=host"
-  log_info "justincormack/nsenter1 sysctl -w fs.inotify.max_user_instances=2099999999"
+  log_info "Linux VM of Docker Desktop or Colima). If istio-cni-node CrashLoopBackOffs with"
+  log_info "'too many open files', increase the VM's resources and, if needed, raise the limits inside it."
+  log_info "Docker Desktop: Settings > Resources, then: docker run --rm --privileged --pid=host"
+  log_info "  justincormack/nsenter1 sysctl -w fs.inotify.max_user_instances=2099999999"
+  log_info "Colima: colima stop && colima start --cpu 6 --memory 12, then:"
+  log_info "  colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=2099999999"
 fi
 
 log_step "Configured versions (from configs/versions.env)"

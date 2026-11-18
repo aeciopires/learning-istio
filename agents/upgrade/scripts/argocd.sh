@@ -200,7 +200,7 @@ cmd_deploy() {
   log_info "Mode:      $mode"
   log_info "Namespace: $MY_NAMESPACE"
   log_info "Validate with:   make validate MODE=$mode"
-  log_info "Gateway address: kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}'"
+  log_info "Gateway address: kubectl -n $MY_NAMESPACE get gateway bookinfo-gateway -o jsonpath='{.status.addresses[0].value}'"
   log_info "Remove with:     make argocd-undeploy"
 }
 

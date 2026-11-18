@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/). The
 version below must always match [VERSION](VERSION).
 
+## [0.5.1] - 2026-11-18
+
+### Changed
+
+- `docs update` also syncs `day8.md` (optional, like `day3.md`-`day7.md`).
+- `scripts/*.sh` look up the `bookinfo-gateway` by name: with a waypoint in
+  the namespace, listing every `Gateway` returned more than one address.
+- `scripts/preflight.sh` also prints the Colima hints on macOS.
+- The final Alpine image of the CLI moves to 3.24.4.
+
 ## [0.5.0] - 2026-11-13
 
 ### Added

@@ -19,11 +19,14 @@
   - [Reduzindo a cardinalidade com a Telemetry API](#reduzindo-a-cardinalidade-com-a-telemetry-api)
 - [Exportando métricas para o Datadog](#exportando-métricas-para-o-datadog)
   - [Instalando o Datadog Agent](#instalando-o-datadog-agent)
+  - [Opções úteis do chart](#opções-úteis-do-chart)
   - [Data plane no modo sidecar](#data-plane-no-modo-sidecar)
   - [Control plane (istiod)](#control-plane-istiod)
   - [Modo ambient (ztunnel e waypoint)](#modo-ambient-ztunnel-e-waypoint)
   - [Logs do istiod e access logs do Envoy](#logs-do-istiod-e-access-logs-do-envoy)
   - [Validando](#validando)
+  - [Troubleshooting do Agent](#troubleshooting-do-agent)
+  - [Removendo o Agent](#removendo-o-agent)
 - [Referências](#referências)
 
 <!-- TOC -->
@@ -128,7 +131,7 @@ Confira direto no Prometheus (http://localhost:9090) se as métricas estão cheg
 # Requisições HTTP por serviço de destino (sidecar, ou ambient COM waypoint)
 sum(rate(istio_requests_total[5m])) by (destination_service_name, response_code)
 
-# Bytes TCP enviados (existe nos dois modos; no ambient sem waypoint é o que há)
+# Bytes TCP (no ambient sem waypoint é o que há; no sidecar só aparece com tráfego TCP, não HTTP)
 sum(rate(istio_tcp_sent_bytes_total[5m])) by (destination_service_name)
 
 # Tempo de convergência do control plane (p99)
@@ -307,6 +310,8 @@ for DASHBOARD in 7639 11829 7636 7630 7645 13277 21306; do
 done
 ```
 
+> O script é para um Grafana **já existente**. No Grafana dos addons, os dashboards do Istio já vêm provisionados, então é normal receber `Cannot save provisioned dashboard` para eles.
+
 # Nível avançado: Prometheus em escala de produção
 
 A abordagem recomendada pela documentação oficial ([Observability Best Practices](https://istio.io/v1.32/docs/ops/best-practices/observability/)) para monitorar meshes em escala de produção é usar **federação hierárquica** combinada com **recording rules**:
@@ -462,11 +467,66 @@ helm install datadog-agent -f datadog-values.yaml datadog/datadog
 
 Substitua `<CLUSTER_NAME>` por um nome para o cluster e `<DATADOG_SITE>` pelo seu [site do Datadog](https://docs.datadoghq.com/getting_started/site/).
 
+> ATENÇÃO!!! **No kind**, acrescente o bloco abaixo em `datadog:`. Sem ele, o Agent não valida o certificado do Kubelet e o container `agent` entra em `CrashLoopBackOff`. A [documentação de troubleshooting](https://docs.datadoghq.com/containers/troubleshooting/) aponta a verificação TLS do Kubelet como o erro mais comum nessa conexão. Use apenas em laboratório.
+>
+> ```yaml
+>   kubelet:
+>     tlsVerify: false
+> ```
+
 **Desabilite a injeção de sidecar nos Pods do Datadog Agent** (recomendação do Datadog). Para Istio 1.10 ou superior, use o **label** `sidecar.istio.io/inject: "false"` no DaemonSet:
 
 ```bash
 kubectl patch daemonset datadog-agent -p '{"spec":{"template":{"metadata":{"labels":{"sidecar.istio.io/inject":"false"}}}}}'
 ```
+
+## Opções úteis do chart
+
+Estes valores complementam o `datadog-values.yaml` e são aplicados com `helm upgrade datadog-agent datadog/datadog -f datadog-values.yaml`. A lista completa está no [values.yaml do chart](https://github.com/DataDog/helm-charts/blob/main/charts/datadog/values.yaml).
+
+```yaml
+datadog:
+  # Tags aplicadas a tudo o que o Agent coleta
+  tags:
+    - "env:lab"
+    - "team:platform"
+
+  # Coleta de logs. Com containerCollectAll: false, só entram os containers
+  # com a annotation ad.datadoghq.com/<container>.logs
+  logs:
+    enabled: true
+    containerCollectAll: false
+
+  # Lista de exclusão de logs, separada por espaços
+  containerExcludeLogs: "kube_namespace:^kube-system$ kube_namespace:^metallb-system$"
+
+  # APM por TCP (porta 8126 do nó) e coleta de processos
+  apm:
+    portEnabled: true
+  processAgent:
+    processCollection: true
+
+# Alta disponibilidade do Cluster Agent e execução dos cluster checks
+clusterAgent:
+  replicas: 2
+clusterChecksRunner:
+  enabled: true
+  replicas: 1
+```
+
+| Valor | Para quê |
+|---|---|
+| `datadog.tags` | Tags estáticas em métricas, eventos e service checks |
+| `datadog.logs.enabled` | Liga a coleta de logs (desligada por padrão) |
+| `datadog.logs.containerCollectAll` | Coleta os logs de **todos** os containers. Aumenta o volume e o custo |
+| `datadog.containerExcludeLogs` / `containerIncludeLogs` | [Filtram](https://docs.datadoghq.com/containers/guide/container-discovery-management/) a coleta por `name:`, `image:` ou `kube_namespace:`. A inclusão tem precedência |
+| `datadog.apm.portEnabled` | Recebe traces por TCP. O socket Unix já vem habilitado |
+| `datadog.processAgent.processCollection` | Coleta de processos |
+| `datadog.networkMonitoring.enabled` | [Cloud Network Monitoring](https://docs.datadoghq.com/network_monitoring/cloud_network_monitoring/). Tem custo próprio e não foi testado neste laboratório |
+| `clusterAgent.replicas` | Réplicas do Cluster Agent. Acima de 1, opera em alta disponibilidade |
+| `clusterChecksRunner.enabled` | Executores dedicados para cluster checks |
+
+> Os access logs do Envoy em JSON, com o campo `REQUEST_TX_DURATION` e a geração de métricas a partir deles, estão no [Day 8](day8.md#enviando-os-logs-para-o-datadog).
 
 ## Data plane no modo sidecar
 
@@ -545,9 +605,10 @@ podAnnotations:
 ```
 
 ```bash
-# Modo sidecar (sem profile). No modo ambient, acrescente: --set profile=ambient
-helm -n istio-system upgrade --install istiod istio/istiod --version $VERSION_ISTIO \
-  -f istiod-datadog-values.yaml --wait --timeout 900s
+# --reuse-values preserva o que foi definido na instalação do Day 1
+# (pilot.cni.enabled=true no modo sidecar, profile=ambient no modo ambient)
+helm -n istio-system upgrade istiod istio/istiod --version $VERSION_ISTIO \
+  --reuse-values -f istiod-datadog-values.yaml --wait --timeout 900s
 
 # Confirme a annotation no Pod
 kubectl -n istio-system get pod -l app=istiod -o jsonpath='{.items[0].metadata.annotations}'
@@ -555,20 +616,57 @@ kubectl -n istio-system get pod -l app=istiod -o jsonpath='{.items[0].metadata.a
 
 ## Modo ambient (ztunnel e waypoint)
 
-No modo ambient não há sidecars para o `auto_conf.yaml` descobrir. A integração tem uma configuração específica: defina `istio_mode: ambient` e um ou mais dos endpoints `ztunnel_endpoint`, `waypoint_endpoint` e `istiod_endpoint` na mesma instância - o check faz scrape de cada endpoint definido. Exemplo estático do `istio.d/conf.yaml` cobrindo os três componentes (da documentação do Datadog):
+No modo ambient não há sidecars para o `auto_conf.yaml` descobrir. A integração tem uma configuração específica: `istio_mode: ambient`, com um ou mais dos endpoints `ztunnel_endpoint`, `waypoint_endpoint` e `istiod_endpoint`. O exemplo estático da [documentação do Datadog](https://docs.datadoghq.com/integrations/istio/) usa URLs de `Service`, mas na instalação deste repositório **não existe `Service` do `ztunnel`**, e o `Service` do waypoint não expõe a porta `15020`. Com aquelas URLs o check fica em `ERROR`.
+
+Por isso, use annotations de Autodiscovery nos Pods, que a integração também aceita. O nome `istio-proxy` é o do container, tanto no `ztunnel` quanto no waypoint.
+
+`ztunnel`, pelo valor `podAnnotations` do chart. Crie o arquivo `ztunnel-datadog-values.yaml`:
 
 ```yaml
-init_config:
-instances:
-  - istio_mode: ambient
-    use_openmetrics: true
-    ztunnel_endpoint: http://ztunnel.istio-system.svc:15020/stats/prometheus
-    waypoint_endpoint: http://waypoint.<NAMESPACE>.svc:15020/stats/prometheus
-    istiod_endpoint: http://istiod.istio-system.svc:15014/metrics
+podAnnotations:
+  ad.datadoghq.com/istio-proxy.checks: |
+    {
+      "istio": {
+        "instances": [
+          {
+            "istio_mode": "ambient",
+            "use_openmetrics": "true",
+            "ztunnel_endpoint": "http://%%host%%:15020/stats/prometheus"
+          }
+        ]
+      }
+    }
 ```
 
-- Substitua `<NAMESPACE>` pelo namespace onde o waypoint foi criado (`istioctl waypoint apply`). Omita `waypoint_endpoint` se não houver waypoint.
-- A própria documentação pede para **ajustar as URLs aos hostnames e portas do seu cluster**. Confirme antes quais `Services` existem (`kubectl -n istio-system get svc`) - o `ztunnel` é um DaemonSet, e as mesmas opções também podem ser definidas via annotations de Autodiscovery (como na seção do control plane).
+```bash
+helm -n istio-system upgrade ztunnel istio/ztunnel --version $VERSION_ISTIO \
+  --reuse-values -f ztunnel-datadog-values.yaml --wait --timeout 900s
+```
+
+Waypoint, pelo [`parametersRef`](https://istio.io/v1.32/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment) do `Gateway`, que aplica um patch no `Deployment` gerado:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: waypoint-options
+  namespace: $MY_NAMESPACE
+data:
+  deployment: |
+    spec:
+      template:
+        metadata:
+          annotations:
+            ad.datadoghq.com/istio-proxy.checks: |
+              {"istio":{"instances":[{"istio_mode":"ambient","use_openmetrics":"true","waypoint_endpoint":"http://%%host%%:15020/stats/prometheus"}]}}
+EOF
+
+kubectl -n $MY_NAMESPACE patch gateway waypoint --type merge \
+  -p '{"spec":{"infrastructure":{"parametersRef":{"group":"","kind":"ConfigMap","name":"waypoint-options"}}}}'
+```
+
+Para o `istiod`, use a annotation da seção anterior acrescentando `"istio_mode": "ambient"` à instância. Depois, confira em `agent status` os checks `istio` com `Configuration Source: container:...`. Cada Agent só enxerga os Pods do próprio nó.
 
 ## Logs do istiod e access logs do Envoy
 
@@ -586,7 +684,7 @@ ad.datadoghq.com/discovery.logs: |
   ]
 ```
 
-Access logs do Envoy - habilite o [access log no Istio](https://istio.io/v1.32/docs/tasks/observability/logs/access-log/) (veja também a seção [6.3 do Guia de Estudos](ISTIO_ENVOY_GUIA_DE_ESTUDOS.md#63-access-log-habilitar-e-customizar-campos)) e aplique a annotation no Pod em que o container `istio-proxy` foi injetado:
+Access logs do Envoy - habilite o [access log no Istio](https://istio.io/v1.32/docs/tasks/observability/logs/access-log/) (o passo a passo com formato customizado está no [Day 8](day8.md); veja também a seção [6.3 do Guia de Estudos](ISTIO_ENVOY_GUIA_DE_ESTUDOS.md#63-access-log-habilitar-e-customizar-campos)) e aplique a annotation no Pod em que o container `istio-proxy` foi injetado:
 
 ```yaml
 ad.datadoghq.com/istio-proxy.logs: |
@@ -603,12 +701,47 @@ ad.datadoghq.com/istio-proxy.logs: |
 Execute o subcomando de status do Agent e procure por `istio` na seção *Checks*:
 
 ```bash
-kubectl exec -it "$(kubectl get pod -l app=datadog-agent -o jsonpath='{.items[0].metadata.name}')" -c agent -- agent status | grep -A15 istio
+kubectl exec "$(kubectl get pod -l app=datadog-agent -o jsonpath='{.items[0].metadata.name}')" -c agent -- agent status 2>/dev/null | grep -A15 -E '^ +istio \('
 ```
 
 > O label `app=datadog-agent` e o container `agent` dependem de como o Agent foi instalado (nome do release Helm). Ajuste o seletor se necessário (`kubectl get pods --show-labels`).
 
 No Datadog, as métricas do data plane aparecem com o prefixo `istio.mesh.` e as do control plane com prefixos como `istio.pilot.`. A lista completa das métricas coletadas está na seção *Data Collected* da página da integração.
+
+## Troubleshooting do Agent
+
+```bash
+export DD_POD=$(kubectl get pod -l app=datadog-agent -o jsonpath='{.items[0].metadata.name}')
+
+# Pods, eventos e motivo de reinícios
+kubectl get pods
+kubectl describe pod $DD_POD
+kubectl get events --sort-by=.lastTimestamp | tail -20
+
+# Estado completo do Agent e checks carregados
+kubectl exec $DD_POD -c agent -- agent status 2>/dev/null | less
+kubectl exec $DD_POD -c agent -- agent configcheck 2>/dev/null | grep -A8 '=== istio check'
+
+# Erros recentes
+kubectl logs $DD_POD -c agent --tail=100 | grep -i error
+
+# Valores aplicados pelo Helm
+helm get values datadog-agent
+```
+
+| Sintoma | Causa provável |
+|---|---|
+| Container `agent` em `CrashLoopBackOff`, com `Impossible to reach Kubelet` nos logs | Certificado do Kubelet. No kind, use `datadog.kubelet.tlsVerify: false` |
+| Nenhum dado no Datadog | API key ou `site` incorretos. Confira o Secret `datadog-secret` sem imprimir o valor: `kubectl describe secret datadog-secret` |
+| Check `istio` ausente em `agent status` | Não há sidecar no nó daquele Agent. Consulte um Agent de um nó com Pods da mesh |
+
+## Removendo o Agent
+
+```bash
+helm uninstall datadog-agent
+kubectl delete secret datadog-secret
+helm repo remove datadog
+```
 
 # Referências
 
@@ -626,4 +759,8 @@ No Datadog, as métricas do data plane aparecem com o prefixo `istio.mesh.` e as
 - https://docs.datadoghq.com/integrations/istio/
 - https://docs.datadoghq.com/containers/kubernetes/installation/
 - https://docs.datadoghq.com/containers/kubernetes/integrations/
+- https://docs.datadoghq.com/containers/kubernetes/log/
+- https://docs.datadoghq.com/containers/guide/container-discovery-management/
+- https://docs.datadoghq.com/containers/troubleshooting/
+- https://github.com/DataDog/helm-charts/tree/main/charts/datadog
 - https://github.com/DataDog/integrations-core/tree/master/istio

@@ -32,7 +32,7 @@ RUN GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo unknown) && \
       -ldflags "-s -w -X main.gitCommit=${GIT_COMMIT}" \
       -o /out/istio-upgrade .
 
-FROM alpine:3.24.1
+FROM alpine:3.24.4
 
 RUN apk add --no-cache ca-certificates && \
     addgroup -S istio-upgrade && adduser -S istio-upgrade -G istio-upgrade

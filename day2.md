@@ -49,12 +49,14 @@ Mais informações sobre os conceitos do Istio, podem ser encontrados nos links 
 
 > Para mais informações sobre este assunto, acesse a página: https://istio.io/v1.32/docs/concepts/traffic-management/
 
+> ATENÇÃO!!! No **modo ambient** ([Day 1](day1.md)), as regras de L7 deste dia são aplicadas pelo **waypoint**, não pelo `ztunnel`. Antes das atividades, crie um waypoint para o namespace: `istioctl waypoint apply -n $MY_NAMESPACE --enroll-namespace --wait`. No modo sidecar ([Day 1 - sidecar](day1-sidecar.md)) nada disso é necessário.
+
 Crie variáveis de ambiente uteis para baixar os arquivos complementares
 
 ```bash
 export ISTIO_RELEASE=1.32
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
-export GATEWAY_API_VERSION="v1.6.1"
+export GATEWAY_API_VERSION="v1.7.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -65,7 +67,7 @@ export ISTIO_HTTPBIN_URL="$ISTIO_BASE_URL/httpbin/"
 Use o comando abaixo para obter o IP do gateway.
 
 ```bash
-export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}')
+export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
 echo $GATEWAY_IP
 ```
 
@@ -79,7 +81,7 @@ Use o navegador, acesse a página http://GATEWAY_IP:80/productpage.
   <img src="images/bookinfo.png" alt="Bookinfo productpage">
 </p>
 
-> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop, será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
+> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop ou no [Colima](INSTALL_REQUIREMENTS.md#opção-2-colima), será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
 > Comandos para reiniciar o serviço docker-mac-net-connect:
 
 ```bash
@@ -110,6 +112,12 @@ for i in $(seq 1 10000); do curl -sSI -o /dev/null http://localhost:8080/product
 
 > Para mais informações sobre esta atividade, acesse a página: https://istio.io/v1.32/docs/tasks/traffic-management/request-routing/#about-this-task
 
+Antes de rotear por versão, defina as versões de cada microsserviço. Os ``virtualservices`` usados neste dia apontam para ``subsets`` (``v1``, ``v2``, ``v3``), e quem define os ``subsets`` são os ``destinationrules`` ([Define the service versions](https://istio.io/v1.32/docs/examples/bookinfo/#define-the-service-versions)). Sem eles, as chamadas para os microsserviços falham e a página mostra a mensagem de que os reviews estão indisponíveis.
+
+```bash
+kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/networking/destination-rule-all.yaml"
+```
+
 O Istio usa ``virtualservices`` para definir regras de rota. Execute o comando a seguir para aplicar serviços virtuais que roteiam todo o tráfego para ``v1`` de cada microsserviço:
 
 ```bash
@@ -119,8 +127,9 @@ kubectl -n $MY_NAMESPACE apply -f "$ISTIO_BOOKINFO_URL/networking/virtual-servic
 Obtenha informações sobre o status dos ``virtualservices`` e ``destinationrules``.
 
 ```bash
-kubectl -n $MY_NAMESPACE get virtualservices
+kubectl -n $MY_NAMESPACE get virtualservices,destinationrules
 kubectl -n $MY_NAMESPACE get virtualservices -o yaml
+kubectl -n $MY_NAMESPACE get destinationrules -o yaml
 ```
 
 Conforme mostra a figura abaixo, todo o tráfego entre as aplicações é destinado apenas para a ``v1``.
@@ -154,8 +163,9 @@ Atualize o navegador. Agora as estrelas sumiram. Isso ocorre porque o tráfego �
 Agora execute o seguinte comando para remover as configurações anteriores.
 
 ```bash
+# O virtualservice "reviews" do arquivo virtual-service-reviews-test-v2.yaml tem o
+# mesmo nome do que está em virtual-service-all-v1.yaml, então este comando remove os dois.
 kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-service-all-v1.yaml"
-kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-service-reviews-test-v2.yaml"
 ```
 
 ## Traffic shifting
@@ -244,10 +254,11 @@ Recarregue a página da web ``/productpage``. Você verá que a página realment
 
 O resultado é explicado na página: https://istio.io/v1.32/docs/tasks/traffic-management/fault-injection/#understanding-what-happened
 
-Agora execute o seguinte comando para remover as configurações anteriores.
+Agora execute os seguintes comandos para remover as configurações anteriores, incluindo os ``destinationrules`` criados no início deste dia (a atividade de mirroring usa os seus próprios).
 
 ```bash
 kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/virtual-service-all-v1.yaml"
+kubectl -n $MY_NAMESPACE delete -f "$ISTIO_BOOKINFO_URL/networking/destination-rule-all.yaml"
 ```
 
 ## Mirroring

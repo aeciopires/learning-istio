@@ -10,6 +10,8 @@
 - [Docker](#docker)
   - [Linux (Ubuntu/Debian)](#linux-ubuntudebian)
   - [macOS (Intel ou Apple Silicon)](#macos-intel-ou-apple-silicon)
+    - [Opção 1: Docker Desktop](#opção-1-docker-desktop)
+    - [Opção 2: Colima](#opção-2-colima)
 - [Helm](#helm)
 - [kubectl](#kubectl)
 - [istioctl](#istioctl)
@@ -70,7 +72,7 @@ versão do Ubuntu.
 
 ```bash
 # Opcional: fixe a versão do mise (senão instala a mais recente disponível)
-# MISE_VERSION="v2026.8.0"
+# MISE_VERSION="v2026.11.9"
 
 curl https://mise.run | sh
 # ou, fixando a versão:
@@ -209,6 +211,10 @@ sudo systemctl enable containerd
 
 ## macOS (Intel ou Apple Silicon)
 
+Escolha **uma** das opções abaixo para executar os containers.
+
+### Opção 1: Docker Desktop
+
 Instale o **Docker Desktop** (traz Docker CE + a VM Linux que executa os
 containers - suporta imagens/arquiteturas amd64 e arm64 nativamente):
 
@@ -227,6 +233,63 @@ hardware).
 > [docker-mac-net-connect](https://github.com/chipmk/docker-mac-net-connect)
 > - veja o passo a passo em [day1.md](day1.md) ou
 > [day1-sidecar.md](day1-sidecar.md).
+
+### Opção 2: Colima
+
+O [Colima](https://github.com/abiosoft/colima) executa o Docker em uma VM
+Linux, sem o Docker Desktop, em Macs Intel e Apple Silicon. Segundo o
+[FAQ oficial](https://github.com/abiosoft/colima/blob/main/docs/FAQ.md), o
+Colima com o runtime Docker é compatível com o kind.
+
+O Colima não inclui o cliente `docker`, por isso instale os dois:
+
+```bash
+brew install colima docker
+```
+
+Inicie a VM. O padrão do Colima é 2 CPUs e 2 GiB de memória, pouco para um
+cluster kind com vários nós, Istio e addons. Os valores abaixo são um ponto
+de partida, ajuste-os de acordo com a sua máquina:
+
+```bash
+colima start --cpu 4 --memory 8
+```
+
+Para alterar CPU e memória depois, pare a VM e inicie-a com os novos
+valores:
+
+```bash
+colima stop
+colima start --cpu 6 --memory 12
+```
+
+Verifique a instalação. O Colima se define como contexto padrão do Docker
+ao iniciar. Se você também usa o Docker Desktop, confira o contexto ativo
+antes de criar o cluster:
+
+```bash
+colima status
+docker context list
+docker context use colima
+docker info
+```
+
+> ATENÇÃO!!! O cluster kind roda dentro da VM do Colima, portanto o IP do
+> LoadBalancer do MetalLB não fica acessível a partir do host por padrão. O
+> [docker-mac-net-connect](https://github.com/chipmk/docker-mac-net-connect)
+> lista o Colima entre os runtimes suportados - veja o passo a passo em
+> [day1.md](day1.md) ou [day1-sidecar.md](day1-sidecar.md). Outra opção é
+> usar o `kubectl port-forward` descrito nesses mesmos arquivos.
+
+> Se os pods `istio-cni-node` entrarem em `CrashLoopBackOff` com o erro
+> `too many open files`, aumente os limites de inotify **dentro da VM** (o
+> ajuste não é persistente):
+>
+> ```bash
+> colima ssh -- sudo sysctl -w fs.inotify.max_user_watches=2099999999
+> colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=2099999999
+> colima ssh -- sudo sysctl -w fs.inotify.max_queued_events=2099999999
+> ```
 
 # Helm
 
@@ -250,7 +313,7 @@ sudo rm -f /etc/apt/sources.list.d/helm-stable-debian.list
 Documentação: https://helm.sh/docs/
 
 ```bash
-VERSION="4.3.1"
+VERSION="4.3.2"
 
 mise latest helm
 mise install helm@$VERSION
@@ -368,7 +431,7 @@ sudo rm -f /usr/local/bin/kind
 > Antes de prosseguir, certifique-se de ter instalado o comando [mise](#mise).
 
 ```bash
-VERSION="0.32.0"
+VERSION="0.33.0"
 
 mise latest kind
 mise install kind@$VERSION
@@ -550,7 +613,7 @@ kubectl apply -f $HOME/metallb-ingress-address.yaml --namespace metallb-system
 O [Go](https://go.dev) só é necessário para **compilar** a CLI
 `istio-upgrade` de [agents/upgrade](agents/upgrade) (comandos `make build`,
 `make test`, `make jwt-*`, `make docs-update`). Os passos manuais do
-[Day 1](day1.md) ao [Day 7](day7.md) não dependem dele - exceto a geração de
+[Day 1](day1.md) ao [Day 8](day8.md) não dependem dele - exceto a geração de
 tokens JWT do Day 7, que usa a CLI.
 
 A versão está pinada em [`mise.toml`](mise.toml) e é a mesma da diretiva

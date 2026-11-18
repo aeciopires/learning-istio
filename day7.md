@@ -255,6 +255,10 @@ done
 ## Testando a partir dos dois clusters
 
 ```bash
+# Aguarde: conexões já abertas podem seguir por um tempo na configuração anterior
+# (nos testes deste repositório, levou menos de 1 minuto)
+sleep 60
+
 # Permitido: mesma identidade nos dois clusters -> 200 em todas, respondido por v1 e v2
 chamar "${CTX_CLUSTER1}" sample
 chamar "${CTX_CLUSTER2}" sample
@@ -431,6 +435,10 @@ done
 Teste os três casos (ainda com a política do Laboratório 2 ativa, então use o cliente do namespace `sample`):
 
 ```bash
+# Aguarde: conexões já abertas podem seguir por um tempo na configuração anterior
+# (nos testes deste repositório, levou menos de 1 minuto)
+sleep 60
+
 # 1. Token válido -> 200
 chamar "${CTX_CLUSTER1}" sample "$TOKEN_CURL"
 
@@ -493,6 +501,10 @@ Como ler a regra: dentro de um mesmo `source`, os campos são combinados com **E
 Matriz de testes - execute cada linha a partir do `cluster1` e depois do `cluster2`:
 
 ```bash
+# Aguarde: conexões já abertas podem seguir por um tempo na configuração anterior
+# (nos testes deste repositório, levou menos de 1 minuto)
+sleep 60
+
 # A. Workload certo + token certo -> 200
 chamar "${CTX_CLUSTER1}" sample "$TOKEN_CURL"
 
@@ -539,6 +551,7 @@ Na Opção B do Day 3 (ambient multicluster) não há sidecars. A documentação
 Consequências práticas para os laboratórios deste dia:
 
 - A parte **L4** do Laboratório 2 (somente `principals`) funciona no ambient **sem waypoint**. A documentação mostra exatamente esse tipo de política e afirma que ela pode ser usada nos dois modos. Remova o bloco `to` (métodos e caminhos são atributos L7).
+  Como a negação acontece em L4, o cliente vê a **conexão ser encerrada** (o `chamar` mostra `000`), e não um `403`. Para que o namespace `outros` participe da mesh, use nele o label `istio.io/dataplane-mode=ambient` em vez de `istio-injection=enabled`.
 - **O ztunnel não avalia atributos L7.** Se uma política com atributos L7 for direcionada por `selector`, o ztunnel **pula** as regras que não consegue avaliar, e o resultado depende da ação:
   - `ALLOW` com atributos L7: a regra nunca casa, então o tráfego é **negado**.
   - `DENY` só com atributos L7 (por exemplo o clássico `notRequestPrincipals: ["*"]`): a regra nunca casa, então o tráfego é **liberado** - a política simplesmente não protege nada.

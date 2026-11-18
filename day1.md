@@ -24,7 +24,7 @@ Crie variáveis de ambiente uteis para baixar os arquivos complementares
 ```bash
 export ISTIO_RELEASE=1.32
 export VERSION_ISTIO="${ISTIO_RELEASE}.0"
-export GATEWAY_API_VERSION="v1.6.1"
+export GATEWAY_API_VERSION="v1.7.0"
 export ISTIO_BASE_URL="https://raw.githubusercontent.com/istio/istio/release-$ISTIO_RELEASE/samples/"
 export ISTIO_BOOKINFO_URL="$ISTIO_BASE_URL/bookinfo/"
 export ISTIO_ADDONS_URL="$ISTIO_BASE_URL/addons"
@@ -156,7 +156,7 @@ kubectl -n $MY_NAMESPACE get gateway
 Use o comando abaixo para obter o IP do gateway.
 
 ```bash
-export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}')
+export GATEWAY_IP=$(kubectl -n $MY_NAMESPACE get gateway bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
 echo $GATEWAY_IP
 ```
 
@@ -170,7 +170,7 @@ Use o navegador, acesse a página http://GATEWAY_IP:80/productpage.
   <img src="images/bookinfo.png" alt="Bookinfo productpage">
 </p>
 
-> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop, será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
+> ATENÇÃO!!! Se você estiver usando **MacOS** com o kind criado no Docker Desktop ou no [Colima](INSTALL_REQUIREMENTS.md#opção-2-colima), será necessário instalar o serviço https://github.com/chipmk/docker-mac-net-connect e possívelmente configurar o fix sugerido neste issue: https://github.com/chipmk/docker-mac-net-connect/issues/62
 > Comandos para reiniciar o serviço docker-mac-net-connect:
 
 ```bash

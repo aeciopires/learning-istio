@@ -74,7 +74,7 @@ flowchart TB
 
     versionsEnv[("configs/versions.env\n(gerado por docs update --apply)")]
     docsupdater -- escreve --> versionsEnv
-    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nday3.md a day7.md (opcionais)\nINSTALL_REQUIREMENTS.md · mise.toml"]
+    docsupdater -. atualiza .-> repoDocs["README.md · day1.md · day1-sidecar.md · day2.md\nday3.md a day8.md (opcionais)\nINSTALL_REQUIREMENTS.md · mise.toml"]
 
     subgraph AUTOMATION["Makefile + scripts/*.sh (NÃO é o CLI)"]
         direction TB
@@ -246,15 +246,16 @@ make build-all             # as 4 combinações de uma vez
 ```
 
 > A imagem Docker (`make docker-build`) continua **só Linux** - o Docker
-> Desktop no macOS executa containers Linux via VM, então não existe (nem
-> faz sentido existir) uma "imagem Docker para macOS". Para usar o CLI no
-> macOS, use os binários `darwin-*` acima, não a imagem Docker.
+> Desktop e o Colima no macOS executam containers Linux via VM, então não
+> existe (nem faz sentido existir) uma "imagem Docker para macOS". Para usar
+> o CLI no macOS, use os binários `darwin-*` acima, não a imagem Docker.
 
 A automação de cluster (`scripts/*.sh`, próxima seção) também funciona em
 macOS - veja as nuances específicas de macOS em
 [INSTALL_REQUIREMENTS.md](../../INSTALL_REQUIREMENTS.md) (instalação do
-Docker Desktop, `docker-mac-net-connect` para o LoadBalancer do MetalLB, e
-por que o preflight não verifica `fs.inotify` no host no macOS).
+Docker Desktop ou do Colima, `docker-mac-net-connect` para o LoadBalancer
+do MetalLB, e por que o preflight não verifica `fs.inotify` no host no
+macOS).
 
 # Uso do CLI
 
@@ -316,7 +317,7 @@ istio-upgrade docs update --apply --allow-major-bump
 ```
 
 Atualiza: `README.md`, `day1.md`, `day1-sidecar.md`, `day2.md`,
-`day3.md` a `day7.md` (opcionais - são ignorados se não existirem),
+`day3.md` a `day8.md` (opcionais - são ignorados se não existirem),
 `INSTALL_REQUIREMENTS.md`, `mise.toml` (na raiz do repositório) e
 [configs/versions.env](configs/versions.env) (consumido pelos scripts de
 cluster - veja a próxima seção, inclusive as versões *informativas* dos
@@ -391,8 +392,8 @@ make destroy-cluster         # apaga o cluster kind
 ```
 
 > `make preflight` também verifica os limites de `fs.inotify` do host (só
-> no Linux - no macOS o kernel relevante é o da VM do Docker Desktop, não
-> o host, então o preflight só avisa): em uma instalação padrão do Linux
+> no Linux - no macOS o kernel relevante é o da VM do Docker Desktop ou do
+> Colima, não o host, então o preflight só avisa): em uma instalação padrão do Linux
 > eles costumam ser baixos demais para o `istio-cni` - instalado em
 > **ambos** os modos (no sidecar ele substitui o container de init
 > privilegiado `istio-init`; no ambient ele captura os pods para o

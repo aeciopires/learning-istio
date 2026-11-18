@@ -40,4 +40,4 @@ kubectl -n "$MY_NAMESPACE" wait --for=condition=available --timeout=300s deploym
 
 log_info "Bookinfo deployed to namespace '$MY_NAMESPACE' (mode=$MODE)."
 log_info "Get the gateway address with:"
-log_info "  kubectl -n $MY_NAMESPACE get gateway -o jsonpath='{.items[*].status.addresses[*].value}'"
+log_info "  kubectl -n $MY_NAMESPACE get gateway bookinfo-gateway -o jsonpath='{.status.addresses[0].value}'"

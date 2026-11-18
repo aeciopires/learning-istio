@@ -88,7 +88,7 @@ export GW_POD=$(kubectl -n $MY_NAMESPACE get pod -l gateway.networking.k8s.io/ga
 kubectl -n $MY_NAMESPACE exec $GW_POD -- pilot-agent request GET server_info | grep '"version"'
 
 # Filtros HTTP REALMENTE configurados neste proxy, na ordem de execução
-istioctl proxy-config listener $GW_POD.$MY_NAMESPACE -o json | grep '"name": "envoy.filters.http' | sort | uniq -c
+istioctl proxy-config listener $GW_POD.$MY_NAMESPACE --port 80 -o json | grep '"name": "envoy.filters.http' | sort | uniq -c
 ```
 
 Filtros HTTP presentes no build do proxy usado pelo Istio 1.32 que mais aparecem em `EnvoyFilter` (conferidos no arquivo acima, no commit do `istio/proxy` referenciado pelo `istio.deps` da tag `1.32.0`):
@@ -279,7 +279,7 @@ curl -s -o /dev/null -D - -H "Accept-Encoding: br;q=1.0, gzip;q=0.8" http://${GA
 curl -s -o /dev/null -D - -H "Accept-Encoding: br;q=0.8, gzip;q=1.0" http://${GATEWAY_IP}/productpage | grep -i content-encoding
 
 # Confirme os dois filtros na cadeia do gateway
-istioctl proxy-config listener $GW_POD.$MY_NAMESPACE -o json | grep '"name": "envoy.filters.http.compressor'
+istioctl proxy-config listener $GW_POD.$MY_NAMESPACE --port 80 -o json | grep '"name": "envoy.filters.http.compressor'
 ```
 
 > Se o seu gateway é o **Envoy Gateway** (e não o do Istio), nada disso é necessário: a compressão é um campo de alto nível (`compressor`) do recurso `BackendTrafficPolicy`. Veja o [Day 6](day6.md#compressão-de-respostas).
@@ -342,6 +342,9 @@ spec:
                   response_handle:headers():add("x-learning-istio", "lua")
                 end
 EOF
+
+# Aguarde alguns segundos: a configuração leva um tempo para chegar ao proxy
+sleep 10
 
 kubectl -n $MY_NAMESPACE exec deploy/ratings-v1 -c ratings -- \
   curl -s -o /dev/null -D - http://productpage:9080/productpage | grep -i x-learning-istio
@@ -511,6 +514,9 @@ spec:
       end
 EOF
 
+# Aguarde alguns segundos: a configuração leva um tempo para chegar ao proxy
+sleep 10
+
 curl -s -o /dev/null -D - -H "x-number: 4" http://${GATEWAY_IP}/productpage | grep -i x-parity
 ```
 
@@ -540,14 +546,14 @@ kubectl get envoyfilter -A
 istioctl analyze -n $MY_NAMESPACE
 
 # 3. O filtro chegou na configuração REAL do proxy? (a única prova de que o patch casou)
-istioctl proxy-config listener $GW_POD.$MY_NAMESPACE -o json | grep -B2 -A12 'envoy.filters.http.compressor'
+istioctl proxy-config listener $GW_POD.$MY_NAMESPACE --port 80 -o json | grep -B2 -A12 'envoy.filters.http.compressor'
 
 # 4. O proxy aceitou a configuração? (SYNCED) Uma configuração inválida é rejeitada pelo Envoy
 istioctl proxy-status
 kubectl -n istio-system logs deploy/istiod | grep -i -E 'envoyfilter|rejected|NACK' | tail -20
 
 # 5. Qual é a ordem real dos filtros HTTP?
-istioctl proxy-config listener $GW_POD.$MY_NAMESPACE -o json | grep '"name": "envoy.filters.http'
+istioctl proxy-config listener $GW_POD.$MY_NAMESPACE --port 80 -o json | grep '"name": "envoy.filters.http'
 ```
 
 | Sintoma | Causa provável |

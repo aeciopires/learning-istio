@@ -59,7 +59,7 @@ else
 fi
 
 check "gateway programmed" bash -c \
-  "kubectl -n '$MY_NAMESPACE' get gateway -o jsonpath='{.items[0].status.conditions[?(@.type==\"Programmed\")].status}' | grep -qx True"
+  "kubectl -n '$MY_NAMESPACE' get gateway bookinfo-gateway -o jsonpath='{.status.conditions[?(@.type==\"Programmed\")].status}' | grep -qx True"
 
 echo
 if [[ $FAILED -ne 0 ]]; then
